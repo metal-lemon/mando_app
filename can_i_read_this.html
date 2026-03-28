@@ -94,7 +94,7 @@
             <button id="saveBtn" class="export-btn">💾 Save Known Characters</button>
         </div>
         <div id="fileStatus" class="file-status">
-            No character file loaded yet.
+            Checking for saved characters...
         </div>
     </div>
 
@@ -443,9 +443,9 @@
         // Strip HTML on paste and show preview
         document.getElementById("textInput").addEventListener('paste', (e) => {
             e.preventDefault();
-            let text = (e.clipboardData || window.clipboardData).getData('text');
-            text = text.replace(/<[^>]*>/g, '');
-            document.execCommand('insertText', false, text);
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const stripped = text.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+            document.execCommand('insertText', false, stripped);
             setTimeout(() => showTextPreview(document.getElementById("textInput").value), 0);
         });
 
@@ -458,8 +458,6 @@
         document.getElementById("convertBtn").addEventListener("click", convertAndAnalyze);
         document.getElementById("clearTextBtn").addEventListener("click", clearText);
         document.getElementById("loadExampleTextBtn").addEventListener("click", loadExampleText);
-        document.getElementById("exportUnknownBtn").addEventListener("click", exportUnknownChars);
-        document.getElementById("copyUnknownBtn").addEventListener("click", copyUnknownChars);
         document.getElementById("saveBtn").addEventListener("click", saveKnownChars);
         
         // Load current state on page load
