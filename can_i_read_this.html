@@ -174,8 +174,7 @@
                     highlighted = highlighted.replace(regex, '<span class="trad-highlight">' + escapedTrad + '</span>');
                 }
             }
-            preview.innerHTML = highlighted.replace(/
-/g, '<br>');
+            preview.innerHTML = highlighted.replace(/\n/g, '<br>');
             preview.style.display = 'block';
         }
 
