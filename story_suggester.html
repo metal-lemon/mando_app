@@ -277,6 +277,16 @@
             margin: 10px 0;
             border-radius: 5px;
         }
+        .stats-simple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+        .stat-simple { background: #f8f9fa; border-radius: 10px; padding: 12px 8px; text-align: center; }
+        .stat-simple .stat-value { font-size: 24px; font-weight: bold; margin: 5px 0; }
+        .stat-simple .stat-title { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-simple .stat-subtitle { font-size: 9px; color: #999; }
+        .stat-value.good { color: #4CAF50; }
+        .stat-value.medium { color: #FF9800; }
+        .stat-value.low { color: #f44336; }
+        .learning-char { background: #ffcdd2; color: #c62828; padding: 5px 10px; border-radius: 6px; font-size: 16px; cursor: pointer; transition: all 0.2s; display: inline-block; margin: 2px; }
+        .learning-char:hover { background: #4CAF50; color: white; transform: scale(1.1); }
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -409,39 +419,54 @@
             return div.innerHTML;
         }
 
+        function getStatColorClass(percentage) {
+            if (percentage >= 95) return "good";
+            if (percentage >= 80) return "medium";
+            return "low";
+        }
+
         function renderStoryCard(story, analysis, chunkMode) {
             const card = document.createElement('div');
             card.className = 'story-card';
             
-            let unknownDisplay = analysis.unknownUniqueList.length > 0 
-                ? analysis.unknownUniqueList.slice(0, 20).map(ch => `<span>${ch}</span>`).join('') 
-                : '<span style="background: #c8e6c9;">None! You know all characters!</span>';
-            
-            if (analysis.unknownUniqueList.length > 20) {
-                unknownDisplay += `<span>... and ${analysis.unknownUniqueList.length - 20} more</span>`;
-            }
-            
-            const mainPercent = analysis.occurrence.percent;
+            const occPercent = analysis.occurrence.percent;
+            const uniqPercent = analysis.unique.percent;
+            const learningGap = analysis.unknownUniqueList.length;
             
             card.innerHTML = `
                 <div class="story-header">
                     <div class="story-title">${escapeHtml(story.title)}</div>
                     <div class="story-stats">
-                        <span class="stat-badge occ">📊 ${analysis.occurrence.percent.toFixed(1)}% (occ)</span>
-                        <span class="stat-badge">🎯 ${analysis.unique.percent.toFixed(1)}% (unique)</span>
-                        <span class="stat-badge">📊 ${analysis.occurrence.total} chars</span>
-                        <span class="stat-badge">🎯 ${analysis.unique.total} unique</span>
+                        <span class="stat-badge occ">${analysis.occurrence.total} chars</span>
+                        <span class="stat-badge">${analysis.unique.total} unique</span>
                     </div>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${mainPercent}%;"></div>
+                <div class="stats-simple">
+                    <div class="stat-simple">
+                        <div class="stat-title">% Known (Raw)</div>
+                        <div class="stat-value ${getStatColorClass(occPercent)}">${occPercent.toFixed(0)}%</div>
+                        <div class="stat-subtitle">characters</div>
+                    </div>
+                    <div class="stat-simple">
+                        <div class="stat-title">% Known (Unique)</div>
+                        <div class="stat-value ${getStatColorClass(uniqPercent)}">${uniqPercent.toFixed(0)}%</div>
+                        <div class="stat-subtitle">distinct chars</div>
+                    </div>
+                    <div class="stat-simple">
+                        <div class="stat-title">Learning Gap</div>
+                        <div class="stat-value ${learningGap === 0 ? 'good' : 'low'}">${learningGap}</div>
+                        <div class="stat-subtitle">chars to learn</div>
+                    </div>
                 </div>
                 <div class="story-content">
                     ${escapeHtml(story.content.substring(0, 500))}${story.content.length > 500 ? '...' : ''}
                 </div>
                 <div class="unknown-chars">
-                    <strong>📖 Characters to learn before reading:</strong><br>
-                    ${unknownDisplay}
+                    <strong>📖 Characters to learn:</strong>
+                    <div style="margin-top: 10px;">
+                        ${analysis.unknownUniqueList.slice(0, 30).map(ch => `<span class="learning-char">${ch}</span>`).join('')}
+                        ${analysis.unknownUniqueList.length > 30 ? `<span style="color:#999;">... and ${analysis.unknownUniqueList.length - 30} more</span>` : ''}
+                    </div>
                 </div>
             `;
             
@@ -495,26 +520,38 @@
             const modal = document.getElementById('storyViewModal');
             const contentDiv = document.getElementById('storyViewContent');
             
-            const unknownList = analysis.unknownUniqueList.map(ch => `<span style="background:#ffcdd2; padding:2px 8px; margin:2px; display:inline-block; border-radius:15px;">${ch}</span>`).join('');
+            const occPercent = analysis.occurrence.percent;
+            const uniqPercent = analysis.unique.percent;
+            const learningGap = analysis.unknownUniqueList.length;
             
             contentDiv.innerHTML = `
                 <h2>${escapeHtml(title)}</h2>
-                <div class="story-stats" style="margin-bottom: 15px;">
-                    <span class="stat-badge occ">📊 ${analysis.occurrence.percent.toFixed(1)}% known (occurrence)</span>
-                    <span class="stat-badge">🎯 ${analysis.unique.percent.toFixed(1)}% known (unique)</span>
-                    <span class="stat-badge">📊 ${analysis.occurrence.total} chars total</span>
-                    <span class="stat-badge">🎯 ${analysis.unique.total} unique chars</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${analysis.occurrence.percent}%;"></div>
+                <div class="stats-simple" style="margin-bottom: 15px;">
+                    <div class="stat-simple">
+                        <div class="stat-title">% Known (Raw)</div>
+                        <div class="stat-value ${getStatColorClass(occPercent)}">${occPercent.toFixed(0)}%</div>
+                        <div class="stat-subtitle">characters</div>
+                    </div>
+                    <div class="stat-simple">
+                        <div class="stat-title">% Known (Unique)</div>
+                        <div class="stat-value ${getStatColorClass(uniqPercent)}">${uniqPercent.toFixed(0)}%</div>
+                        <div class="stat-subtitle">distinct chars</div>
+                    </div>
+                    <div class="stat-simple">
+                        <div class="stat-title">Learning Gap</div>
+                        <div class="stat-value ${learningGap === 0 ? 'good' : 'low'}">${learningGap}</div>
+                        <div class="stat-subtitle">chars to learn</div>
+                    </div>
                 </div>
                 <div style="margin: 20px 0; padding: 20px; background: #fafafa; border-radius: 8px; font-size: 18px; line-height: 1.8;">
                     ${escapeHtml(content).replace(/\n/g, '<br>')}
                 </div>
                 ${analysis.unknownUniqueList.length > 0 ? `
                     <div style="margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px;">
-                        <strong>📖 Characters to learn before reading this text:</strong><br>
-                        ${unknownList}
+                        <strong>📖 Characters to learn:</strong>
+                        <div style="margin-top: 10px;">
+                            ${analysis.unknownUniqueList.map(ch => `<span class="learning-char">${ch}</span>`).join('')}
+                        </div>
                     </div>
                 ` : '<div style="margin-top: 20px; padding: 15px; background: #c8e6c9; border-radius: 8px;">🎉 You know all the characters in this text!</div>'}
             `;

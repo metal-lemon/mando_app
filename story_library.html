@@ -197,6 +197,27 @@
             background-color: #ffebee;
             border-left-color: #f44336;
         }
+        .story-list-item-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .story-list-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+        .stats-simple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; width: 100%; }
+        .stat-simple { background: #f8f9fa; border-radius: 10px; padding: 10px 8px; text-align: center; }
+        .stat-simple .stat-value { font-size: 20px; font-weight: bold; margin: 5px 0; }
+        .stat-simple .stat-title { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-simple .stat-subtitle { font-size: 8px; color: #999; }
+        .stat-value.good { color: #4CAF50; }
+        .stat-value.medium { color: #FF9800; }
+        .stat-value.low { color: #f44336; }
         @media (max-width: 600px) {
             .header {
                 flex-direction: column;
@@ -210,6 +231,12 @@
             .story-list-actions {
                 width: 100%;
                 text-align: right;
+            }
+            .stats-simple {
+                grid-template-columns: 1fr;
+            }
+            .story-list-item-main {
+                flex-direction: column;
             }
         }
     </style>
@@ -301,6 +328,33 @@
             return div.innerHTML;
         }
 
+        function getStatColorClass(percentage) {
+            if (percentage >= 95) return "good";
+            if (percentage >= 80) return "medium";
+            return "low";
+        }
+
+        function analyzeStory(story) {
+            const uniqueChars = story.characters || extractCharacters(story.content);
+            const uniqueTotal = uniqueChars.length;
+            const knownUnique = uniqueChars.filter(ch => window.mandarinState.has(ch)).length;
+            const uniquePercent = uniqueTotal > 0 ? (knownUnique / uniqueTotal) * 100 : 0;
+
+            const chineseRegex = /[\u4e00-\u9fff]/g;
+            const allChars = story.content.match(chineseRegex) || [];
+            const totalOcc = allChars.length;
+            const knownOcc = allChars.filter(ch => window.mandarinState.has(ch)).length;
+            const occPercent = totalOcc > 0 ? (knownOcc / totalOcc) * 100 : 0;
+
+            const unknownUniqueList = uniqueChars.filter(ch => !window.mandarinState.has(ch));
+
+            return {
+                unique: { total: uniqueTotal, known: knownUnique, percent: uniquePercent },
+                occurrence: { total: totalOcc, known: knownOcc, percent: occPercent },
+                unknownUniqueList
+            };
+        }
+
         function renderLibrary() {
             const container = document.getElementById('storyLibraryList');
             container.innerHTML = '';
@@ -309,22 +363,46 @@
                 return;
             }
             stories.forEach((story, index) => {
+                const analysis = analyzeStory(story);
+                const occPercent = analysis.occurrence.percent;
+                const uniqPercent = analysis.unique.percent;
+                const learningGap = analysis.unknownUniqueList.length;
+                
                 const item = document.createElement('div');
                 item.className = 'story-list-item';
                 item.innerHTML = `
-                    <div class="story-list-info">
-                        <span class="story-list-id">#${story.id}</span>
-                        <span class="story-list-title">${escapeHtml(story.title)}</span>
-                        <div class="story-list-details">
-                            Source: ${escapeHtml(story.source || 'Unknown')} | 
-                            ${story.content.length} chars | 
-                            ${story.characters ? story.characters.length : '?'} unique chars
+                    <div class="story-list-item-main">
+                        <div class="story-list-info">
+                            <span class="story-list-id">#${story.id}</span>
+                            <span class="story-list-title">${escapeHtml(story.title)}</span>
+                            <div class="story-list-stats">
+                                Source: ${escapeHtml(story.source || 'Unknown')} • 
+                                ${story.content.length} chars • 
+                                ${analysis.unique.total} unique
+                            </div>
+                        </div>
+                        <div class="story-list-actions">
+                            <button class="info" data-action="view" data-index="${index}">👁️ View</button>
+                            <button class="warning" data-action="edit" data-index="${index}">✏️ Edit</button>
+                            <button class="danger" data-action="delete" data-index="${index}">🗑️ Delete</button>
                         </div>
                     </div>
-                    <div class="story-list-actions">
-                        <button class="info" data-action="view" data-index="${index}">👁️ View</button>
-                        <button class="warning" data-action="edit" data-index="${index}">✏️ Edit</button>
-                        <button class="danger" data-action="delete" data-index="${index}">🗑️ Delete</button>
+                    <div class="stats-simple">
+                        <div class="stat-simple">
+                            <div class="stat-title">% Known (Raw)</div>
+                            <div class="stat-value ${getStatColorClass(occPercent)}">${occPercent.toFixed(0)}%</div>
+                            <div class="stat-subtitle">characters</div>
+                        </div>
+                        <div class="stat-simple">
+                            <div class="stat-title">% Known (Unique)</div>
+                            <div class="stat-value ${getStatColorClass(uniqPercent)}">${uniqPercent.toFixed(0)}%</div>
+                            <div class="stat-subtitle">distinct chars</div>
+                        </div>
+                        <div class="stat-simple">
+                            <div class="stat-title">Learning Gap</div>
+                            <div class="stat-value ${learningGap === 0 ? 'good' : 'low'}">${learningGap}</div>
+                            <div class="stat-subtitle">chars to learn</div>
+                        </div>
                     </div>
                 `;
                 container.appendChild(item);
