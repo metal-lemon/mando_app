@@ -102,13 +102,18 @@
         <h2>📝 Step 2: Paste Text to Analyze</h2>
         <p>Paste the Chinese text you want to read (article, story, homework, etc.)</p>
         <textarea id="textInput" placeholder="Paste your Chinese text here...&#10;&#10;Example:&#10;我喜欢学习中文。今天天气很好，我去公园散步。"></textarea>
-        <div id="textPreview" class="result-text" style="display: none;"></div>
         <div class="button-group">
             <button id="analyzeBtn">🔍 Analyze Text</button>
             <button id="convertBtn" class="trad">🧹 Convert Trad → Simp</button>
             <button id="clearTextBtn" class="danger">🗑️ Clear Text</button>
             <button id="loadExampleTextBtn" class="secondary">📄 Load Example Text</button>
         </div>
+    </div>
+
+    <div id="previewSection" class="section" style="display: none;">
+        <h2>🔍 Preview</h2>
+        <p class="info-text">Traditional characters are highlighted in <span style="color: #6a1b9a; font-weight: bold;">purple</span>.</p>
+        <div id="textPreview" class="result-text"></div>
     </div>
 
     <div id="results" style="display: none;">
@@ -160,9 +165,10 @@
         }
 
         function showTextPreview(text) {
+            const previewSection = document.getElementById('previewSection');
             const preview = document.getElementById('textPreview');
             if (!text.trim()) {
-                preview.style.display = 'none';
+                previewSection.style.display = 'none';
                 return;
             }
             const escaped = escapeHtml(text);
@@ -175,7 +181,7 @@
                 }
             }
             preview.innerHTML = highlighted.replace(/\n/g, '<br>');
-            preview.style.display = 'block';
+            previewSection.style.display = 'block';
         }
 
         function convertToSimplified() {
@@ -196,7 +202,7 @@
 
             if (count > 0) {
                 textInput.value = converted;
-                document.getElementById('textPreview').style.display = 'none';
+                document.getElementById('previewSection').style.display = 'none';
                 return true;
             }
             return false;
@@ -365,7 +371,7 @@
             if (!window.mandarinState) { alert("Shared state not available."); return; }
             currentText = text;
             currentAnalysis = true;
-            document.getElementById("textPreview").style.display = "none";
+            document.getElementById("previewSection").style.display = "none";
             analyzeTextWithSet(text, window.mandarinState);
         }
 
@@ -412,7 +418,7 @@
         
         function clearText() { 
             document.getElementById("textInput").value = ""; 
-            document.getElementById("textPreview").style.display = "none";
+            document.getElementById("previewSection").style.display = "none";
             document.getElementById("results").style.display = "none"; 
         }
 
