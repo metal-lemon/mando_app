@@ -586,6 +586,15 @@
             console.log('No data/stories.json found. You can load one manually.');
             updateFileStatus('No data/stories.json found. Use "Load Story Database" to load one.', false);
         });
+
+        // Handle incoming text from other pages (e.g., Can I Read This)
+        const params = new URLSearchParams(window.location.search);
+        const incomingText = params.get('text');
+        if (incomingText) {
+            document.getElementById('storyContent').value = decodeURIComponent(incomingText);
+            updateFileStatus('Text imported from Can I Read This', true);
+            window.history.replaceState({}, '', window.location.pathname);
+        }
     </script>
 </body>
 </html>

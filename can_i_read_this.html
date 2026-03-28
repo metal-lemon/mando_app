@@ -107,6 +107,7 @@
             <button id="convertBtn" class="trad">🧹 Convert Trad → Simp</button>
             <button id="clearTextBtn" class="danger">🗑️ Clear Text</button>
             <button id="loadExampleTextBtn" class="secondary">📄 Load Example Text</button>
+            <button id="saveToStoriesBtn" class="secondary">📚 Save to Stories</button>
         </div>
     </div>
 
@@ -427,6 +428,13 @@
             updateFileStatus("Known characters saved to known_chars.json", true);
         }
 
+        function saveToStories() {
+            const text = document.getElementById("textInput").value;
+            if (!text.trim()) { alert("Please paste some text first."); return; }
+            const encoded = encodeURIComponent(text);
+            window.open(`story_library.html?text=${encoded}`, '_blank');
+        }
+
         // File input handler – load and merge
         document.getElementById("charFileInput").addEventListener("change", (e) => { 
             if (e.target.files.length && window.mandarinState) {
@@ -464,6 +472,7 @@
         document.getElementById("clearTextBtn").addEventListener("click", clearText);
         document.getElementById("loadExampleTextBtn").addEventListener("click", loadExampleText);
         document.getElementById("saveBtn").addEventListener("click", saveKnownChars);
+        document.getElementById("saveToStoriesBtn").addEventListener("click", saveToStories);
         
         // Load current state on page load
         if (window.mandarinState) {
