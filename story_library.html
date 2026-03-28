@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Story Library - Manage Your Story Database</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <script src="shared_state.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .header h1 {
+            margin: 0 0 5px 0;
+        }
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        .home-btn {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .home-btn:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+        .section {
+            background: white;
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            margin-top: 0;
+            border-bottom: 2px solid #ff6b6b;
+            padding-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #c92a2a;
+        }
+        button.secondary {
+            background-color: #4CAF50;
+        }
+        button.secondary:hover {
+            background-color: #45a049;
+        }
+        button.info {
+            background-color: #2196F3;
+        }
+        button.info:hover {
+            background-color: #0b7dda;
+        }
+        button.warning {
+            background-color: #ff9800;
+        }
+        button.warning:hover {
+            background-color: #e68a00;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #da190b;
+        }
+        .story-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        .story-list-item:hover {
+            background: #f5f5f5;
+        }
+        .story-list-info {
+            flex: 1;
+        }
+        .story-list-id {
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-right: 15px;
+        }
+        .story-list-title {
+            font-weight: bold;
+        }
+        .story-list-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .story-list-actions button {
+            margin-left: 8px;
+            padding: 5px 12px;
+            font-size: 12px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal-content {
+            background: white;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 15px;
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        input, textarea, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .file-status {
+            background-color: #e3f2fd;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .file-status.success {
+            background-color: #e8f5e9;
+            border-left-color: #4CAF50;
+        }
+        .file-status.error {
+            background-color: #ffebee;
+            border-left-color: #f44336;
+        }
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .story-list-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .story-list-actions {
+                width: 100%;
+                text-align: right;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📚 Story Library</h1>
+            <p>Manage your story database – view, add, edit, delete, and export stories</p>
+        </div>
+        <a href="index.html" class="home-btn">🏠 Home</a>
+    </div>
+
+    <div class="section">
+        <h2>📁 Story Database Management</h2>
+        <div class="button-group">
+            <input type="file" id="loadFileInput" accept=".json" style="display: none;">
+            <button id="loadStoriesBtn" class="secondary">📂 Load Story Database (stories.json)</button>
+            <button id="addStoryBtn" class="secondary">➕ Add New Story</button>
+            <button id="exportStoriesBtn" class="warning">💾 Export Database</button>
+        </div>
+        <div id="fileStatus" class="file-status">
+            No stories loaded.
+        </div>
+        <div id="storyLibraryList"></div>
+    </div>
+
+    <!-- Add/Edit Story Modal -->
+    <div id="storyFormModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="storyFormTitle">➕ Add New Story</h2>
+            <p>Characters will be automatically extracted from the content.</p>
+            <input type="hidden" id="editStoryId" value="">
+            <label>Story Title:</label>
+            <input type="text" id="storyTitle" style="width: 100%; padding: 8px; margin: 10px 0;" placeholder="e.g., The Little Prince">
+            <label>Source (optional):</label>
+            <input type="text" id="storySource" style="width: 100%; padding: 8px; margin: 10px 0;" placeholder="e.g., Children's Story, Textbook, Website">
+            <label>Story Content (Chinese text):</label>
+            <textarea id="storyContent" rows="10" style="width: 100%; padding: 8px; margin: 10px 0;" placeholder="Paste your Chinese story here..."></textarea>
+            <div id="charPreview" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 12px;"></div>
+            <div class="button-group">
+                <button id="saveStoryBtn">💾 Save Story</button>
+                <button id="cancelStoryBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stories = [];
+        let currentKnownSet = new Set(); // not used for library, but needed for analysis if we want to display stats
+
+        function updateFileStatus(message, isSuccess = false, isError = false) {
+            const div = document.getElementById("fileStatus");
+            div.textContent = message;
+            div.className = "file-status";
+            if (isSuccess) div.classList.add("success");
+            if (isError) div.classList.add("error");
+        }
+
+        function extractCharacters(text) {
+            const chineseRegex = /[\u4e00-\u9fff]/g;
+            const matches = text.match(chineseRegex);
+            if (!matches) return [];
+            return [...new Set(matches)];
+        }
+
+        function showCharPreview() {
+            const content = document.getElementById('storyContent').value;
+            const chars = extractCharacters(content);
+            const previewDiv = document.getElementById('charPreview');
+            if (chars.length > 0) {
+                previewDiv.innerHTML = `<strong>Extracted characters (${chars.length} unique):</strong><br>${chars.sort().join(' ')}`;
+            } else {
+                previewDiv.innerHTML = '<em>No Chinese characters found in this text.</em>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderLibrary() {
+            const container = document.getElementById('storyLibraryList');
+            container.innerHTML = '';
+            if (stories.length === 0) {
+                container.innerHTML = '<div class="info-text">No stories in database. Click "Add New Story" to get started.</div>';
+                return;
+            }
+            stories.forEach((story, index) => {
+                const item = document.createElement('div');
+                item.className = 'story-list-item';
+                item.innerHTML = `
+                    <div class="story-list-info">
+                        <span class="story-list-id">#${story.id}</span>
+                        <span class="story-list-title">${escapeHtml(story.title)}</span>
+                        <div class="story-list-details">
+                            Source: ${escapeHtml(story.source || 'Unknown')} | 
+                            ${story.content.length} chars | 
+                            ${story.characters ? story.characters.length : '?'} unique chars
+                        </div>
+                    </div>
+                    <div class="story-list-actions">
+                        <button class="info" data-action="view" data-index="${index}">👁️ View</button>
+                        <button class="warning" data-action="edit" data-index="${index}">✏️ Edit</button>
+                        <button class="danger" data-action="delete" data-index="${index}">🗑️ Delete</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            // Attach event listeners
+            container.querySelectorAll('[data-action="view"]').forEach(btn => {
+                btn.addEventListener('click', () => viewStory(parseInt(btn.dataset.index)));
+            });
+            container.querySelectorAll('[data-action="edit"]').forEach(btn => {
+                btn.addEventListener('click', () => editStory(parseInt(btn.dataset.index)));
+            });
+            container.querySelectorAll('[data-action="delete"]').forEach(btn => {
+                btn.addEventListener('click', () => deleteStory(parseInt(btn.dataset.index)));
+            });
+        }
+
+        function viewStory(index) {
+            const story = stories[index];
+            alert(`Title: ${story.title}\n\nContent:\n${story.content}\n\nSource: ${story.source || 'Unknown'}`);
+        }
+
+        function editStory(index) {
+            const story = stories[index];
+            document.getElementById('storyFormTitle').textContent = '✏️ Edit Story';
+            document.getElementById('editStoryId').value = index;
+            document.getElementById('storyTitle').value = story.title;
+            document.getElementById('storySource').value = story.source || '';
+            document.getElementById('storyContent').value = story.content;
+            showCharPreview();
+            document.getElementById('storyFormModal').style.display = 'block';
+        }
+
+        function deleteStory(index) {
+            if (confirm(`Are you sure you want to delete "${stories[index].title}"?`)) {
+                stories.splice(index, 1);
+                // Reassign IDs
+                stories.forEach((story, i) => { story.id = i + 1; });
+                exportStoriesToFile();
+                renderLibrary();
+                updateFileStatus(`✅ Story deleted. Database exported.`, true);
+            }
+        }
+
+        function exportStoriesToFile() {
+            if (stories.length === 0) {
+                alert('No stories to export.');
+                return false;
+            }
+            const jsonStr = JSON.stringify(stories, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'stories.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            return true;
+        }
+
+        function loadStoriesFromFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    stories = Array.isArray(data) ? data : [];
+                    renderLibrary();
+                    updateFileStatus(`✅ Loaded ${stories.length} stories successfully!`, true);
+                } catch (error) {
+                    updateFileStatus(`❌ Failed to load file: ${error.message}`, false, true);
+                }
+            };
+            reader.onerror = () => updateFileStatus("❌ Failed to read file.", false, true);
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function saveStory() {
+            const editId = document.getElementById('editStoryId').value;
+            const title = document.getElementById('storyTitle').value.trim();
+            const source = document.getElementById('storySource').value.trim();
+            const content = document.getElementById('storyContent').value;
+            if (!title || !content) {
+                alert('Please enter both a title and story content.');
+                return;
+            }
+            const characters = extractCharacters(content);
+            let nextId = 1;
+            if (stories.length > 0) {
+                const maxId = Math.max(...stories.map(s => s.id));
+                nextId = maxId + 1;
+            }
+            if (editId !== '') {
+                const index = parseInt(editId);
+                stories[index] = {
+                    ...stories[index],
+                    title: title,
+                    source: source || 'Unknown',
+                    content: content,
+                    characters: characters
+                };
+                updateFileStatus(`✅ Story updated!`, true);
+            } else {
+                const newStory = {
+                    id: nextId,
+                    title: title,
+                    source: source || 'User Added',
+                    content: content,
+                    characters: characters
+                };
+                stories.push(newStory);
+                updateFileStatus(`✅ Story added! (ID: ${nextId})`, true);
+            }
+            // Export immediately so the user can save the new file
+            exportStoriesToFile();
+            renderLibrary();
+            document.getElementById('storyFormModal').style.display = 'none';
+            clearStoryForm();
+        }
+
+        function clearStoryForm() {
+            document.getElementById('editStoryId').value = '';
+            document.getElementById('storyTitle').value = '';
+            document.getElementById('storySource').value = '';
+            document.getElementById('storyContent').value = '';
+            document.getElementById('storyFormTitle').textContent = '➕ Add New Story';
+            document.getElementById('charPreview').innerHTML = '';
+        }
+
+        // Event listeners
+        document.getElementById('loadStoriesBtn').addEventListener('click', () => {
+            const input = document.getElementById('loadFileInput');
+            input.click();
+        });
+        document.getElementById('loadFileInput').addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                loadStoriesFromFile(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+        document.getElementById('addStoryBtn').addEventListener('click', () => {
+            clearStoryForm();
+            document.getElementById('storyFormModal').style.display = 'block';
+        });
+        document.getElementById('exportStoriesBtn').addEventListener('click', () => {
+            if (stories.length) {
+                exportStoriesToFile();
+                alert('Database exported! Check your downloads folder.');
+            } else {
+                alert('No stories to export.');
+            }
+        });
+        document.getElementById('saveStoryBtn').addEventListener('click', saveStory);
+        document.getElementById('cancelStoryBtn').addEventListener('click', () => {
+            document.getElementById('storyFormModal').style.display = 'none';
+            clearStoryForm();
+        });
+        document.getElementById('storyContent').addEventListener('input', showCharPreview);
+
+        // Modal close
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('storyFormModal').style.display = 'none';
+                clearStoryForm();
+            });
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('storyFormModal')) {
+                document.getElementById('storyFormModal').style.display = 'none';
+                clearStoryForm();
+            }
+        });
+
+        // Auto-load if stories.json exists
+        fetch('stories.json').then(response => {
+            if (response.ok) return response.json();
+            throw new Error('Not found');
+        }).then(data => {
+            stories = Array.isArray(data) ? data : [];
+            renderLibrary();
+            updateFileStatus(`✅ Auto-loaded ${stories.length} stories from local file!`, true);
+        }).catch(() => {
+            console.log('No stories.json found. You can load one manually.');
+            updateFileStatus('No stories.json found. Use "Load Story Database" to load one.', false);
+        });
+    </script>
+</body>
+</html>
