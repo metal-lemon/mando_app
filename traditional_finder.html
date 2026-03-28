@@ -369,6 +369,14 @@
         document.getElementById("exportTradBtn").addEventListener("click", exportTradChars);
         document.getElementById("copyTradBtn").addEventListener("click", copyTradChars);
 
+        // Strip HTML when pasting into text input
+        document.getElementById("textInput").addEventListener('paste', (e) => {
+            e.preventDefault();
+            let text = (e.clipboardData || window.clipboardData).getData('text');
+            text = text.replace(/<[^>]*>/g, '');
+            document.execCommand('insertText', false, text);
+        });
+
         // Update preview when shared state changes
         if (window.mandarinState) {
             window.mandarinState.subscribe(() => {
