@@ -465,6 +465,25 @@
         } else {
             updateFileStatus("Shared state not available. Please ensure shared_state.js is loaded.", false, true);
         }
+
+        // Auto-load traditional character map
+        fetch('data/trad_simp_map.json').then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('No data/trad_simp_map.json found');
+        }).then(data => {
+            for (let [trad, simp] of Object.entries(data)) {
+                if (trad && simp && trad.length === 1 && simp.length === 1) {
+                    tradMap.set(trad, simp);
+                }
+            }
+            if (tradMap.size > 0) {
+                console.log(`Loaded ${tradMap.size} traditional-simplified pairs`);
+            }
+        }).catch(() => {
+            console.log('No data/trad_simp_map.json found, traditional highlighting disabled.');
+        });
     </script>
 </body>
 </html>
