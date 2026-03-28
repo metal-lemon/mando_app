@@ -54,6 +54,14 @@
         .char-tile:hover { transform: scale(1.05); }
         .char-tile.unknown { background-color: #ffcdd2; color: #c62828; }
         .char-tile.known { background-color: #c8e6c9; color: #2e7d32; }
+        .char-tile.trad { background-color: #e1bee7; color: #6a1b9a; }
+        .learning-char.trad { background-color: #e1bee7; color: #6a1b9a; }
+        .learning-char.trad:hover { background-color: #7b1fa2; color: white; }
+        .result-text .trad-highlight { background-color: #e1bee7; color: #6a1b9a; padding: 2px 4px; border-radius: 4px; font-weight: bold; text-decoration: underline; text-decoration-color: #6a1b9a; }
+        .trad-indicator { background-color: #e1bee7; border: 1px solid #6a1b9a; color: #6a1b9a; padding: 8px 15px; border-radius: 20px; font-size: 14px; margin: 10px 0; display: inline-block; }
+        button.trad { background-color: #6a1b9a; }
+        button.trad:hover { background-color: #7b1fa2; }
+        .char-count-badge.trad { background-color: #6a1b9a; }
         .progress-bar { width: 100%; height: 30px; background-color: #e0e0e0; border-radius: 15px; overflow: hidden; margin: 15px 0; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }
         .info-text { color: #666; font-style: italic; margin: 10px 0; }
@@ -94,8 +102,10 @@
         <h2>📝 Step 2: Paste Text to Analyze</h2>
         <p>Paste the Chinese text you want to read (article, story, homework, etc.)</p>
         <textarea id="textInput" placeholder="Paste your Chinese text here...&#10;&#10;Example:&#10;我喜欢学习中文。今天天气很好，我去公园散步。"></textarea>
+        <div id="textPreview" class="result-text" style="display: none;"></div>
         <div class="button-group">
             <button id="analyzeBtn">🔍 Analyze Text</button>
+            <button id="convertBtn" class="trad">🧹 Convert Trad → Simp</button>
             <button id="clearTextBtn" class="danger">🗑️ Clear Text</button>
             <button id="loadExampleTextBtn" class="secondary">📄 Load Example Text</button>
         </div>
@@ -104,6 +114,7 @@
     <div id="results" style="display: none;">
         <div class="section">
             <h2>📊 Readability Analysis</h2>
+            <div id="tradIndicator" class="trad-indicator" style="display: none;"></div>
             <div class="stats-simple">
                 <div class="stat-simple">
                     <div class="stat-title">% Known (Raw)</div>
@@ -138,9 +149,71 @@
     </div>
 
     <script>
-        let originalKnownSet = new Set(); // not used anymore, but keep for potential future
         let currentAnalysis = null;
         let currentText = "";
+        let tradMap = new Map();
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showTextPreview(text) {
+            const preview = document.getElementById('textPreview');
+            if (!text.trim()) {
+                preview.style.display = 'none';
+                return;
+            }
+            const escaped = escapeHtml(text);
+            let highlighted = escaped;
+            for (let [trad, simp] of tradMap) {
+                if (text.includes(trad)) {
+                    const escapedTrad = escapeHtml(trad);
+                    const regex = new RegExp(escapedTrad, 'g');
+                    highlighted = highlighted.replace(regex, '<span class="trad-highlight">' + escapedTrad + '</span>');
+                }
+            }
+            preview.innerHTML = highlighted.replace(/
+/g, '<br>');
+            preview.style.display = 'block';
+        }
+
+        function convertToSimplified() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value;
+            if (!text.trim()) { alert("Please paste some text first."); return false; }
+            if (tradMap.size === 0) { alert("Traditional character map not loaded."); return false; }
+
+            let converted = text;
+            let count = 0;
+            for (let [trad, simp] of tradMap) {
+                if (text.includes(trad)) {
+                    const regex = new RegExp(trad, 'g');
+                    converted = converted.replace(regex, simp);
+                    count++;
+                }
+            }
+
+            if (count > 0) {
+                textInput.value = converted;
+                document.getElementById('textPreview').style.display = 'none';
+                return true;
+            }
+            return false;
+        }
+
+        function convertAndAnalyze() {
+            const converted = convertToSimplified();
+            if (converted) {
+                analyzeText();
+            } else {
+                const text = document.getElementById("textInput").value;
+                if (text.trim()) {
+                    showTextPreview(text);
+                }
+            }
+        }
 
         function updateFileStatus(message, isSuccess = false, isError = false) {
             const statusDiv = document.getElementById("fileStatus");
@@ -172,6 +245,10 @@
             const unknownUnique = Array.from(uniqueChars).filter(ch => !state.has(ch));
             const knownUniqueCount = uniqueTotal - unknownUnique.length;
 
+            // Separate traditional from non-traditional unknowns
+            const tradUnknown = unknownUnique.filter(ch => tradMap.has(ch));
+            const nonTradUnknown = unknownUnique.filter(ch => !tradMap.has(ch));
+
             const uniquePercent = (knownUniqueCount / uniqueTotal) * 100;
             const occurrencePercent = (knownCount / totalChars) * 100;
 
@@ -194,6 +271,15 @@
             progressFill.style.width = occurrencePercent + "%";
             progressFill.textContent = occurrencePercent.toFixed(0) + "%";
 
+            // Show/hide traditional indicator
+            const tradIndicator = document.getElementById('tradIndicator');
+            if (tradUnknown.length > 0) {
+                tradIndicator.innerHTML = '📜 ' + tradUnknown.length + ' traditional character' + (tradUnknown.length > 1 ? 's' : '') + ' found (shown in purple below)';
+                tradIndicator.style.display = 'inline-block';
+            } else {
+                tradIndicator.style.display = 'none';
+            }
+
             // Advice based on unique percentage (more useful for learning)
             const advice = getReadabilityAdvice(uniquePercent);
             const adviceDiv = document.getElementById("readabilityAdvice");
@@ -210,11 +296,23 @@
             } else {
                 learningGapSection.style.display = "block";
                 learningGapBadge.textContent = unknownUnique.length;
+                if (tradUnknown.length > 0) {
+                    learningGapBadge.classList.add('trad');
+                } else {
+                    learningGapBadge.classList.remove('trad');
+                }
                 learningGapChars.innerHTML = "";
-                unknownUnique.sort().forEach(ch => {
+
+                // Show traditional chars first (purple), then non-traditional (red)
+                const allSorted = [...tradUnknown.sort(), ...nonTradUnknown.sort()];
+                allSorted.forEach(ch => {
+                    const isTrad = tradMap.has(ch);
                     const tile = document.createElement("span");
-                    tile.className = "learning-char";
+                    tile.className = "learning-char" + (isTrad ? " trad" : "");
                     tile.textContent = ch;
+                    if (isTrad) {
+                        tile.title = 'Traditional: ' + ch + ' → ' + tradMap.get(ch) + ' (simplified)';
+                    }
                     tile.addEventListener("click", () => {
                         if (!state.has(ch)) {
                             state.addCharacter(ch);
@@ -268,6 +366,7 @@
             if (!window.mandarinState) { alert("Shared state not available."); return; }
             currentText = text;
             currentAnalysis = true;
+            document.getElementById("textPreview").style.display = "none";
             analyzeTextWithSet(text, window.mandarinState);
         }
 
@@ -314,6 +413,7 @@
         
         function clearText() { 
             document.getElementById("textInput").value = ""; 
+            document.getElementById("textPreview").style.display = "none";
             document.getElementById("results").style.display = "none"; 
         }
 
@@ -339,8 +439,23 @@
         
         document.getElementById("chooseFileBtn").addEventListener("click", () => document.getElementById("charFileInput").click());
         document.getElementById("loadExampleBtn").addEventListener("click", loadExampleCharacters);
+
+        // Strip HTML on paste and show preview
+        document.getElementById("textInput").addEventListener('paste', (e) => {
+            e.preventDefault();
+            let text = (e.clipboardData || window.clipboardData).getData('text');
+            text = text.replace(/<[^>]*>/g, '');
+            document.execCommand('insertText', false, text);
+            setTimeout(() => showTextPreview(document.getElementById("textInput").value), 0);
+        });
+
+        // Update preview on input
+        document.getElementById("textInput").addEventListener('input', () => {
+            showTextPreview(document.getElementById("textInput").value);
+        });
         document.getElementById("clearCharsBtn").addEventListener("click", clearChars);
         document.getElementById("analyzeBtn").addEventListener("click", analyzeText);
+        document.getElementById("convertBtn").addEventListener("click", convertAndAnalyze);
         document.getElementById("clearTextBtn").addEventListener("click", clearText);
         document.getElementById("loadExampleTextBtn").addEventListener("click", loadExampleText);
         document.getElementById("exportUnknownBtn").addEventListener("click", exportUnknownChars);
