@@ -231,6 +231,13 @@
             <button id="addStoryBtn" class="secondary">➕ Add New Story</button>
             <button id="exportStoriesBtn" class="warning">💾 Export Database</button>
         </div>
+        <div class="info-box">
+            <strong>📤 To make your exported file the canonical version:</strong><br>
+            1. Click "Export Database" to download a backup<br>
+            2. Rename the file to <code>stories.json</code><br>
+            3. Copy it to the <code>data/</code> folder<br>
+            4. If using git: <code>git add data/stories.json && git commit -m "Update stories"</code>
+        </div>
         <div id="fileStatus" class="file-status">
             No stories loaded.
         </div>
