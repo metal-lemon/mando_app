@@ -27,14 +27,14 @@
         .char-tile:hover { transform: scale(1.05); }
         .char-tile.known { background-color: #c8e6c9; color: #2e7d32; }
         .char-tile.trad-found { background-color: #e1bee7; color: #6a1b9a; }
-        .highlight { background-color: #e1bee7; color: #6a1b9a; font-weight: bold; }
+        .highlight { background-color: #e1bee7; color: #6a1b9a; font-weight: bold; text-decoration: underline; text-decoration-color: #6a1b9a; }
         .info-text { color: #666; font-style: italic; margin: 10px 0; }
         .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
         .file-status { background-color: #e3f2fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2196F3; }
         .file-status.success { background-color: #e8f5e9; border-left-color: #4CAF50; }
         .file-status.error { background-color: #ffebee; border-left-color: #f44336; }
         .result-text { line-height: 1.6; font-size: 18px; background-color: #fafafa; padding: 15px; border-radius: 8px; margin-top: 15px; }
-        .result-text span.highlight { background-color: #e1bee7; color: #6a1b9a; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+        .result-text span.highlight { background-color: #e1bee7; color: #6a1b9a; padding: 2px 4px; border-radius: 4px; font-weight: bold; text-decoration: underline; text-decoration-color: #6a1b9a; }
         .known-badge { font-size: 12px; margin-left: 8px; color: #2e7d32; }
         .checkbox-label { display: flex; align-items: center; gap: 10px; margin: 10px 0; cursor: pointer; }
         @media (max-width: 600px) { .header { flex-direction: column; text-align: center; } }
@@ -84,8 +84,8 @@
         <div class="section">
             <h2>📊 Results</h2>
             <div id="stats" class="info-text"></div>
-            <div id="resultText" class="result-text"></div>
             <div id="tradListResult" class="char-list"></div>
+            <div id="resultText" class="result-text"></div>
             <div class="button-group">
                 <button id="exportTradBtn">💾 Export Traditional Characters</button>
                 <button id="copyTradBtn">📋 Copy Traditional Characters</button>
@@ -234,14 +234,16 @@
             const statsDiv = document.getElementById("stats");
             statsDiv.innerHTML = `Total Chinese characters: ${allChars.length}<br>Traditional characters found: ${tradChars.length}<br>Unique traditional characters: ${uniqueTrad.length}`;
 
-            // Highlight traditional in original text (purple)
-            let highlightedText = text;
+            // Highlight traditional in original text (purple) - escape first, then highlight
+            const escapedText = escapeHtml(text);
+            let highlightedText = escapedText;
             uniqueTrad.forEach(ch => {
-                const regex = new RegExp(ch, 'g');
-                highlightedText = highlightedText.replace(regex, `<span class="highlight">${ch}</span>`);
+                const escapedChar = escapeHtml(ch);
+                const regex = new RegExp(escapedChar, 'g');
+                highlightedText = highlightedText.replace(regex, `<span class="highlight">${escapedChar}</span>`);
             });
             const resultDiv = document.getElementById("resultText");
-            resultDiv.innerHTML = escapeHtml(highlightedText).replace(/\n/g, '<br>');
+            resultDiv.innerHTML = highlightedText.replace(/\n/g, '<br>');
 
             // Display unique trad list with click-to-add simplified
             const listDiv = document.getElementById("tradListResult");
