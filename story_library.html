@@ -591,8 +591,10 @@
         const params = new URLSearchParams(window.location.search);
         const incomingText = params.get('text');
         if (incomingText) {
+            clearStoryForm();
             document.getElementById('storyContent').value = decodeURIComponent(incomingText);
-            updateFileStatus('Text imported from Can I Read This', true);
+            showCharPreview();
+            document.getElementById('storyFormModal').style.display = 'block';
             window.history.replaceState({}, '', window.location.pathname);
         }
     </script>
