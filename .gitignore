@@ -1,0 +1,29 @@
+# Logs
+*.log
+server.log
+app_server.log
+
+# Data files (can be large/generated)
+data/*.json
+*.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Node (if ever used)
+node_modules/
+package-lock.json
+
+# Local settings
+.env
+.env.local
