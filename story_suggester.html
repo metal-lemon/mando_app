@@ -628,7 +628,7 @@
             if (response.ok) {
                 return response.json();
             }
-            throw new Error('No stories.json found');
+            throw new Error('No data/stories.json found');
         }).then(data => {
             stories = Array.isArray(data) ? data : [];
             document.getElementById('storyStatus').innerHTML = `✅ Loaded ${stories.length} stories from data/stories.json!`;

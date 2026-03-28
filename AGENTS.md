@@ -280,3 +280,10 @@ button.secondary:hover {
 
 ### Modify data folder location
 Update all `fetch()` calls and file download paths. Default is `data/` for dictionary and stories.
+
+### File Location Conventions
+- **Canonical location for stories**: `data/stories.json`
+- **Canonical location for dictionary**: `data/dictionary.json`
+- **Canonical location for character data**: `data/trad_simp_map.json`
+- When exporting, use timestamped backup filenames (e.g., `stories_backup_2026-03-28.json`)
+- All pages should read from `data/stories.json` - do not use root-level `stories.json`

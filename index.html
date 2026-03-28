@@ -447,7 +447,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'stories.json';
+        a.download = `stories_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -480,7 +480,7 @@
     fetch('data/stories.json').then(r => r.ok ? r.json() : null).then(data => {
         if (data && Array.isArray(data)) {
             storyDatabase = data;
-            console.log(`Loaded ${storyDatabase.length} stories from canonical file.`);
+            console.log(`Loaded ${storyDatabase.length} stories from data/stories.json.`);
         }
     }).catch(() => {});
 </script>

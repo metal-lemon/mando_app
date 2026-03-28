@@ -227,7 +227,7 @@
         <h2>📁 Story Database Management</h2>
         <div class="button-group">
             <input type="file" id="loadFileInput" accept=".json" style="display: none;">
-            <button id="loadStoriesBtn" class="secondary">📂 Load Story Database (stories.json)</button>
+            <button id="loadStoriesBtn" class="secondary">📂 Load Story Database (data/stories.json)</button>
             <button id="addStoryBtn" class="secondary">➕ Add New Story</button>
             <button id="exportStoriesBtn" class="warning">💾 Export Database</button>
         </div>
@@ -371,7 +371,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'stories.json';
+            a.download = `stories_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
             a.click();
             URL.revokeObjectURL(url);
             return true;
@@ -490,16 +490,16 @@
         });
 
         // Auto-load if stories.json exists
-        fetch('stories.json').then(response => {
+        fetch('data/stories.json').then(response => {
             if (response.ok) return response.json();
             throw new Error('Not found');
         }).then(data => {
             stories = Array.isArray(data) ? data : [];
             renderLibrary();
-            updateFileStatus(`✅ Auto-loaded ${stories.length} stories from local file!`, true);
+            updateFileStatus(`✅ Auto-loaded ${stories.length} stories from data/stories.json!`, true);
         }).catch(() => {
-            console.log('No stories.json found. You can load one manually.');
-            updateFileStatus('No stories.json found. Use "Load Story Database" to load one.', false);
+            console.log('No data/stories.json found. You can load one manually.');
+            updateFileStatus('No data/stories.json found. Use "Load Story Database" to load one.', false);
         });
     </script>
 </body>
