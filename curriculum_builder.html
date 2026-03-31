@@ -116,12 +116,26 @@
         }
 
         function loadStories() {
-            return fetch('data/stories.json').then(response => {
-                if (!response.ok) throw new Error('stories.json not found');
-                return response.json();
-            }).then(data => {
-                stories = Array.isArray(data) ? data : [];
-                console.log(`Loaded ${stories.length} stories`);
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Timeout loading stories (file may be too large)'));
+                }, 30000);
+
+                fetch('data/stories.json')
+                    .then(response => {
+                        clearTimeout(timeout);
+                        if (!response.ok) throw new Error('stories.json not found');
+                        return response.json();
+                    })
+                    .then(data => {
+                        stories = Array.isArray(data) ? data : [];
+                        console.log(`Loaded ${stories.length} stories`);
+                        resolve(stories);
+                    })
+                    .catch(err => {
+                        clearTimeout(timeout);
+                        reject(err);
+                    });
             });
         }
 
