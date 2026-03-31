@@ -119,12 +119,12 @@
             return new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     reject(new Error('Timeout loading stories (file may be too large)'));
-                }, 30000);
+                }, 60000);
 
-                fetch('data/stories.json')
+                fetch('data/stories_data.json')
                     .then(response => {
                         clearTimeout(timeout);
-                        if (!response.ok) throw new Error('stories.json not found');
+                        if (!response.ok) throw new Error('stories_data.json not found');
                         return response.json();
                     })
                     .then(data => {
@@ -145,15 +145,14 @@
             let bestJumpsize = Infinity;
 
             for (const story of stories) {
-                const storyChars = new Set(extractCharacters(story.content));
+                const storyChars = new Set(story.characters || []);
                 const newChars = [...storyChars].filter(c => !knownSet.has(c));
-                const newCharSet = new Set(newChars);
                 const targetCovered = newChars.filter(c => remainingTargets.has(c));
                 const jumpsize = newChars.length;
 
                 if (jumpsize >= minSize && jumpsize <= maxSize && targetCovered.length > 0) {
                     const score = targetCovered.length * 1000 - jumpsize;
-                    if (score > bestScore || (score === bestScore && storyChars.size > (bestStory ? new Set(extractCharacters(bestStory.content)).size : 0))) {
+                    if (score > bestScore || (score === bestScore && storyChars.size > (bestStory ? new Set(bestStory.characters || []).size : 0))) {
                         bestScore = score;
                         bestStory = story;
                         bestJumpsize = jumpsize;
@@ -177,7 +176,7 @@
                 for (let minSize = 1; minSize <= 5; minSize++) {
                     const result = findStoryForStep(currentKnown, remainingTargets, minSize, 5);
                     if (result) {
-                        const storyChars = new Set(extractCharacters(result.story.content));
+                        const storyChars = new Set(result.story.characters || []);
                         const newChars = [...storyChars].filter(c => !currentKnown.has(c));
                         const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
                         const jumpsize = newChars.length;
@@ -208,7 +207,7 @@
                     for (let size = 6; size <= maxJumpsize; size += 5) {
                         const result = findStoryForStep(currentKnown, remainingTargets, 1, size);
                         if (result) {
-                            const storyChars = new Set(extractCharacters(result.story.content));
+                            const storyChars = new Set(result.story.characters || []);
                             const newChars = [...storyChars].filter(c => !currentKnown.has(c));
                             const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
                             const jumpsize = newChars.length;
