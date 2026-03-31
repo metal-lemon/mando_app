@@ -156,19 +156,24 @@
                     reject(new Error('Timeout loading stories (file may be too large)'));
                 }, 60000);
 
+                console.log('Fetching stories_data.json...');
                 fetch('data/stories_data.json')
                     .then(response => {
+                        console.log('Response received:', response.status, response.statusText);
                         clearTimeout(timeout);
-                        if (!response.ok) throw new Error('stories_data.json not found');
+                        if (!response.ok) throw new Error(`stories_data.json not found (${response.status})`);
                         return response.json();
                     })
                     .then(data => {
+                        console.log('JSON parsed, type:', typeof data);
+                        if (!data) throw new Error('Empty response from stories_data.json');
                         stories = Array.isArray(data) ? data : [];
                         console.log(`Loaded ${stories.length} stories`);
                         resolve(stories);
                     })
                     .catch(err => {
                         clearTimeout(timeout);
+                        console.error('Load error:', err);
                         reject(err);
                     });
             });
@@ -290,7 +295,8 @@
                     title: savedStory ? savedStory.title : 'Target Text',
                     content: targetText,
                     jumpsize: 0,
-                    remainder: 0
+                    remainder: 0,
+                    targetCharsCovered: []
                 });
             }
 
@@ -322,9 +328,9 @@
             resultsSection.style.display = 'block';
 
             const totalSteps = result.lessons.filter(l => l.jumpsize > 0).length;
-            const totalNewChars = result.lessons.reduce((sum, l) => sum + l.jumpsize, 0);
+            const totalNewChars = result.lessons.reduce((sum, l) => sum + (l.jumpsize || 0), 0);
             const targetUnknowns = result.lessons.length > 0 ? result.lessons[0].remainder + 
-                result.lessons.reduce((sum, l) => sum + l.targetCharsCovered.length, 0) : 0;
+                result.lessons.reduce((sum, l) => sum + (l.targetCharsCovered?.length || 0), 0) : 0;
 
             pathSummary.textContent = `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns`;
 
