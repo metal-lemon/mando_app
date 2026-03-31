@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Curriculum Builder - Learning Path Generator</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y=".9em" font-size="90">📚</text></svg>">
     <script src="shared_state.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
@@ -41,6 +41,18 @@
         .error-box h3 { margin: 0 0 10px 0; color: #c62828; }
         .char-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
         .char-tile { background-color: #e0e7ff; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-family: monospace; }
+        .step-section { background: #f0f4ff; border: 2px solid #667eea; border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .step-section h3 { margin: 0 0 10px 0; color: #667eea; }
+        .saved-story-badge { background: #4CAF50; color: white; padding: 5px 12px; border-radius: 15px; font-size: 14px; display: inline-block; margin-bottom: 10px; }
+        /* Modal styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 10% auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .modal-content h2 { margin-top: 0; color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        .modal-content label { display: block; margin: 15px 0 5px 0; font-weight: bold; color: #333; }
+        .modal-content input[type="text"] { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .modal-content input[type="text"]:focus { outline: none; border-color: #667eea; }
+        .close-modal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-modal:hover { color: #000; }
         @media (max-width: 600px) { body { padding: 10px; } .header { flex-direction: column; text-align: center; } .lesson-item { flex-direction: column; align-items: flex-start; } }
     </style>
 </head>
@@ -57,19 +69,25 @@
         <h2>📝 Step 1: Your Target Text</h2>
         <p>Paste the Chinese text you want to learn to read.</p>
         <textarea id="targetText" placeholder="Paste your target Chinese text here...&#10;&#10;Example:&#10;我想学习中文，今天天气很好。"></textarea>
+        <div id="savedStoryBadge" class="saved-story-badge" style="display: none;"></div>
+        <div class="button-group">
+            <button id="saveToLibraryBtn">💾 Save to Library</button>
+            <button id="loadExampleBtn" class="secondary">📄 Load Example</button>
+            <button id="clearBtn" class="danger">🗑️ Clear</button>
+        </div>
+        <div id="targetStatus" class="file-status">
+            Enter your target text above and save to library to begin.
+        </div>
+    </div>
+
+    <div id="step2Section" class="step-section" style="display: none;">
+        <h3>🎯 Step 2: Build Your Plan</h3>
         <div class="checkbox-group">
             <input type="checkbox" id="remainderPermitted">
             <label for="remainderPermitted">Remainder permitted</label>
             <span class="info-text">(OFF = all target characters must be covered by story chain)</span>
         </div>
-        <div class="button-group">
-            <button id="generateBtn">🎯 Generate Learning Path</button>
-            <button id="loadExampleBtn" class="secondary">📄 Load Example</button>
-            <button id="clearBtn" class="danger">🗑️ Clear</button>
-        </div>
-        <div id="targetStatus" class="file-status">
-            Enter your target text above and click Generate Learning Path.
-        </div>
+        <button id="generateBtn" class="secondary">🎯 Build plan to read: <span id="targetTitleDisplay"></span></button>
     </div>
 
     <div id="resultsSection" class="section" style="display: none;">
@@ -77,7 +95,6 @@
         <div id="pathSummary" class="info-text"></div>
         <ul id="lessonList" class="lesson-list"></ul>
         <div class="button-group">
-            <button id="addToLibraryBtn" class="secondary">📚 Add to Library</button>
             <button id="exportBtn">💾 Export JSON</button>
         </div>
     </div>
@@ -90,8 +107,26 @@
         </div>
     </div>
 
+    <!-- Save to Library Modal -->
+    <div id="saveModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>💾 Save Target to Library</h2>
+            <p class="info-text">Enter a title and source for your target text. This will be saved so you can track your progress.</p>
+            <label for="storyTitle">Title (required):</label>
+            <input type="text" id="storyTitle" placeholder="e.g., My Target Article">
+            <label for="storySource">Source (optional):</label>
+            <input type="text" id="storySource" placeholder="e.g., Textbook, Website, Article">
+            <div class="button-group" style="margin-top: 20px;">
+                <button id="confirmSaveBtn">💾 Save</button>
+                <button id="cancelSaveBtn" class="danger">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let stories = [];
+        let savedStory = null;
         let curriculum = null;
 
         function escapeHtml(text) {
@@ -252,7 +287,7 @@
             if (remainderPermitted || remainingTargets.size === 0) {
                 lessons.push({
                     step: '🎉',
-                    title: 'Target Text',
+                    title: savedStory ? savedStory.title : 'Target Text',
                     content: targetText,
                     jumpsize: 0,
                     remainder: 0
@@ -318,6 +353,7 @@
 
             curriculum = {
                 target: document.getElementById('targetText').value,
+                targetTitle: savedStory ? savedStory.title : 'Unknown',
                 targetUnknowns: targetUnknowns,
                 remainderPermitted: document.getElementById('remainderPermitted').checked,
                 lessons: result.lessons
@@ -356,23 +392,62 @@
         function loadExample() {
             const example = '我想学习中文，今天天气很好，我们去公园散步，看见了很多人在跑步。';
             document.getElementById('targetText').value = example;
-            updateTargetStatus('Example loaded. Click Generate Learning Path.', true);
+            document.getElementById('storyTitle').value = '我的目标文章';
+            document.getElementById('storySource').value = 'Example';
+            updateTargetStatus('Example loaded. Fill in the title and click "Save to Library".', true);
         }
 
         function clearAll() {
             document.getElementById('targetText').value = '';
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('step2Section').style.display = 'none';
+            document.getElementById('savedStoryBadge').style.display = 'none';
             document.getElementById('remainderPermitted').checked = false;
-            updateTargetStatus('Enter your target text above and click Generate Learning Path.');
+            savedStory = null;
             curriculum = null;
+            updateTargetStatus('Enter your target text above and save to library to begin.');
         }
 
-        function addToLibrary() {
-            if (!curriculum) return;
-            const targetText = curriculum.target;
-            const encoded = encodeURIComponent(targetText);
-            window.open(`story_library.html?text=${encoded}`, '_blank');
+        function openSaveModal() {
+            const targetText = document.getElementById('targetText').value.trim();
+            if (!targetText) {
+                updateTargetStatus('Please enter a target text first.', false, true);
+                return;
+            }
+            document.getElementById('saveModal').style.display = 'block';
+            document.getElementById('storyTitle').focus();
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').style.display = 'none';
+        }
+
+        function confirmSave() {
+            const title = document.getElementById('storyTitle').value.trim();
+            const source = document.getElementById('storySource').value.trim();
+            const content = document.getElementById('targetText').value.trim();
+
+            if (!title) {
+                alert('Please enter a title for your target text.');
+                return;
+            }
+
+            savedStory = {
+                id: Date.now(),
+                title: title,
+                source: source || 'User Target',
+                content: content,
+                characters: extractCharacters(content)
+            };
+
+            document.getElementById('savedStoryBadge').textContent = `✓ Saved: ${title}`;
+            document.getElementById('savedStoryBadge').style.display = 'inline-block';
+            document.getElementById('targetTitleDisplay').textContent = title;
+            document.getElementById('step2Section').style.display = 'block';
+            
+            closeSaveModal();
+            updateTargetStatus(`Target saved as "${title}". Click "Build plan" to generate your learning path.`, true);
         }
 
         function exportJSON() {
@@ -387,14 +462,33 @@
             URL.revokeObjectURL(url);
         }
 
+        // Event listeners
+        document.getElementById('saveToLibraryBtn').addEventListener('click', openSaveModal);
         document.getElementById('generateBtn').addEventListener('click', generatePath);
         document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
         document.getElementById('clearBtn').addEventListener('click', clearAll);
-        document.getElementById('addToLibraryBtn').addEventListener('click', addToLibrary);
         document.getElementById('exportBtn').addEventListener('click', exportJSON);
 
+        // Modal event listeners
+        document.getElementById('confirmSaveBtn').addEventListener('click', confirmSave);
+        document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveModal);
+        document.querySelector('.close-modal').addEventListener('click', closeSaveModal);
+        window.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('saveModal')) {
+                closeSaveModal();
+            }
+        });
+
+        // Enter key in modal
+        document.getElementById('storyTitle').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('storySource').focus();
+        });
+        document.getElementById('storySource').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') confirmSave();
+        });
+
         if (window.mandarinState) {
-            updateTargetStatus(`You know ${window.mandarinState.getCount()} characters. Enter target text and generate path.`, true);
+            updateTargetStatus(`You know ${window.mandarinState.getCount()} characters. Enter target text and save to library.`, true);
         }
     </script>
 </body>
