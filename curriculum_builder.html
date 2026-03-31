@@ -22,6 +22,8 @@
         button.secondary:hover { background-color: #38a169; }
         button.danger { background-color: #f56565; }
         button.danger:hover { background-color: #e53e3e; }
+        button.success { background-color: #4CAF50; }
+        button.success:hover { background-color: #45a049; }
         .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
         .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; }
@@ -44,6 +46,19 @@
         .step-section { background: #f0f4ff; border: 2px solid #667eea; border-radius: 10px; padding: 15px; margin: 15px 0; }
         .step-section h3 { margin: 0 0 10px 0; color: #667eea; }
         .saved-story-badge { background: #4CAF50; color: white; padding: 5px 12px; border-radius: 15px; font-size: 14px; display: inline-block; margin-bottom: 10px; }
+        /* Setup section */
+        .setup-section { background: white; margin-bottom: 25px; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 2px solid #667eea; }
+        .setup-section h2 { margin-top: 0; color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .setup-status { font-size: 20px; }
+        .setup-status.success { color: #4CAF50; }
+        .setup-status.error { color: #f44336; }
+        .check-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .check-item:last-child { border-bottom: none; }
+        .check-icon { margin-right: 10px; }
+        .check-icon.success { color: #4CAF50; }
+        .check-icon.error { color: #f44336; }
+        .check-icon.warning { color: #FF9800; }
+        .check-icon.info { color: #2196F3; }
         /* Modal styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: white; margin: 10% auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
@@ -53,6 +68,8 @@
         .modal-content input[type="text"]:focus { outline: none; border-color: #667eea; }
         .close-modal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-modal:hover { color: #000; }
+        .setup-step { margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+        .setup-step strong { color: #667eea; }
         @media (max-width: 600px) { body { padding: 10px; } .header { flex-direction: column; text-align: center; } .lesson-item { flex-direction: column; align-items: flex-start; } }
     </style>
 </head>
@@ -66,6 +83,11 @@
     </div>
 
     <div class="section">
+        <h2>🔧 Setup <span id="setupStatusIcon" class="setup-status">❌</span></h2>
+        <button id="setupBtn" class="secondary">🔧 Setup</button>
+    </div>
+
+    <div class="section">
         <h2>📝 Step 1: Your Target Text</h2>
         <p>Paste the Chinese text you want to learn to read.</p>
         <textarea id="targetText" placeholder="Paste your target Chinese text here...&#10;&#10;Example:&#10;我想学习中文，今天天气很好。"></textarea>
@@ -76,7 +98,7 @@
             <button id="clearBtn" class="danger">🗑️ Clear</button>
         </div>
         <div id="targetStatus" class="file-status">
-            Enter your target text above and save to library to begin.
+            Run Setup first to prepare the story library.
         </div>
     </div>
 
@@ -110,7 +132,7 @@
     <!-- Save to Library Modal -->
     <div id="saveModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <span class="close-modal" data-modal="saveModal">&times;</span>
             <h2>💾 Save Target to Library</h2>
             <p class="info-text">Enter a title and source for your target text. This will be saved so you can track your progress.</p>
             <label for="storyTitle">Title (required):</label>
@@ -124,10 +146,40 @@
         </div>
     </div>
 
+    <!-- Setup Modal -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-modal="setupModal">&times;</span>
+            <h2>🔧 Setup Instructions</h2>
+            <p>This will set up the files needed for the Curriculum Builder to work efficiently.</p>
+            
+            <div class="setup-step">
+                <strong>Step 1:</strong> Create a folder called <code>user_data</code> in your project root directory (same level as <code>data/</code> folder).
+            </div>
+            
+            <div class="setup-step">
+                <strong>Step 2:</strong> Click the download button below and save the file to the <code>user_data</code> folder.
+            </div>
+            
+            <div class="setup-step">
+                <strong>File location:</strong> <code>user_data/stories_data.json</code>
+            </div>
+            
+            <button id="downloadStoriesDataBtn" class="secondary">📥 Download stories_data.json</button>
+            
+            <div id="setupCheckResults" style="margin-top: 20px;"></div>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button id="closeSetupBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let stories = [];
         let savedStory = null;
         let curriculum = null;
+        let setupComplete = false;
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -150,30 +202,111 @@
             if (isError) statusDiv.classList.add('error');
         }
 
+        function updateSetupStatusIcon(success) {
+            const icon = document.getElementById('setupStatusIcon');
+            if (success) {
+                icon.textContent = '✅';
+                icon.className = 'setup-status success';
+            } else {
+                icon.textContent = '❌';
+                icon.className = 'setup-status error';
+            }
+        }
+
+        async function runSetupCheck() {
+            const results = [];
+            
+            // Check user_data/stories_data.json
+            try {
+                const response = await fetch('user_data/stories_data.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        results.push({ icon: '✅', text: `user_data/stories_data.json - Found (${data.length} stories)`, type: 'success' });
+                    } else {
+                        results.push({ icon: '❌', text: 'user_data/stories_data.json - Invalid (empty or wrong format)', type: 'error' });
+                    }
+                } else {
+                    results.push({ icon: '❌', text: 'user_data/stories_data.json - Missing', type: 'error' });
+                }
+            } catch (e) {
+                results.push({ icon: '❌', text: 'user_data/stories_data.json - Missing or error loading', type: 'error' });
+            }
+            
+            // Check data/stories.json (source)
+            try {
+                const response = await fetch('data/stories.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = Array.isArray(data) ? data.length : 0;
+                    results.push({ icon: 'ℹ️', text: `data/stories.json - Found (${count} stories, source file)`, type: 'info' });
+                } else {
+                    results.push({ icon: '⚠️', text: 'data/stories.json - Not found', type: 'warning' });
+                }
+            } catch (e) {
+                results.push({ icon: '⚠️', text: 'data/stories.json - Not found', type: 'warning' });
+            }
+            
+            // Check target story (session)
+            if (savedStory) {
+                results.push({ icon: 'ℹ️', text: `Target: "${savedStory.title}" (saved)`, type: 'info' });
+            } else {
+                results.push({ icon: 'ℹ️', text: 'Target: Not saved', type: 'info' });
+            }
+            
+            // Check known characters
+            if (window.mandarinState) {
+                const count = window.mandarinState.getCount();
+                results.push({ icon: 'ℹ️', text: `Known characters: ${count}`, type: 'info' });
+            } else {
+                results.push({ icon: 'ℹ️', text: 'Known characters: 0 (shared state not loaded)', type: 'info' });
+            }
+            
+            // Render results
+            const resultsDiv = document.getElementById('setupCheckResults');
+            resultsDiv.innerHTML = results.map(r => 
+                `<div class="check-item"><span class="check-icon ${r.type}">${r.icon}</span>${r.text}</div>`
+            ).join('');
+            
+            // Check if setup is complete (stories_data.json found)
+            const storiesDataOk = results.some(r => r.type === 'success' && r.text.includes('stories_data.json'));
+            setupComplete = storiesDataOk;
+            updateSetupStatusIcon(setupComplete);
+            
+            if (storiesDataOk) {
+                resultsDiv.innerHTML += '<div class="check-item" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #4CAF50;"><span class="check-icon success">✅</span><strong>Setup complete - Curriculum Builder is ready!</strong></div>';
+            } else {
+                resultsDiv.innerHTML += '<div class="check-item" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #f44336;"><span class="check-icon error">❌</span><strong>Setup required - Download stories_data.json to user_data/ folder</strong></div>';
+            }
+            
+            return setupComplete;
+        }
+
         function loadStories() {
             return new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
-                    reject(new Error('Timeout loading stories (file may be too large)'));
+                    reject(new Error('Timeout loading stories'));
                 }, 60000);
 
-                console.log('Fetching stories_data.json...');
-                fetch('data/stories_data.json')
+                fetch('user_data/stories_data.json')
                     .then(response => {
-                        console.log('Response received:', response.status, response.statusText);
                         clearTimeout(timeout);
-                        if (!response.ok) throw new Error(`stories_data.json not found (${response.status})`);
+                        if (!response.ok) throw new Error('user_data/stories_data.json not found');
                         return response.json();
                     })
                     .then(data => {
-                        console.log('JSON parsed, type:', typeof data);
-                        if (!data) throw new Error('Empty response from stories_data.json');
-                        stories = Array.isArray(data) ? data : [];
+                        if (!data || !Array.isArray(data)) throw new Error('Invalid stories_data.json format');
+                        stories = data;
+                        // Convert characters from string to array if needed
+                        stories = stories.map(s => ({
+                            ...s,
+                            characters: typeof s.characters === 'string' ? s.characters.split('') : (s.characters || [])
+                        }));
                         console.log(`Loaded ${stories.length} stories`);
                         resolve(stories);
                     })
                     .catch(err => {
                         clearTimeout(timeout);
-                        console.error('Load error:', err);
                         reject(err);
                     });
             });
@@ -185,14 +318,14 @@
             let bestJumpsize = Infinity;
 
             for (const story of stories) {
-                const storyChars = new Set(story.characters || []);
+                const storyChars = new Set(Array.isArray(story.characters) ? story.characters : []);
                 const newChars = [...storyChars].filter(c => !knownSet.has(c));
                 const targetCovered = newChars.filter(c => remainingTargets.has(c));
                 const jumpsize = newChars.length;
 
                 if (jumpsize >= minSize && jumpsize <= maxSize && targetCovered.length > 0) {
                     const score = targetCovered.length * 1000 - jumpsize;
-                    if (score > bestScore || (score === bestScore && storyChars.size > (bestStory ? new Set(bestStory.characters || []).size : 0))) {
+                    if (score > bestScore || (score === bestScore && storyChars.size > (bestStory ? new Set(Array.isArray(bestStory.characters) ? bestStory.characters : []).size : 0))) {
                         bestScore = score;
                         bestStory = story;
                         bestJumpsize = jumpsize;
@@ -216,7 +349,7 @@
                 for (let minSize = 1; minSize <= 5; minSize++) {
                     const result = findStoryForStep(currentKnown, remainingTargets, minSize, 5);
                     if (result) {
-                        const storyChars = new Set(result.story.characters || []);
+                        const storyChars = new Set(Array.isArray(result.story.characters) ? result.story.characters : []);
                         const newChars = [...storyChars].filter(c => !currentKnown.has(c));
                         const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
                         const jumpsize = newChars.length;
@@ -247,7 +380,7 @@
                     for (let size = 6; size <= maxJumpsize; size += 5) {
                         const result = findStoryForStep(currentKnown, remainingTargets, 1, size);
                         if (result) {
-                            const storyChars = new Set(result.story.characters || []);
+                            const storyChars = new Set(Array.isArray(result.story.characters) ? result.story.characters : []);
                             const newChars = [...storyChars].filter(c => !currentKnown.has(c));
                             const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
                             const jumpsize = newChars.length;
@@ -373,6 +506,11 @@
                 return;
             }
 
+            if (!setupComplete) {
+                updateTargetStatus('Please run Setup first to download stories_data.json to user_data/', false, true);
+                return;
+            }
+
             const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
             const remainderPermitted = document.getElementById('remainderPermitted').checked;
 
@@ -412,7 +550,7 @@
             document.getElementById('remainderPermitted').checked = false;
             savedStory = null;
             curriculum = null;
-            updateTargetStatus('Enter your target text above and save to library to begin.');
+            updateTargetStatus('Run Setup first to prepare the story library.');
         }
 
         function openSaveModal() {
@@ -427,6 +565,19 @@
 
         function closeSaveModal() {
             document.getElementById('saveModal').style.display = 'none';
+        }
+
+        function openSetupModal() {
+            document.getElementById('setupModal').style.display = 'block';
+            runSetupCheck();
+        }
+
+        function closeSetupModal() {
+            document.getElementById('setupModal').style.display = 'none';
+            // Re-run check to update icon
+            if (setupComplete) {
+                updateSetupStatusIcon(true);
+            }
         }
 
         function confirmSave() {
@@ -456,6 +607,26 @@
             updateTargetStatus(`Target saved as "${title}". Click "Build plan" to generate your learning path.`, true);
         }
 
+        function downloadStoriesData() {
+            // Download stories_data.json from data/ folder
+            fetch('data/stories_data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error('File not found');
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'stories_data.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                })
+                .catch(err => {
+                    alert('Error: Could not download stories_data.json.\n\nMake sure it exists in the data/ folder.');
+                });
+        }
+
         function exportJSON() {
             if (!curriculum) return;
             const jsonStr = JSON.stringify(curriculum, null, 2);
@@ -469,20 +640,30 @@
         }
 
         // Event listeners
+        document.getElementById('setupBtn').addEventListener('click', openSetupModal);
         document.getElementById('saveToLibraryBtn').addEventListener('click', openSaveModal);
         document.getElementById('generateBtn').addEventListener('click', generatePath);
         document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
         document.getElementById('clearBtn').addEventListener('click', clearAll);
         document.getElementById('exportBtn').addEventListener('click', exportJSON);
+        document.getElementById('downloadStoriesDataBtn').addEventListener('click', downloadStoriesData);
 
         // Modal event listeners
         document.getElementById('confirmSaveBtn').addEventListener('click', confirmSave);
         document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveModal);
-        document.querySelector('.close-modal').addEventListener('click', closeSaveModal);
+        document.getElementById('closeSetupBtn').addEventListener('click', closeSetupModal);
+        
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.getAttribute('data-modal');
+                if (modalId === 'saveModal') closeSaveModal();
+                if (modalId === 'setupModal') closeSetupModal();
+            });
+        });
+        
         window.addEventListener('click', (e) => {
-            if (e.target === document.getElementById('saveModal')) {
-                closeSaveModal();
-            }
+            if (e.target.id === 'saveModal') closeSaveModal();
+            if (e.target.id === 'setupModal') closeSetupModal();
         });
 
         // Enter key in modal
@@ -493,9 +674,8 @@
             if (e.key === 'Enter') confirmSave();
         });
 
-        if (window.mandarinState) {
-            updateTargetStatus(`You know ${window.mandarinState.getCount()} characters. Enter target text and save to library.`, true);
-        }
+        // Initial setup check
+        runSetupCheck();
     </script>
 </body>
 </html>
