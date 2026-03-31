@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Curriculum Builder - Learning Path Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <script src="shared_state.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header h1 { margin: 0 0 5px 0; }
+        .header p { margin: 0; opacity: 0.9; }
+        .home-btn { background-color: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; transition: background-color 0.3s; }
+        .home-btn:hover { background-color: rgba(255,255,255,0.3); }
+        .section { background: white; margin-bottom: 25px; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section h2 { margin-top: 0; color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        textarea { width: 100%; max-width: 100%; min-height: 150px; padding: 12px; font-size: 16px; font-family: monospace; border: 2px solid #ddd; border-radius: 8px; resize: vertical; margin: 10px 0; }
+        textarea:focus { outline: none; border-color: #667eea; }
+        button { background-color: #667eea; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 5px; transition: background-color 0.3s; }
+        button:hover { background-color: #5a67d8; }
+        button.secondary { background-color: #48bb78; }
+        button.secondary:hover { background-color: #38a169; }
+        button.danger { background-color: #f56565; }
+        button.danger:hover { background-color: #e53e3e; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
+        .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; }
+        .file-status { background-color: #e3f2fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2196F3; }
+        .file-status.success { background-color: #e8f5e9; border-left-color: #4CAF50; }
+        .file-status.error { background-color: #ffebee; border-left-color: #f44336; }
+        .lesson-list { list-style: none; padding: 0; margin: 0; }
+        .lesson-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; }
+        .lesson-item.final { background: #e8f5e9; border-color: #4CAF50; }
+        .lesson-number { font-size: 18px; font-weight: bold; color: #667eea; min-width: 30px; }
+        .lesson-item.final .lesson-number { font-size: 24px; }
+        .lesson-title { flex: 1; font-size: 16px; font-weight: bold; }
+        .lesson-stats { font-size: 16px; color: #666; min-width: 80px; text-align: right; }
+        .lesson-stats .remainder { color: #f44336; }
+        .info-text { color: #666; font-style: italic; margin: 10px 0; }
+        .error-box { background-color: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 15px; margin: 15px 0; }
+        .error-box h3 { margin: 0 0 10px 0; color: #c62828; }
+        .char-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .char-tile { background-color: #e0e7ff; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-family: monospace; }
+        @media (max-width: 600px) { body { padding: 10px; } .header { flex-direction: column; text-align: center; } .lesson-item { flex-direction: column; align-items: flex-start; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📚 Curriculum Builder</h1>
+            <p>Generate a learning path from your target text using the story library</p>
+        </div>
+        <a href="index.html" class="home-btn">🏠 Home</a>
+    </div>
+
+    <div class="section">
+        <h2>📝 Step 1: Your Target Text</h2>
+        <p>Paste the Chinese text you want to learn to read.</p>
+        <textarea id="targetText" placeholder="Paste your target Chinese text here...&#10;&#10;Example:&#10;我想学习中文，今天天气很好。"></textarea>
+        <div class="checkbox-group">
+            <input type="checkbox" id="remainderPermitted">
+            <label for="remainderPermitted">Remainder permitted</label>
+            <span class="info-text">(OFF = all target characters must be covered by story chain)</span>
+        </div>
+        <div class="button-group">
+            <button id="generateBtn">🎯 Generate Learning Path</button>
+            <button id="loadExampleBtn" class="secondary">📄 Load Example</button>
+            <button id="clearBtn" class="danger">🗑️ Clear</button>
+        </div>
+        <div id="targetStatus" class="file-status">
+            Enter your target text above and click Generate Learning Path.
+        </div>
+    </div>
+
+    <div id="resultsSection" class="section" style="display: none;">
+        <h2>📖 Learning Path</h2>
+        <div id="pathSummary" class="info-text"></div>
+        <ul id="lessonList" class="lesson-list"></ul>
+        <div class="button-group">
+            <button id="addToLibraryBtn" class="secondary">📚 Add to Library</button>
+            <button id="exportBtn">💾 Export JSON</button>
+        </div>
+    </div>
+
+    <div id="errorSection" class="section" style="display: none;">
+        <div class="error-box">
+            <h3>❌ Cannot Build Learning Path</h3>
+            <p id="errorMessage"></p>
+            <div id="unreachableChars"></div>
+        </div>
+    </div>
+
+    <script>
+        let stories = [];
+        let curriculum = null;
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function extractCharacters(text) {
+            const chineseRegex = /[\u4e00-\u9fff]/g;
+            const matches = text.match(chineseRegex);
+            if (!matches) return [];
+            return [...new Set(matches)];
+        }
+
+        function updateTargetStatus(message, isSuccess = false, isError = false) {
+            const statusDiv = document.getElementById('targetStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = 'file-status';
+            if (isSuccess) statusDiv.classList.add('success');
+            if (isError) statusDiv.classList.add('error');
+        }
+
+        function loadStories() {
+            return fetch('data/stories.json').then(response => {
+                if (!response.ok) throw new Error('stories.json not found');
+                return response.json();
+            }).then(data => {
+                stories = Array.isArray(data) ? data : [];
+                console.log(`Loaded ${stories.length} stories`);
+            });
+        }
+
+        function findStoryForStep(knownSet, remainingTargets, minSize = 1, maxSize = 5) {
+            let bestStory = null;
+            let bestScore = -1;
+            let bestJumpsize = Infinity;
+
+            for (const story of stories) {
+                const storyChars = new Set(extractCharacters(story.content));
+                const newChars = [...storyChars].filter(c => !knownSet.has(c));
+                const newCharSet = new Set(newChars);
+                const targetCovered = newChars.filter(c => remainingTargets.has(c));
+                const jumpsize = newChars.length;
+
+                if (jumpsize >= minSize && jumpsize <= maxSize && targetCovered.length > 0) {
+                    const score = targetCovered.length * 1000 - jumpsize;
+                    if (score > bestScore || (score === bestScore && storyChars.size > (bestStory ? new Set(extractCharacters(bestStory.content)).size : 0))) {
+                        bestScore = score;
+                        bestStory = story;
+                        bestJumpsize = jumpsize;
+                    }
+                }
+            }
+
+            return bestStory ? { story: bestStory, jumpsize: bestJumpsize } : null;
+        }
+
+        function generateCurriculum(targetText, knownSet, remainderPermitted) {
+            const targetChars = new Set(extractCharacters(targetText));
+            const remainingTargets = new Set([...targetChars].filter(c => !knownSet.has(c)));
+            const lessons = [];
+            let currentKnown = new Set(knownSet);
+            let step = 1;
+            const maxJumpsize = 100;
+
+            while (remainingTargets.size > 0) {
+                let found = false;
+                for (let minSize = 1; minSize <= 5; minSize++) {
+                    const result = findStoryForStep(currentKnown, remainingTargets, minSize, 5);
+                    if (result) {
+                        const storyChars = new Set(extractCharacters(result.story.content));
+                        const newChars = [...storyChars].filter(c => !currentKnown.has(c));
+                        const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
+                        const jumpsize = newChars.length;
+
+                        for (const c of newChars) {
+                            currentKnown.add(c);
+                        }
+                        for (const c of targetCovered) {
+                            remainingTargets.delete(c);
+                        }
+
+                        lessons.push({
+                            step: step,
+                            story: result.story,
+                            jumpsize: jumpsize,
+                            remainder: remainingTargets.size,
+                            newChars: newChars,
+                            targetCharsCovered: targetCovered
+                        });
+
+                        step++;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    for (let size = 6; size <= maxJumpsize; size += 5) {
+                        const result = findStoryForStep(currentKnown, remainingTargets, 1, size);
+                        if (result) {
+                            const storyChars = new Set(extractCharacters(result.story.content));
+                            const newChars = [...storyChars].filter(c => !currentKnown.has(c));
+                            const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
+                            const jumpsize = newChars.length;
+
+                            for (const c of newChars) {
+                                currentKnown.add(c);
+                            }
+                            for (const c of targetCovered) {
+                                remainingTargets.delete(c);
+                            }
+
+                            lessons.push({
+                                step: step,
+                                story: result.story,
+                                jumpsize: jumpsize,
+                                remainder: remainingTargets.size,
+                                newChars: newChars,
+                                targetCharsCovered: targetCovered
+                            });
+
+                            step++;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!found) {
+                    const unreachable = [...remainingTargets];
+                    return {
+                        success: false,
+                        unreachable: unreachable,
+                        lessons: lessons
+                    };
+                }
+
+                if (step > 1000) {
+                    return { success: false, error: 'Maximum steps exceeded', lessons: lessons };
+                }
+            }
+
+            if (remainderPermitted || remainingTargets.size === 0) {
+                lessons.push({
+                    step: '🎉',
+                    title: 'Target Text',
+                    content: targetText,
+                    jumpsize: 0,
+                    remainder: 0
+                });
+            }
+
+            return {
+                success: true,
+                lessons: lessons
+            };
+        }
+
+        function renderCurriculum(result) {
+            const resultsSection = document.getElementById('resultsSection');
+            const errorSection = document.getElementById('errorSection');
+            const lessonList = document.getElementById('lessonList');
+            const pathSummary = document.getElementById('pathSummary');
+
+            if (!result.success) {
+                resultsSection.style.display = 'none';
+                errorSection.style.display = 'block';
+                document.getElementById('errorMessage').textContent = 
+                    `Cannot reach ${result.unreachable.length} character(s) from the story library.`;
+                
+                const unreachableDiv = document.getElementById('unreachableChars');
+                unreachableDiv.innerHTML = '<strong>Unreachable characters:</strong> ' + 
+                    result.unreachable.map(c => `<span class="char-tile">${c}</span>`).join(' ');
+                return;
+            }
+
+            errorSection.style.display = 'none';
+            resultsSection.style.display = 'block';
+
+            const totalSteps = result.lessons.filter(l => l.jumpsize > 0).length;
+            const totalNewChars = result.lessons.reduce((sum, l) => sum + l.jumpsize, 0);
+            const targetUnknowns = result.lessons.length > 0 ? result.lessons[0].remainder + 
+                result.lessons.reduce((sum, l) => sum + l.targetCharsCovered.length, 0) : 0;
+
+            pathSummary.textContent = `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns`;
+
+            lessonList.innerHTML = '';
+            for (const lesson of result.lessons) {
+                const li = document.createElement('li');
+                li.className = 'lesson-item' + (lesson.step === '🎉' ? ' final' : '');
+                
+                const stepNum = document.createElement('span');
+                stepNum.className = 'lesson-number';
+                stepNum.textContent = lesson.step + '.';
+                
+                const title = document.createElement('span');
+                title.className = 'lesson-title';
+                title.textContent = lesson.title || lesson.story.title;
+                
+                const stats = document.createElement('span');
+                stats.className = 'lesson-stats';
+                stats.innerHTML = `${lesson.jumpsize} <span class="remainder">${lesson.remainder}</span>`;
+                
+                li.appendChild(stepNum);
+                li.appendChild(title);
+                li.appendChild(stats);
+                lessonList.appendChild(li);
+            }
+
+            curriculum = {
+                target: document.getElementById('targetText').value,
+                targetUnknowns: targetUnknowns,
+                remainderPermitted: document.getElementById('remainderPermitted').checked,
+                lessons: result.lessons
+            };
+        }
+
+        function generatePath() {
+            const targetText = document.getElementById('targetText').value.trim();
+            if (!targetText) {
+                updateTargetStatus('Please enter a target text.', false, true);
+                return;
+            }
+
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+            const remainderPermitted = document.getElementById('remainderPermitted').checked;
+
+            updateTargetStatus('Generating learning path...');
+
+            loadStories().then(() => {
+                if (stories.length === 0) {
+                    updateTargetStatus('No stories found in library.', false, true);
+                    return;
+                }
+
+                const result = generateCurriculum(targetText, knownSet, remainderPermitted);
+                renderCurriculum(result);
+
+                if (result.success) {
+                    updateTargetStatus(`Learning path generated with ${result.lessons.length} steps.`, true);
+                }
+            }).catch(err => {
+                updateTargetStatus(`Error loading stories: ${err.message}`, false, true);
+            });
+        }
+
+        function loadExample() {
+            const example = '我想学习中文，今天天气很好，我们去公园散步，看见了很多人在跑步。';
+            document.getElementById('targetText').value = example;
+            updateTargetStatus('Example loaded. Click Generate Learning Path.', true);
+        }
+
+        function clearAll() {
+            document.getElementById('targetText').value = '';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('remainderPermitted').checked = false;
+            updateTargetStatus('Enter your target text above and click Generate Learning Path.');
+            curriculum = null;
+        }
+
+        function addToLibrary() {
+            if (!curriculum) return;
+            const targetText = curriculum.target;
+            const encoded = encodeURIComponent(targetText);
+            window.open(`story_library.html?text=${encoded}`, '_blank');
+        }
+
+        function exportJSON() {
+            if (!curriculum) return;
+            const jsonStr = JSON.stringify(curriculum, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `curriculum_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', generatePath);
+        document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+        document.getElementById('addToLibraryBtn').addEventListener('click', addToLibrary);
+        document.getElementById('exportBtn').addEventListener('click', exportJSON);
+
+        if (window.mandarinState) {
+            updateTargetStatus(`You know ${window.mandarinState.getCount()} characters. Enter target text and generate path.`, true);
+        }
+    </script>
+</body>
+</html>
