@@ -359,7 +359,7 @@
             return score1 + score2;
         }
 
-        function findStoryForStep(knownSet, remainingTargets, minTargets = 1) {
+        function findStoryForStep(knownSet, remainingTargets, minTargets = 1, maxJumpsize = 100) {
             let bestStory = null;
             let bestScore = -Infinity;
             let bestJumpsize = Infinity;
@@ -369,13 +369,14 @@
                 const newChars = [...storyChars].filter(c => !knownSet.has(c));
                 const targets = newChars.filter(c => remainingTargets.has(c));
                 const nonTargets = newChars.length - targets.length;
+                const jumpsize = newChars.length;
                 
-                if (targets.length >= minTargets) {
+                if (targets.length >= minTargets && jumpsize <= maxJumpsize) {
                     const score = calculateScore(targets.length, nonTargets);
-                    if (score > bestScore || (score === bestScore && newChars.length < bestJumpsize)) {
+                    if (score > bestScore || (score === bestScore && jumpsize < bestJumpsize)) {
                         bestScore = score;
                         bestStory = story;
-                        bestJumpsize = newChars.length;
+                        bestJumpsize = jumpsize;
                     }
                 }
             }
@@ -425,6 +426,9 @@
             let currentKnown = new Set(knownSet);
             let step = 1;
             const totalTargets = remainingTargets.size;
+            
+            let maxJumpsize = 5;  // Start with ideal limit
+            let limitLiftedCount = 0;
 
             document.getElementById('progressSection').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
@@ -432,11 +436,27 @@
             document.getElementById('progressStatus').textContent = `Building path for ${totalTargets} target characters...`;
 
             while (remainingTargets.size > 0 && !stopRequested) {
-                const result = findStoryForStep(currentKnown, remainingTargets, 1);
+                const result = findStoryForStep(currentKnown, remainingTargets, 1, maxJumpsize);
                 
                 if (!result) {
-                    const unreachable = [...remainingTargets];
-                    return { success: false, unreachable: unreachable, lessons: lessons };
+                    // Try to find any story without jumpsize limit
+                    const anyResult = findStoryForStep(currentKnown, remainingTargets, 1, 1000);
+                    
+                    if (!anyResult) {
+                        const unreachable = [...remainingTargets];
+                        return { success: false, unreachable: unreachable, lessons: lessons };
+                    }
+                    
+                    // Limit was lifted - update status
+                    maxJumpsize++;
+                    limitLiftedCount++;
+                    const liftStatus = limitLiftedCount > 0 ? ` | Limit lifted: ${limitLiftedCount}x` : '';
+                    document.getElementById('progressStatus').innerHTML = 
+                        `<span style="color: #FF9800;">Could not find story with jumpsize ≤ ${maxJumpsize - 1}, lifting limit to ${maxJumpsize}${liftStatus}</span>`;
+                    
+                    // Try again with new limit
+                    await new Promise(r => setTimeout(r, 50));
+                    continue;
                 }
 
                 const storyChars = new Set(result.story.characters || []);
@@ -462,9 +482,11 @@
                 updateLessonDisplay(lesson, step - 1);
                 
                 const progress = ((totalTargets - remainingTargets.size) / totalTargets) * 100;
+                const biggestJump = Math.max(...lessons.map(l => l.jumpsize), 0);
+                const liftStatus = limitLiftedCount > 0 ? ` | Limit lifted: ${limitLiftedCount}x` : '';
                 document.getElementById('progressFill').style.width = progress + '%';
                 document.getElementById('progressText').textContent = 
-                    `Steps: ${step} | Best jumpsize: ${Math.max(...lessons.map(l => l.jumpsize))} | Remaining: ${remainingTargets.size}`;
+                    `Steps: ${step} | Max jumpsize: ${biggestJump}${liftStatus} | Remaining: ${remainingTargets.size}`;
                 
                 // Yield to UI
                 await new Promise(r => setTimeout(r, 10));
@@ -487,13 +509,26 @@
                 });
             }
 
-            return { success: true, lessons: lessons };
+            return { success: true, lessons: lessons, limitLiftedCount: limitLiftedCount };
         }
 
         async function optimizePath(lessons, knownSet, targetChars) {
             let improved = true;
             let iterations = 0;
             const maxIterations = 1000;
+            
+            // Recalculate remainder for all lessons
+            function recalculateRemainders() {
+                const targetSet = new Set(targetChars);
+                for (let i = 0; i < lessons.length; i++) {
+                    if (i > 0) {
+                        for (const c of lessons[i].targetCharsCovered) {
+                            targetSet.delete(c);
+                        }
+                    }
+                    lessons[i].remainder = targetSet.size;
+                }
+            }
             
             while (improved && !stopRequested && iterations < maxIterations) {
                 improved = false;
@@ -543,6 +578,9 @@
                         nonTargetChars: nonTargets
                     };
                     
+                    // Recalculate all remainders after this change
+                    recalculateRemainders();
+                    
                     // Update display
                     updateLessonDisplay(lessons[biggestIndex], biggestIndex);
                     
@@ -578,9 +616,11 @@
             const totalNewChars = result.lessons.reduce((sum, l) => sum + (l.jumpsize || 0), 0);
             const targetUnknowns = result.lessons.reduce((sum, l) => sum + (l.targetCharsCovered?.length || 0), 0);
             const biggestJumpsize = Math.max(...result.lessons.slice(0, -1).map(l => l.jumpsize || 0));
+            const limitLiftedCount = result.limitLiftedCount || 0;
+            const liftStatus = limitLiftedCount > 0 ? ` | Limit lifted: ${limitLiftedCount}x` : '';
 
             document.getElementById('pathSummary').textContent = 
-                `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns | Max jumpsize: ${biggestJumpsize}`;
+                `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns | Max jumpsize: ${biggestJumpsize}${liftStatus}`;
 
             const lessonList = document.getElementById('finalLessonList');
             lessonList.innerHTML = '';
