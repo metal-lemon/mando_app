@@ -397,14 +397,23 @@
             const jumpsize = targets + nonTargets;
             if (jumpsize === 0) return -Infinity;
             
-            // Component 1: CoverageRatio
-            const score1 = (targets / jumpsize) * 2000;
+            // Component A: Jumpsize Reward - smaller jumpsize = better
+            const scoreA = 10000 / Math.max(jumpsize, 1);
             
-            // Component 2: JumpsizeQuality
-            const score2 = 2000 - (targets - 1) * 200 - nonTargets * 400;
+            // Component B: Non-Target Penalty - zero nonTargets is ideal
+            const scoreB = nonTargets === 0 ? 50000 : -10000 * nonTargets;
             
-            // Component 3: TargetCountBonus - rewards fewer targets (slower path)
-            const score3 = 6000 - (targets * 1000);
+            // Component C: Target Count Reward - fewer targets is better (max 5)
+            const scoreC = (5 - targets) * 2500;
+            
+            // Component D: CoverageRatio (kept from old)
+            const scoreD = (targets / jumpsize) * 2000;
+            
+            // Component E: TargetCountBonus (kept from old)
+            const scoreE = 6000 - (targets * 1000);
+            
+            // Component F: NonTargetPenalty (kept from old)
+            const scoreF = 2000 - (nonTargets * 2000);
             
             // Component 4: FrequencyBonus - prioritize common characters
             let score4 = 0;
@@ -417,10 +426,7 @@
                 }
             }
             
-            // Component 5: NonTargetPenalty
-            const score5 = 2000 - (nonTargets * 2000);
-            
-            return score1 + score2 + score3 + score4 + score5;
+            return scoreA + scoreB + scoreC + scoreD + scoreE + scoreF + score4;
         }
 
         function findStoryForStep(knownSet, remainingTargets, minTargets = 1, maxJumpsize = 100) {
@@ -543,6 +549,8 @@
                     nonTargetChars: nonTargets
                 };
                 lessons.push(lesson);
+
+                maxJumpsize = 5;  // Reset limit after each step
 
                 // Update display
                 updateLessonDisplay(lesson, step - 1);
