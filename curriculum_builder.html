@@ -79,6 +79,16 @@
         .close-modal:hover { color: #000; }
         .setup-step { margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
         .setup-step strong { color: #667eea; }
+        /* Story picker modal */
+        .story-picker-list { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px; }
+        .story-picker-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .story-picker-item:hover { background-color: #f5f5f5; }
+        .story-picker-item:last-child { border-bottom: none; }
+        .story-picker-title { font-weight: bold; flex: 1; }
+        .story-picker-stats { font-size: 12px; color: #666; white-space: nowrap; margin-left: 10px; }
+        .sort-buttons { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+        .sort-btn { padding: 5px 10px; font-size: 12px; background: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 3px; cursor: pointer; }
+        .sort-btn.active { background: #667eea; color: white; border-color: #667eea; }
         @media (max-width: 600px) { body { padding: 10px; } .header { flex-direction: column; text-align: center; } .lesson-item { flex-direction: column; align-items: flex-start; } }
     </style>
 </head>
@@ -96,13 +106,14 @@
         <button id="setupBtn" class="secondary">🔧 Setup</button>
     </div>
 
-    <div class="section">
+        <div class="section">
         <h2>📝 Step 1: Your Target Text</h2>
         <p>Paste the Chinese text you want to learn to read.</p>
         <textarea id="targetText" placeholder="Paste your target Chinese text here...&#10;&#10;Example:&#10;我想学习中文，今天天气很好。"></textarea>
         <div id="savedStoryBadge" class="saved-story-badge" style="display: none;"></div>
         <div class="button-group">
             <button id="saveToLibraryBtn">💾 Save to Library</button>
+            <button id="pickFromLibraryBtn" class="secondary">📚 Pick from Library</button>
             <button id="loadExampleBtn" class="secondary">📄 Load Example</button>
             <button id="clearBtn" class="danger">🗑️ Clear</button>
         </div>
@@ -194,6 +205,25 @@
             
             <div class="button-group" style="margin-top: 20px;">
                 <button id="closeSetupBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Picker Modal -->
+    <div id="storyPickerModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-modal" data-modal="storyPickerModal">&times;</span>
+            <h2>📚 Pick a Story from Library</h2>
+            <input type="text" id="storyPickerSearch" placeholder="Search by title or ID...">
+            <div class="sort-buttons">
+                <button class="sort-btn active" data-sort="newest">Newest First</button>
+                <button class="sort-btn" data-sort="alpha">A-Z</button>
+                <button class="sort-btn" data-sort="chars">Fewest Chars</button>
+                <button class="sort-btn" data-sort="jump">Smallest Jump</button>
+            </div>
+            <div id="storyPickerList" class="story-picker-list"></div>
+            <div class="button-group" style="margin-top: 15px;">
+                <button id="closeStoryPickerBtn" class="danger">Cancel</button>
             </div>
         </div>
     </div>
@@ -799,6 +829,107 @@
             if (setupComplete) updateSetupStatusIcon(true);
         }
 
+        let currentSort = 'newest';
+        let libraryStories = [];
+
+        function openStoryPicker() {
+            if (libraryStories.length === 0) {
+                document.getElementById('storyPickerList').innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Loading stories...</div>';
+                loadStories().then(() => {
+                    libraryStories = stories.map(s => ({
+                        ...s,
+                        jumpSize: (s.characters || []).filter(c => !(window.mandarinState ? window.mandarinState.has(c) : false)).length
+                    }));
+                    renderStoryPicker();
+                });
+            }
+            currentSort = 'newest';
+            updateSortButtons();
+            document.getElementById('storyPickerSearch').value = '';
+            document.getElementById('storyPickerModal').style.display = 'block';
+            renderStoryPicker();
+        }
+
+        function closeStoryPicker() {
+            document.getElementById('storyPickerModal').style.display = 'none';
+        }
+
+        function renderStoryPicker() {
+            const search = document.getElementById('storyPickerSearch').value.toLowerCase();
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+            
+            let filtered = libraryStories.filter(s => {
+                const matchId = s.id.toString().includes(search);
+                const matchTitle = (s.title || '').toLowerCase().includes(search);
+                return matchId || matchTitle;
+            });
+
+            // Sort
+            if (currentSort === 'newest') {
+                filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+            } else if (currentSort === 'alpha') {
+                filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            } else if (currentSort === 'chars') {
+                filtered.sort((a, b) => (a.characters?.length || 0) - (b.characters?.length || 0));
+            } else if (currentSort === 'jump') {
+                filtered.sort((a, b) => (a.jumpSize || 0) - (b.jumpSize || 0));
+            }
+
+            const list = document.getElementById('storyPickerList');
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No stories found</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(s => `
+                <div class="story-picker-item" data-id="${s.id}">
+                    <span class="story-picker-title">${escapeHtml(s.title || 'Untitled')}</span>
+                    <span class="story-picker-stats">${s.characters?.length || 0} chars | jump: ${s.jumpSize || 0}</span>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            list.querySelectorAll('.story-picker-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = parseInt(item.dataset.id);
+                    const story = libraryStories.find(s => s.id === id);
+                    if (story) {
+                        selectStoryFromLibrary(story);
+                    }
+                });
+            });
+        }
+
+        function updateSortButtons() {
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === currentSort);
+            });
+        }
+
+        function selectStoryFromLibrary(story) {
+            // Get full story content from stories.json
+            fetch('data/stories.json')
+                .then(response => response.json())
+                .then(allStories => {
+                    const fullStory = allStories.find(s => s.id === story.id);
+                    const content = fullStory ? fullStory.content : '';
+                    
+                    document.getElementById('targetText').value = content;
+                    document.getElementById('storyTitle').value = story.title || 'Untitled';
+                    document.getElementById('storySource').value = story.source || '';
+                    
+                    closeStoryPicker();
+                    updateTargetStatus(`Selected: "${story.title}". Click "Save to Library" then "Build plan".`, true);
+                })
+                .catch(() => {
+                    // Fallback: just use what we have
+                    document.getElementById('targetText').value = story.title;
+                    document.getElementById('storyTitle').value = story.title || 'Untitled';
+                    closeStoryPicker();
+                    updateTargetStatus(`Selected: "${story.title}". Note: Could not load full content.`, true);
+                });
+        }
+
         function confirmSave() {
             const title = document.getElementById('storyTitle').value.trim();
             const source = document.getElementById('storySource').value.trim();
@@ -863,6 +994,7 @@
         // Event listeners
         document.getElementById('setupBtn').addEventListener('click', openSetupModal);
         document.getElementById('saveToLibraryBtn').addEventListener('click', openSaveModal);
+        document.getElementById('pickFromLibraryBtn').addEventListener('click', openStoryPicker);
         document.getElementById('generateBtn').addEventListener('click', generatePath);
         document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
         document.getElementById('clearBtn').addEventListener('click', clearAll);
@@ -870,6 +1002,17 @@
         document.getElementById('stopBtn').addEventListener('click', stopBuilding);
         document.getElementById('optimizeBtn').addEventListener('click', optimizeFurther);
         document.getElementById('downloadStoriesDataBtn').addEventListener('click', downloadStoriesData);
+
+        // Story picker event listeners
+        document.getElementById('storyPickerSearch').addEventListener('input', renderStoryPicker);
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSort = btn.dataset.sort;
+                updateSortButtons();
+                renderStoryPicker();
+            });
+        });
+        document.getElementById('closeStoryPickerBtn').addEventListener('click', closeStoryPicker);
 
         // Modal event listeners
         document.getElementById('confirmSaveBtn').addEventListener('click', confirmSave);
@@ -881,11 +1024,13 @@
                 const modalId = btn.getAttribute('data-modal');
                 if (modalId === 'saveModal') closeSaveModal();
                 if (modalId === 'setupModal') closeSetupModal();
+                if (modalId === 'storyPickerModal') closeStoryPicker();
             });
         });
         
         window.addEventListener('click', (e) => {
             if (e.target.id === 'saveModal') closeSaveModal();
+            if (e.target.id === 'storyPickerModal') closeStoryPicker();
             if (e.target.id === 'setupModal') closeSetupModal();
         });
 
