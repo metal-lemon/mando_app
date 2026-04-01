@@ -235,6 +235,8 @@
         let setupComplete = false;
         let stopRequested = false;
         let frequencyTable = new Map();
+        let frequencyScoreTable = [];
+        let frequencyScoreTableSize = 0;
         let totalStories = 0;
 
         function escapeHtml(text) {
@@ -280,6 +282,22 @@
             }
             totalStories = stories.length;
             console.log(`Built frequency table with ${frequencyTable.size} unique characters`);
+        }
+
+        function buildFrequencyScoreTable(knownSet) {
+            const entries = [];
+            for (const [char, count] of frequencyTable) {
+                if (!knownSet.has(char)) {
+                    entries.push({ char: char, appearanceCount: count });
+                }
+            }
+            entries.sort((a, b) => a.appearanceCount - b.appearanceCount);
+            frequencyScoreTable = entries.map((entry, index) => ({
+                ...entry,
+                id: index + 1
+            }));
+            frequencyScoreTableSize = frequencyScoreTable.length;
+            console.log(`Built frequency score table with ${frequencyScoreTableSize} characters`);
         }
 
         async function runSetupCheck() {
@@ -375,18 +393,34 @@
             });
         }
 
-        function calculateScore(targets, nonTargets) {
+        function calculateScore(targets, nonTargets, targetCharsArray) {
             const jumpsize = targets + nonTargets;
             if (jumpsize === 0) return -Infinity;
             
-            // Component 1: Target coverage ratio
+            // Component 1: CoverageRatio
             const score1 = (targets / jumpsize) * 2000;
             
-            // Component 2: Jumpsize quality
-            // Base 2000 for first target, -200 per extra target, -400 per non-target
+            // Component 2: JumpsizeQuality
             const score2 = 2000 - (targets - 1) * 200 - nonTargets * 400;
             
-            return score1 + score2;
+            // Component 3: TargetCountBonus - rewards fewer targets (slower path)
+            const score3 = 6000 - (targets * 1000);
+            
+            // Component 4: FrequencyBonus - prioritize common characters
+            let score4 = 0;
+            if (targetCharsArray && targetCharsArray.length > 0 && frequencyScoreTableSize > 0) {
+                for (const char of targetCharsArray) {
+                    const entry = frequencyScoreTable.find(e => e.char === char);
+                    if (entry) {
+                        score4 += (entry.id / frequencyScoreTableSize) * (2000 / jumpsize);
+                    }
+                }
+            }
+            
+            // Component 5: NonTargetPenalty
+            const score5 = 2000 - (nonTargets * 2000);
+            
+            return score1 + score2 + score3 + score4 + score5;
         }
 
         function findStoryForStep(knownSet, remainingTargets, minTargets = 1, maxJumpsize = 100) {
@@ -402,7 +436,7 @@
                 const jumpsize = newChars.length;
                 
                 if (targets.length >= minTargets && jumpsize <= maxJumpsize) {
-                    const score = calculateScore(targets.length, nonTargets);
+                    const score = calculateScore(targets.length, nonTargets, targets);
                     if (score > bestScore || (score === bestScore && jumpsize < bestJumpsize)) {
                         bestScore = score;
                         bestStory = story;
@@ -466,10 +500,12 @@
             document.getElementById('progressStatus').textContent = `Building path for ${totalTargets} target characters...`;
 
             while (remainingTargets.size > 0 && !stopRequested) {
+                buildFrequencyScoreTable(currentKnown);
                 const result = findStoryForStep(currentKnown, remainingTargets, 1, maxJumpsize);
                 
                 if (!result) {
                     // Try to find any story without jumpsize limit
+                    buildFrequencyScoreTable(currentKnown);
                     const anyResult = findStoryForStep(currentKnown, remainingTargets, 1, 1000);
                     
                     if (!anyResult) {
@@ -589,6 +625,7 @@
                     for (const c of lessons[i].targetCharsCovered) remainingTargets.delete(c);
                 }
                 
+                buildFrequencyScoreTable(beforeKnown);
                 const result = findStoryForStep(beforeKnown, remainingTargets, 1);
                 
                 if (result && result.jumpsize < lesson.jumpsize) {
