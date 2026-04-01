@@ -24,14 +24,18 @@
         button.danger:hover { background-color: #e53e3e; }
         button.success { background-color: #4CAF50; }
         button.success:hover { background-color: #45a049; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
         .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; }
         .file-status { background-color: #e3f2fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2196F3; }
         .file-status.success { background-color: #e8f5e9; border-left-color: #4CAF50; }
         .file-status.error { background-color: #ffebee; border-left-color: #f44336; }
+        .file-status.warning { background-color: #fff3e0; border-left-color: #FF9800; }
         .lesson-list { list-style: none; padding: 0; margin: 0; }
-        .lesson-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; }
+        .lesson-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; transition: background-color 0.3s; }
+        .lesson-item:hover { background-color: #f0f0f0; }
+        .lesson-item.optimized { background-color: #e8f5e9; border-color: #4CAF50; }
         .lesson-item.final { background: #e8f5e9; border-color: #4CAF50; }
         .lesson-number { font-size: 18px; font-weight: bold; color: #667eea; min-width: 30px; }
         .lesson-item.final .lesson-number { font-size: 24px; }
@@ -59,6 +63,11 @@
         .check-icon.error { color: #f44336; }
         .check-icon.warning { color: #FF9800; }
         .check-icon.info { color: #2196F3; }
+        /* Progress bar */
+        .progress-section { margin: 15px 0; }
+        .progress-bar { width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease; }
+        .progress-text { font-size: 14px; color: #666; margin-top: 5px; }
         /* Modal styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
         .modal-content { background-color: white; margin: 50px auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto; }
@@ -112,12 +121,26 @@
         <button id="generateBtn" class="secondary">🎯 Build plan to read: <span id="targetTitleDisplay"></span></button>
     </div>
 
-    <div id="resultsSection" class="section" style="display: none;">
-        <h2>📖 Learning Path</h2>
-        <div id="pathSummary" class="info-text"></div>
+    <div id="progressSection" class="section" style="display: none;">
+        <h2>📖 Building Path...</h2>
+        <div id="progressStatus" class="info-text">Initializing...</div>
+        <div class="progress-section">
+            <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width: 0%;"></div></div>
+            <div id="progressText" class="progress-text">Steps: 0 | Best jumpsize: -</div>
+        </div>
         <ul id="lessonList" class="lesson-list"></ul>
         <div class="button-group">
+            <button id="stopBtn" class="danger">🛑 Stop & Export</button>
+        </div>
+    </div>
+
+    <div id="resultsSection" class="section" style="display: none;">
+        <h2>📖 Learning Path Complete!</h2>
+        <div id="pathSummary" class="info-text"></div>
+        <ul id="finalLessonList" class="lesson-list"></ul>
+        <div class="button-group">
             <button id="exportBtn">💾 Export JSON</button>
+            <button id="optimizeBtn" class="secondary">🔄 Optimize Further</button>
         </div>
     </div>
 
@@ -180,6 +203,9 @@
         let savedStory = null;
         let curriculum = null;
         let setupComplete = false;
+        let stopRequested = false;
+        let frequencyTable = new Map();
+        let totalStories = 0;
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -194,12 +220,13 @@
             return [...new Set(matches)];
         }
 
-        function updateTargetStatus(message, isSuccess = false, isError = false) {
+        function updateTargetStatus(message, isSuccess = false, isError = false, isWarning = false) {
             const statusDiv = document.getElementById('targetStatus');
             statusDiv.textContent = message;
             statusDiv.className = 'file-status';
             if (isSuccess) statusDiv.classList.add('success');
             if (isError) statusDiv.classList.add('error');
+            if (isWarning) statusDiv.classList.add('warning');
         }
 
         function updateSetupStatusIcon(success) {
@@ -213,10 +240,21 @@
             }
         }
 
+        function buildFrequencyTable() {
+            frequencyTable.clear();
+            for (const story of stories) {
+                const chars = story.characters || [];
+                for (const char of chars) {
+                    frequencyTable.set(char, (frequencyTable.get(char) || 0) + 1);
+                }
+            }
+            totalStories = stories.length;
+            console.log(`Built frequency table with ${frequencyTable.size} unique characters`);
+        }
+
         async function runSetupCheck() {
             const results = [];
             
-            // Check user_data/stories_data.json
             try {
                 const response = await fetch('user_data/stories_data.json');
                 if (response.ok) {
@@ -233,7 +271,6 @@
                 results.push({ icon: '❌', text: 'user_data/stories_data.json - Missing or error loading', type: 'error' });
             }
             
-            // Check data/stories.json (source)
             try {
                 const response = await fetch('data/stories.json');
                 if (response.ok) {
@@ -247,14 +284,12 @@
                 results.push({ icon: '⚠️', text: 'data/stories.json - Not found', type: 'warning' });
             }
             
-            // Check target story (session)
             if (savedStory) {
                 results.push({ icon: 'ℹ️', text: `Target: "${savedStory.title}" (saved)`, type: 'info' });
             } else {
                 results.push({ icon: 'ℹ️', text: 'Target: Not saved', type: 'info' });
             }
             
-            // Check known characters
             if (window.mandarinState) {
                 const count = window.mandarinState.getCount();
                 results.push({ icon: 'ℹ️', text: `Known characters: ${count}`, type: 'info' });
@@ -262,13 +297,11 @@
                 results.push({ icon: 'ℹ️', text: 'Known characters: 0 (shared state not loaded)', type: 'info' });
             }
             
-            // Render results
             const resultsDiv = document.getElementById('setupCheckResults');
             resultsDiv.innerHTML = results.map(r => 
                 `<div class="check-item"><span class="check-icon ${r.type}">${r.icon}</span>${r.text}</div>`
             ).join('');
             
-            // Check if setup is complete (stories_data.json found)
             const storiesDataOk = results.some(r => r.type === 'success' && r.text.includes('stories_data.json'));
             setupComplete = storiesDataOk;
             updateSetupStatusIcon(setupComplete);
@@ -297,11 +330,11 @@
                     .then(data => {
                         if (!data || !Array.isArray(data)) throw new Error('Invalid stories_data.json format');
                         stories = data;
-                        // Convert characters from string to array if needed
                         stories = stories.map(s => ({
                             ...s,
                             characters: typeof s.characters === 'string' ? s.characters.split('') : (s.characters || [])
                         }));
+                        buildFrequencyTable();
                         console.log(`Loaded ${stories.length} stories`);
                         resolve(stories);
                     })
@@ -312,111 +345,131 @@
             });
         }
 
-        function findStoryForStep(knownSet, remainingTargets, minSize = 1, maxSize = 5) {
+        function calculateScore(targets, nonTargets) {
+            const jumpsize = targets + nonTargets;
+            if (jumpsize === 0) return -Infinity;
+            
+            // Component 1: Target coverage ratio
+            const score1 = (targets / jumpsize) * 2000;
+            
+            // Component 2: Jumpsize quality
+            // Base 2000 for first target, -200 per extra target, -400 per non-target
+            const score2 = 2000 - (targets - 1) * 200 - nonTargets * 400;
+            
+            return score1 + score2;
+        }
+
+        function findStoryForStep(knownSet, remainingTargets, minTargets = 1) {
             let bestStory = null;
-            let bestScore = -1;
+            let bestScore = -Infinity;
             let bestJumpsize = Infinity;
 
             for (const story of stories) {
-                const storyChars = new Set(Array.isArray(story.characters) ? story.characters : []);
+                const storyChars = new Set(story.characters || []);
                 const newChars = [...storyChars].filter(c => !knownSet.has(c));
-                const targetCovered = newChars.filter(c => remainingTargets.has(c));
-                const jumpsize = newChars.length;
-
-                if (jumpsize >= minSize && jumpsize <= maxSize && targetCovered.length > 0) {
-                    const score = targetCovered.length * 1000 - jumpsize;
-                    if (score > bestScore || (score === bestScore && storyChars.size > (bestStory ? new Set(Array.isArray(bestStory.characters) ? bestStory.characters : []).size : 0))) {
+                const targets = newChars.filter(c => remainingTargets.has(c));
+                const nonTargets = newChars.length - targets.length;
+                
+                if (targets.length >= minTargets) {
+                    const score = calculateScore(targets.length, nonTargets);
+                    if (score > bestScore || (score === bestScore && newChars.length < bestJumpsize)) {
                         bestScore = score;
                         bestStory = story;
-                        bestJumpsize = jumpsize;
+                        bestJumpsize = newChars.length;
                     }
                 }
             }
 
-            return bestStory ? { story: bestStory, jumpsize: bestJumpsize } : null;
+            return bestStory ? { story: bestStory, jumpsize: bestJumpsize, score: bestScore } : null;
         }
 
-        function generateCurriculum(targetText, knownSet, remainderPermitted) {
+        function renderLessonItem(lesson, index) {
+            const li = document.createElement('li');
+            li.className = 'lesson-item' + (lesson.step === '🎉' ? ' final' : '');
+            li.id = `lesson-${index}`;
+            
+            const stepNum = document.createElement('span');
+            stepNum.className = 'lesson-number';
+            stepNum.textContent = lesson.step + '.';
+            
+            const title = document.createElement('span');
+            title.className = 'lesson-title';
+            title.textContent = lesson.title || lesson.story?.title || 'Unknown';
+            
+            const stats = document.createElement('span');
+            stats.className = 'lesson-stats';
+            stats.innerHTML = `${lesson.jumpsize} <span class="remainder">${lesson.remainder}</span>`;
+            
+            li.appendChild(stepNum);
+            li.appendChild(title);
+            li.appendChild(stats);
+            
+            return li;
+        }
+
+        function updateLessonDisplay(lesson, index) {
+            let li = document.getElementById(`lesson-${index}`);
+            if (!li) {
+                li = renderLessonItem(lesson, index);
+                document.getElementById('lessonList').appendChild(li);
+            } else {
+                li.className = 'lesson-item optimized';
+                li.querySelector('.lesson-stats').innerHTML = `${lesson.jumpsize} <span class="remainder">${lesson.remainder}</span>`;
+            }
+        }
+
+        async function generateCurriculumAsync(targetText, knownSet, remainderPermitted) {
             const targetChars = new Set(extractCharacters(targetText));
             const remainingTargets = new Set([...targetChars].filter(c => !knownSet.has(c)));
             const lessons = [];
             let currentKnown = new Set(knownSet);
             let step = 1;
-            const maxJumpsize = 100;
+            const totalTargets = remainingTargets.size;
 
-            while (remainingTargets.size > 0) {
-                let found = false;
-                for (let minSize = 1; minSize <= 5; minSize++) {
-                    const result = findStoryForStep(currentKnown, remainingTargets, minSize, 5);
-                    if (result) {
-                        const storyChars = new Set(Array.isArray(result.story.characters) ? result.story.characters : []);
-                        const newChars = [...storyChars].filter(c => !currentKnown.has(c));
-                        const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
-                        const jumpsize = newChars.length;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('progressStatus').textContent = `Building path for ${totalTargets} target characters...`;
 
-                        for (const c of newChars) {
-                            currentKnown.add(c);
-                        }
-                        for (const c of targetCovered) {
-                            remainingTargets.delete(c);
-                        }
-
-                        lessons.push({
-                            step: step,
-                            story: result.story,
-                            jumpsize: jumpsize,
-                            remainder: remainingTargets.size,
-                            newChars: newChars,
-                            targetCharsCovered: targetCovered
-                        });
-
-                        step++;
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    for (let size = 6; size <= maxJumpsize; size += 5) {
-                        const result = findStoryForStep(currentKnown, remainingTargets, 1, size);
-                        if (result) {
-                            const storyChars = new Set(Array.isArray(result.story.characters) ? result.story.characters : []);
-                            const newChars = [...storyChars].filter(c => !currentKnown.has(c));
-                            const targetCovered = [...remainingTargets].filter(c => storyChars.has(c));
-                            const jumpsize = newChars.length;
-
-                            for (const c of newChars) {
-                                currentKnown.add(c);
-                            }
-                            for (const c of targetCovered) {
-                                remainingTargets.delete(c);
-                            }
-
-                            lessons.push({
-                                step: step,
-                                story: result.story,
-                                jumpsize: jumpsize,
-                                remainder: remainingTargets.size,
-                                newChars: newChars,
-                                targetCharsCovered: targetCovered
-                            });
-
-                            step++;
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!found) {
+            while (remainingTargets.size > 0 && !stopRequested) {
+                const result = findStoryForStep(currentKnown, remainingTargets, 1);
+                
+                if (!result) {
                     const unreachable = [...remainingTargets];
-                    return {
-                        success: false,
-                        unreachable: unreachable,
-                        lessons: lessons
-                    };
+                    return { success: false, unreachable: unreachable, lessons: lessons };
                 }
 
+                const storyChars = new Set(result.story.characters || []);
+                const newChars = [...storyChars].filter(c => !currentKnown.has(c));
+                const targets = [...remainingTargets].filter(c => storyChars.has(c));
+                const nonTargets = newChars.length - targets.length;
+
+                for (const c of newChars) currentKnown.add(c);
+                for (const c of targets) remainingTargets.delete(c);
+
+                const lesson = {
+                    step: step,
+                    story: result.story,
+                    jumpsize: newChars.length,
+                    remainder: remainingTargets.size,
+                    newChars: newChars,
+                    targetCharsCovered: targets,
+                    nonTargetChars: nonTargets
+                };
+                lessons.push(lesson);
+
+                // Update display
+                updateLessonDisplay(lesson, step - 1);
+                
+                const progress = ((totalTargets - remainingTargets.size) / totalTargets) * 100;
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressText').textContent = 
+                    `Steps: ${step} | Best jumpsize: ${Math.max(...lessons.map(l => l.jumpsize))} | Remaining: ${remainingTargets.size}`;
+                
+                // Yield to UI
+                await new Promise(r => setTimeout(r, 10));
+                
+                step++;
                 if (step > 1000) {
                     return { success: false, error: 'Maximum steps exceeded', lessons: lessons };
                 }
@@ -428,47 +481,111 @@
                     title: savedStory ? savedStory.title : 'Target Text',
                     content: targetText,
                     jumpsize: 0,
-                    remainder: 0,
-                    targetCharsCovered: []
+                    remainder: remainingTargets.size,
+                    targetCharsCovered: [],
+                    nonTargetChars: 0
                 });
             }
 
-            return {
-                success: true,
-                lessons: lessons
-            };
+            return { success: true, lessons: lessons };
         }
 
-        function renderCurriculum(result) {
-            const resultsSection = document.getElementById('resultsSection');
-            const errorSection = document.getElementById('errorSection');
-            const lessonList = document.getElementById('lessonList');
-            const pathSummary = document.getElementById('pathSummary');
+        async function optimizePath(lessons, knownSet, targetChars) {
+            let improved = true;
+            let iterations = 0;
+            const maxIterations = 1000;
+            
+            while (improved && !stopRequested && iterations < maxIterations) {
+                improved = false;
+                iterations++;
+                
+                // Find biggest jumpsize (excluding final step)
+                let biggestIndex = -1;
+                let biggestJumpsize = 0;
+                
+                for (let i = 0; i < lessons.length - 1; i++) {
+                    if (lessons[i].jumpsize > biggestJumpsize) {
+                        biggestJumpsize = lessons[i].jumpsize;
+                        biggestIndex = i;
+                    }
+                }
+                
+                if (biggestIndex === -1) break;
+                
+                const lesson = lessons[biggestIndex];
+                const beforeKnown = new Set(knownSet);
+                for (let i = 0; i < biggestIndex; i++) {
+                    for (const c of lessons[i].newChars) beforeKnown.add(c);
+                }
+                
+                // Find alternative story
+                const remainingTargets = new Set(targetChars);
+                for (let i = 0; i < biggestIndex; i++) {
+                    for (const c of lessons[i].targetCharsCovered) remainingTargets.delete(c);
+                }
+                
+                const result = findStoryForStep(beforeKnown, remainingTargets, 1);
+                
+                if (result && result.jumpsize < lesson.jumpsize) {
+                    // Recalculate new chars and targets
+                    const storyChars = new Set(result.story.characters || []);
+                    const newChars = [...storyChars].filter(c => !beforeKnown.has(c));
+                    const targets = [...remainingTargets].filter(c => storyChars.has(c));
+                    const nonTargets = newChars.length - targets.length;
+                    
+                    // Update lesson
+                    lessons[biggestIndex] = {
+                        ...lesson,
+                        story: result.story,
+                        jumpsize: newChars.length,
+                        newChars: newChars,
+                        targetCharsCovered: targets,
+                        nonTargetChars: nonTargets
+                    };
+                    
+                    // Update display
+                    updateLessonDisplay(lessons[biggestIndex], biggestIndex);
+                    
+                    // Update progress text
+                    const biggest = Math.max(...lessons.slice(0, -1).map(l => l.jumpsize));
+                    document.getElementById('progressText').textContent = 
+                        `Optimizing (${iterations}) | Best jumpsize: ${biggest}`;
+                    
+                    improved = true;
+                    await new Promise(r => setTimeout(r, 5));
+                }
+            }
+            
+            return { iterations, improved };
+        }
 
+        function showResults(result) {
+            document.getElementById('progressSection').style.display = 'none';
+            
             if (!result.success) {
-                resultsSection.style.display = 'none';
-                errorSection.style.display = 'block';
+                document.getElementById('errorSection').style.display = 'block';
                 document.getElementById('errorMessage').textContent = 
                     `Cannot reach ${result.unreachable.length} character(s) from the story library.`;
-                
                 const unreachableDiv = document.getElementById('unreachableChars');
                 unreachableDiv.innerHTML = '<strong>Unreachable characters:</strong> ' + 
                     result.unreachable.map(c => `<span class="char-tile">${c}</span>`).join(' ');
                 return;
             }
 
-            errorSection.style.display = 'none';
-            resultsSection.style.display = 'block';
-
+            document.getElementById('resultsSection').style.display = 'block';
+            
             const totalSteps = result.lessons.filter(l => l.jumpsize > 0).length;
             const totalNewChars = result.lessons.reduce((sum, l) => sum + (l.jumpsize || 0), 0);
-            const targetUnknowns = result.lessons.length > 0 ? result.lessons[0].remainder + 
-                result.lessons.reduce((sum, l) => sum + (l.targetCharsCovered?.length || 0), 0) : 0;
+            const targetUnknowns = result.lessons.reduce((sum, l) => sum + (l.targetCharsCovered?.length || 0), 0);
+            const biggestJumpsize = Math.max(...result.lessons.slice(0, -1).map(l => l.jumpsize || 0));
 
-            pathSummary.textContent = `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns`;
+            document.getElementById('pathSummary').textContent = 
+                `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns | Max jumpsize: ${biggestJumpsize}`;
 
+            const lessonList = document.getElementById('finalLessonList');
             lessonList.innerHTML = '';
-            for (const lesson of result.lessons) {
+            for (let i = 0; i < result.lessons.length; i++) {
+                const lesson = result.lessons[i];
                 const li = document.createElement('li');
                 li.className = 'lesson-item' + (lesson.step === '🎉' ? ' final' : '');
                 
@@ -478,7 +595,7 @@
                 
                 const title = document.createElement('span');
                 title.className = 'lesson-title';
-                title.textContent = lesson.title || lesson.story.title;
+                title.textContent = lesson.title || lesson.story?.title || 'Unknown';
                 
                 const stats = document.createElement('span');
                 stats.className = 'lesson-stats';
@@ -499,7 +616,7 @@
             };
         }
 
-        function generatePath() {
+        async function generatePath() {
             const targetText = document.getElementById('targetText').value.trim();
             if (!targetText) {
                 updateTargetStatus('Please enter a target text.', false, true);
@@ -513,24 +630,87 @@
 
             const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
             const remainderPermitted = document.getElementById('remainderPermitted').checked;
+            
+            stopRequested = false;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('lessonList').innerHTML = '';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('optimizeBtn').style.display = 'inline-block';
 
-            updateTargetStatus('Generating learning path...');
+            updateTargetStatus('Loading stories and building path...', false, false, true);
 
-            loadStories().then(() => {
+            try {
+                await loadStories();
+                
                 if (stories.length === 0) {
                     updateTargetStatus('No stories found in library.', false, true);
                     return;
                 }
 
-                const result = generateCurriculum(targetText, knownSet, remainderPermitted);
-                renderCurriculum(result);
+                const targetChars = new Set(extractCharacters(targetText));
+                updateTargetStatus('Building path...', false, false, true);
 
-                if (result.success) {
-                    updateTargetStatus(`Learning path generated with ${result.lessons.length} steps.`, true);
+                // Phase 1: Build initial path
+                const initialResult = await generateCurriculumAsync(targetText, knownSet, remainderPermitted);
+                
+                if (stopRequested) {
+                    showResults({ success: true, lessons: initialResult.lessons });
+                    updateTargetStatus('Path building stopped. Export when ready.', true);
+                    return;
                 }
-            }).catch(err => {
-                updateTargetStatus(`Error loading stories: ${err.message}`, false, true);
-            });
+
+                if (!initialResult.success) {
+                    showResults(initialResult);
+                    return;
+                }
+
+                updateTargetStatus('Initial path complete! Optimizing...', false, false, true);
+
+                // Phase 2: Optimize
+                const optimizeResult = await optimizePath(initialResult.lessons, knownSet, targetChars);
+                
+                if (stopRequested) {
+                    showResults({ success: true, lessons: initialResult.lessons });
+                    updateTargetStatus('Optimization stopped. Export when ready.', true);
+                    return;
+                }
+
+                showResults({ success: true, lessons: initialResult.lessons });
+                updateTargetStatus(`Path complete! ${optimizeResult.iterations} optimizations made.`, true);
+
+            } catch (err) {
+                updateTargetStatus(`Error: ${err.message}`, false, true);
+            }
+        }
+
+        async function optimizeFurther() {
+            if (!curriculum || !curriculum.lessons) return;
+            
+            stopRequested = false;
+            document.getElementById('optimizeBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('progressStatus').textContent = 'Optimizing further...';
+            document.getElementById('progressFill').style.width = '100%';
+            
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+            const targetChars = new Set(extractCharacters(document.getElementById('targetText').value));
+            
+            const optimizeResult = await optimizePath(curriculum.lessons, knownSet, targetChars);
+            
+            document.getElementById('optimizeBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('progressSection').style.display = 'none';
+            
+            showResults({ success: true, lessons: curriculum.lessons });
+            updateTargetStatus(`Optimization complete! ${optimizeResult.iterations} more optimizations.`, true);
+        }
+
+        function stopBuilding() {
+            stopRequested = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('optimizeBtn').style.display = 'none';
+            updateTargetStatus('Stopping...', false, false, true);
         }
 
         function loadExample() {
@@ -543,6 +723,7 @@
 
         function clearAll() {
             document.getElementById('targetText').value = '';
+            document.getElementById('progressSection').style.display = 'none';
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('errorSection').style.display = 'none';
             document.getElementById('step2Section').style.display = 'none';
@@ -550,6 +731,7 @@
             document.getElementById('remainderPermitted').checked = false;
             savedStory = null;
             curriculum = null;
+            stopRequested = true;
             updateTargetStatus('Run Setup first to prepare the story library.');
         }
 
@@ -574,10 +756,7 @@
 
         function closeSetupModal() {
             document.getElementById('setupModal').style.display = 'none';
-            // Re-run check to update icon
-            if (setupComplete) {
-                updateSetupStatusIcon(true);
-            }
+            if (setupComplete) updateSetupStatusIcon(true);
         }
 
         function confirmSave() {
@@ -608,7 +787,6 @@
         }
 
         function downloadStoriesData() {
-            // Download stories_data.json from data/ folder
             fetch('data/stories_data.json')
                 .then(response => {
                     if (!response.ok) throw new Error('File not found');
@@ -646,6 +824,8 @@
         document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
         document.getElementById('clearBtn').addEventListener('click', clearAll);
         document.getElementById('exportBtn').addEventListener('click', exportJSON);
+        document.getElementById('stopBtn').addEventListener('click', stopBuilding);
+        document.getElementById('optimizeBtn').addEventListener('click', optimizeFurther);
         document.getElementById('downloadStoriesDataBtn').addEventListener('click', downloadStoriesData);
 
         // Modal event listeners
@@ -666,7 +846,6 @@
             if (e.target.id === 'setupModal') closeSetupModal();
         });
 
-        // Enter key in modal
         document.getElementById('storyTitle').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') document.getElementById('storySource').focus();
         });
@@ -674,7 +853,6 @@
             if (e.key === 'Enter') confirmSave();
         });
 
-        // Initial setup check
         runSetupCheck();
     </script>
 </body>
