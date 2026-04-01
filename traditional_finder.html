@@ -372,9 +372,9 @@
         // Strip HTML when pasting into text input
         document.getElementById("textInput").addEventListener('paste', (e) => {
             e.preventDefault();
-            let text = (e.clipboardData || window.clipboardData).getData('text');
-            text = text.replace(/<[^>]*>/g, '');
-            document.execCommand('insertText', false, text);
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const stripped = text.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+            document.execCommand('insertText', false, stripped);
         });
 
         // Update preview when shared state changes

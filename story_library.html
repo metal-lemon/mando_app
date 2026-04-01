@@ -586,6 +586,17 @@
             console.log('No data/stories.json found. You can load one manually.');
             updateFileStatus('No data/stories.json found. Use "Load Story Database" to load one.', false);
         });
+
+        // Handle incoming text from other pages (e.g., Can I Read This)
+        const params = new URLSearchParams(window.location.search);
+        const incomingText = params.get('text');
+        if (incomingText) {
+            clearStoryForm();
+            document.getElementById('storyContent').value = decodeURIComponent(incomingText);
+            showCharPreview();
+            document.getElementById('storyFormModal').style.display = 'block';
+            window.history.replaceState({}, '', window.location.pathname);
+        }
     </script>
 </body>
 </html>

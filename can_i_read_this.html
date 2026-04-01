@@ -94,7 +94,7 @@
             <button id="saveBtn" class="export-btn">💾 Save Known Characters</button>
         </div>
         <div id="fileStatus" class="file-status">
-            No character file loaded yet.
+            Checking for saved characters...
         </div>
     </div>
 
@@ -102,13 +102,19 @@
         <h2>📝 Step 2: Paste Text to Analyze</h2>
         <p>Paste the Chinese text you want to read (article, story, homework, etc.)</p>
         <textarea id="textInput" placeholder="Paste your Chinese text here...&#10;&#10;Example:&#10;我喜欢学习中文。今天天气很好，我去公园散步。"></textarea>
-        <div id="textPreview" class="result-text" style="display: none;"></div>
         <div class="button-group">
             <button id="analyzeBtn">🔍 Analyze Text</button>
             <button id="convertBtn" class="trad">🧹 Convert Trad → Simp</button>
             <button id="clearTextBtn" class="danger">🗑️ Clear Text</button>
             <button id="loadExampleTextBtn" class="secondary">📄 Load Example Text</button>
+            <button id="saveToStoriesBtn" class="secondary">📚 Save to Stories</button>
         </div>
+    </div>
+
+    <div id="previewSection" class="section" style="display: none;">
+        <h2>🔍 Preview</h2>
+        <p class="info-text">Traditional characters are highlighted in <span style="color: #6a1b9a; font-weight: bold;">purple</span>.</p>
+        <div id="textPreview" class="result-text"></div>
     </div>
 
     <div id="results" style="display: none;">
@@ -160,9 +166,10 @@
         }
 
         function showTextPreview(text) {
+            const previewSection = document.getElementById('previewSection');
             const preview = document.getElementById('textPreview');
             if (!text.trim()) {
-                preview.style.display = 'none';
+                previewSection.style.display = 'none';
                 return;
             }
             const escaped = escapeHtml(text);
@@ -174,9 +181,8 @@
                     highlighted = highlighted.replace(regex, '<span class="trad-highlight">' + escapedTrad + '</span>');
                 }
             }
-            preview.innerHTML = highlighted.replace(/
-/g, '<br>');
-            preview.style.display = 'block';
+            preview.innerHTML = highlighted.replace(/\n/g, '<br>');
+            previewSection.style.display = 'block';
         }
 
         function convertToSimplified() {
@@ -197,7 +203,7 @@
 
             if (count > 0) {
                 textInput.value = converted;
-                document.getElementById('textPreview').style.display = 'none';
+                document.getElementById('previewSection').style.display = 'none';
                 return true;
             }
             return false;
@@ -366,7 +372,7 @@
             if (!window.mandarinState) { alert("Shared state not available."); return; }
             currentText = text;
             currentAnalysis = true;
-            document.getElementById("textPreview").style.display = "none";
+            document.getElementById("previewSection").style.display = "none";
             analyzeTextWithSet(text, window.mandarinState);
         }
 
@@ -413,13 +419,20 @@
         
         function clearText() { 
             document.getElementById("textInput").value = ""; 
-            document.getElementById("textPreview").style.display = "none";
+            document.getElementById("previewSection").style.display = "none";
             document.getElementById("results").style.display = "none"; 
         }
 
         function saveKnownChars() {
             window.mandarinState.exportToFile();
             updateFileStatus("Known characters saved to known_chars.json", true);
+        }
+
+        function saveToStories() {
+            const text = document.getElementById("textInput").value;
+            if (!text.trim()) { alert("Please paste some text first."); return; }
+            const encoded = encodeURIComponent(text);
+            window.open(`story_library.html?text=${encoded}`, '_blank');
         }
 
         // File input handler – load and merge
@@ -443,9 +456,9 @@
         // Strip HTML on paste and show preview
         document.getElementById("textInput").addEventListener('paste', (e) => {
             e.preventDefault();
-            let text = (e.clipboardData || window.clipboardData).getData('text');
-            text = text.replace(/<[^>]*>/g, '');
-            document.execCommand('insertText', false, text);
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const stripped = text.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+            document.execCommand('insertText', false, stripped);
             setTimeout(() => showTextPreview(document.getElementById("textInput").value), 0);
         });
 
@@ -458,9 +471,8 @@
         document.getElementById("convertBtn").addEventListener("click", convertAndAnalyze);
         document.getElementById("clearTextBtn").addEventListener("click", clearText);
         document.getElementById("loadExampleTextBtn").addEventListener("click", loadExampleText);
-        document.getElementById("exportUnknownBtn").addEventListener("click", exportUnknownChars);
-        document.getElementById("copyUnknownBtn").addEventListener("click", copyUnknownChars);
         document.getElementById("saveBtn").addEventListener("click", saveKnownChars);
+        document.getElementById("saveToStoriesBtn").addEventListener("click", saveToStories);
         
         // Load current state on page load
         if (window.mandarinState) {
@@ -468,6 +480,25 @@
         } else {
             updateFileStatus("Shared state not available. Please ensure shared_state.js is loaded.", false, true);
         }
+
+        // Auto-load traditional character map
+        fetch('data/trad_simp_map.json').then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('No data/trad_simp_map.json found');
+        }).then(data => {
+            for (let [trad, simp] of Object.entries(data)) {
+                if (trad && simp && trad.length === 1 && simp.length === 1) {
+                    tradMap.set(trad, simp);
+                }
+            }
+            if (tradMap.size > 0) {
+                console.log(`Loaded ${tradMap.size} traditional-simplified pairs`);
+            }
+        }).catch(() => {
+            console.log('No data/trad_simp_map.json found, traditional highlighting disabled.');
+        });
     </script>
 </body>
 </html>
