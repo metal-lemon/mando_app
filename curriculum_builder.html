@@ -811,8 +811,11 @@
             const blob = new Blob([jsonStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
+            const title = curriculum.targetTitle || 'unknown';
+            const safeTitle = title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 50);
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+            a.download = `curriculum_${safeTitle}_${timestamp}.json`;
             a.href = url;
-            a.download = `curriculum_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
