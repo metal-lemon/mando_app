@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki Curriculum Builder - Wikipedia-Based Learning Path</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <script src="shared_state.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #9c27b0 0%, #673ab7 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .header h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.8rem;
+        }
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        .home-btn {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .home-btn:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+        .section {
+            background: white;
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #9c27b0;
+            padding-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        .section h3 {
+            color: #9c27b0;
+            margin: 15px 0 10px 0;
+        }
+        textarea {
+            width: 100%;
+            max-width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            font-size: 16px;
+            font-family: monospace;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            margin: 10px 0;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #9c27b0;
+        }
+        button {
+            background-color: #9c27b0;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #7b1fa2;
+        }
+        button.secondary {
+            background-color: #48bb78;
+        }
+        button.secondary:hover {
+            background-color: #38a169;
+        }
+        button.warning {
+            background-color: #ff9800;
+        }
+        button.warning:hover {
+            background-color: #e68a00;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        .file-status {
+            background-color: #e3f2fd;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .file-status.success {
+            background-color: #e8f5e9;
+            border-left-color: #4CAF50;
+        }
+        .file-status.error {
+            background-color: #ffebee;
+            border-left-color: #f44336;
+        }
+        .file-status.warning {
+            background-color: #fff3e0;
+            border-left-color: #FF9800;
+        }
+        .info-text {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #9c27b0;
+        }
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .results-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+        .results-table tr:hover {
+            background-color: #f9f9f9;
+        }
+        .results-table .coverage {
+            font-weight: bold;
+            color: #9c27b0;
+            text-align: center;
+        }
+        .results-table .title {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .results-table a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        .results-table a:hover {
+            text-decoration: underline;
+        }
+        .char-badge {
+            display: inline-block;
+            background: #e1bee7;
+            color: #7b1fa2;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin: 2px;
+            font-family: monospace;
+        }
+        .char-section {
+            background: #f3e5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .char-section h4 {
+            margin: 0 0 10px 0;
+            color: #7b1fa2;
+        }
+        .setup-instructions {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .setup-instructions h3 {
+            margin-top: 0;
+            color: #e65100;
+        }
+        .setup-instructions code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .setup-instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .setup-instructions li {
+            margin: 8px 0;
+        }
+        .progress-section {
+            margin: 15px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #9c27b0, #673ab7);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .pagination .page-info {
+            color: #666;
+        }
+        .filter-section {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .filter-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .filter-section input[type="range"] {
+            width: 100%;
+        }
+        .filter-section .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .results-table {
+                font-size: 14px;
+            }
+            .results-table th,
+            .results-table td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🗺️ Wiki Curriculum Builder</h1>
+            <p>Build learning paths using Wikipedia as a content library</p>
+        </div>
+        <a href="index.html" class="home-btn">🏠 Home</a>
+    </div>
+
+    <div class="section">
+        <h2>📋 Index Status</h2>
+        <div id="indexStatus" class="file-status">
+            Loading index status...
+        </div>
+        <input type="file" id="indexFileInput" accept=".json" style="display: none;">
+        <div class="button-group">
+            <button id="loadIndexBtn">📂 Load Index File</button>
+            <button id="checkDefaultBtn" class="secondary">🔍 Check Default Location (data/wiki_index.json)</button>
+        </div>
+        <div id="indexStats" class="stats-grid" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+        <h2>🎯 Target Text</h2>
+        <p class="info-text">Enter the Chinese text you want to learn to read. The system will find Wikipedia articles that can help you build toward this goal.</p>
+        <textarea id="targetText" placeholder="Paste your target Chinese text here...
+
+Example:
+我想学习中文，今天天气很好，我们去公园散步。"></textarea>
+        <div class="button-group">
+            <button id="findCandidatesBtn" disabled>🔍 Find Wikipedia Candidates</button>
+            <button id="loadExampleBtn" class="secondary" disabled>📄 Load Example</button>
+            <button id="clearBtn" class="warning" disabled>🗑️ Clear</button>
+        </div>
+    </div>
+
+    <div class="section" id="charsSection" style="display: none;">
+        <h2>📊 Character Analysis</h2>
+        <div class="stats-grid" id="charStats"></div>
+        <div class="char-section" id="knownSection" style="display: none;">
+            <h4>✅ Known Characters (<span id="knownCount">0</span>)</h4>
+            <div id="knownChars" class="char-list"></div>
+        </div>
+        <div class="char-section" id="unknownSection" style="display: none;">
+            <h4>❓ Unknown Characters to Learn (<span id="unknownCount">0</span>)</h4>
+            <div id="unknownChars" class="char-list"></div>
+        </div>
+    </div>
+
+    <div class="section" id="progressSection" style="display: none;">
+        <h2>🔄 Finding Candidates...</h2>
+        <div id="progressStatus" class="info-text">Initializing...</div>
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%;">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="resultsSection" style="display: none;">
+        <h2>📚 Candidate Pool</h2>
+        <div class="stats-grid" id="resultStats"></div>
+
+        <div class="filter-section">
+            <label>Minimum coverage filter: <span id="minCoverageLabel">0</span> characters</label>
+            <input type="range" id="minCoverage" min="0" max="50" value="0">
+            <div class="range-labels">
+                <span>0</span>
+                <span>Show all</span>
+                <span>50</span>
+            </div>
+        </div>
+
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Coverage</th>
+                    <th>Characters Taught</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+        </table>
+
+        <div class="pagination" id="pagination"></div>
+
+        <div class="button-group">
+            <button id="exportBtn">💾 Export Pool (JSON)</button>
+            <button id="exportCsvBtn" class="secondary">📊 Export CSV</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📖 How This Works</h2>
+        <div class="setup-instructions">
+            <h3>Stage 1: Building the Candidate Pool</h3>
+            <p>This tool uses Chinese Wikipedia as a content library to find reading material that can help you learn specific characters.</p>
+            
+            <h3>Setup Instructions</h3>
+            <ol>
+                <li><strong>Download Wikipedia dump</strong>:
+                    <ul>
+                        <li><strong>XML bz2</strong>: Run <code>python scripts/build_wiki_index.py --download</code></li>
+                        <li><strong>ZIM file</strong>: Download from <a href="https://download.kiwix.org/zim/wikipedia/" target="_blank">Kiwix downloads</a></li>
+                    </ul>
+                </li>
+                <li><strong>Build the index</strong>:
+                    <ul>
+                        <li>For XML: <code>python scripts/build_wiki_index.py --input dump.xml.bz2</code></li>
+                        <li>For ZIM: <code>python scripts/build_wiki_index.py --input wikipedia.zim</code> (requires <code>zim-tools</code> or <code>libzim</code>)</li>
+                    </ul>
+                </li>
+                <li><strong>Copy to data folder</strong> - Move <code>data/wiki_index.json</code> to your web app's <code>data/</code> folder.</li>
+                <li><strong>Load and query</strong> - Use this tool to find Wikipedia articles covering your target characters.</li>
+            </ol>
+            
+            <h3>Algorithm</h3>
+            <ol>
+                <li>Extract characters from your target text</li>
+                <li>Subtract your known characters (from shared state)</li>
+                <li>For each unknown character, find all Wikipedia pages containing it</li>
+                <li>Count how many unknown chars each page covers</li>
+                <li>Sort by coverage and return top candidates</li>
+            </ol>
+            
+            <p><strong>Note:</strong> Future stages will add Jaccard clustering and path optimization.</p>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_INDEX_PATH = 'data/wiki_index.json';
+        const MAX_POOL_SIZE = 2000;
+        const PAGE_SIZE = 50;
+
+        let wikiIndex = null;
+        let unknownChars = [];
+        let candidatePool = [];
+        let currentPage = 1;
+        let minCoverageFilter = 0;
+
+        function extractCharacters(text) {
+            const chineseRegex = /[\u4e00-\u9fff]/g;
+            const matches = text.match(chineseRegex);
+            if (!matches) return [];
+            return [...new Set(matches)];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateIndexStatus(message, isSuccess = false, isError = false, isWarning = false) {
+            const statusDiv = document.getElementById('indexStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = 'file-status';
+            if (isSuccess) statusDiv.classList.add('success');
+            if (isError) statusDiv.classList.add('error');
+            if (isWarning) statusDiv.classList.add('warning');
+        }
+
+        function displayIndexStats(stats) {
+            const statsDiv = document.getElementById('indexStats');
+            statsDiv.style.display = 'grid';
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <div class="value">${stats.totalPages?.toLocaleString() || 'N/A'}</div>
+                    <div class="label">Total Pages</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${stats.pagesWithChars?.toLocaleString() || 'N/A'}</div>
+                    <div class="label">Pages with Chinese</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${stats.uniqueChars?.toLocaleString() || 'N/A'}</div>
+                    <div class="label">Unique Characters</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${stats.buildDate ? new Date(stats.buildDate).toLocaleDateString() : 'N/A'}</div>
+                    <div class="label">Index Built</div>
+                </div>
+            `;
+        }
+
+        function loadIndexFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    wikiIndex = JSON.parse(e.target.result);
+                    if (!wikiIndex.pages || !wikiIndex.index) {
+                        throw new Error('Invalid index format: missing pages or index');
+                    }
+                    updateIndexStatus(`Index loaded: ${Object.keys(wikiIndex.pages).length} pages`, true);
+                    displayIndexStats(wikiIndex);
+                    enableControls();
+                } catch (err) {
+                    updateIndexStatus(`Failed to load index: ${err.message}`, false, true);
+                    wikiIndex = null;
+                }
+            };
+            reader.onerror = () => {
+                updateIndexStatus('Failed to read file', false, true);
+                wikiIndex = null;
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        async function checkDefaultIndex() {
+            updateIndexStatus('Checking for index at data/wiki_index.json...', false, false, true);
+            try {
+                const response = await fetch(DEFAULT_INDEX_PATH);
+                if (response.ok) {
+                    wikiIndex = await response.json();
+                    if (!wikiIndex.pages || !wikiIndex.index) {
+                        throw new Error('Invalid index format');
+                    }
+                    updateIndexStatus(`Found index at ${DEFAULT_INDEX_PATH}: ${Object.keys(wikiIndex.pages).length} pages`, true);
+                    displayIndexStats(wikiIndex);
+                    enableControls();
+                } else {
+                    updateIndexStatus(`Index not found at ${DEFAULT_INDEX_PATH}. Please load manually or run the Python script.`, false, true);
+                }
+            } catch (err) {
+                updateIndexStatus(`Error loading index: ${err.message}`, false, true);
+                wikiIndex = null;
+            }
+        }
+
+        function enableControls() {
+            document.getElementById('findCandidatesBtn').disabled = false;
+            document.getElementById('loadExampleBtn').disabled = false;
+            document.getElementById('clearBtn').disabled = false;
+        }
+
+        function analyzeTargetText() {
+            const targetText = document.getElementById('targetText').value.trim();
+            if (!targetText) {
+                document.getElementById('charsSection').style.display = 'none';
+                return;
+            }
+
+            const targetChars = extractCharacters(targetText);
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+
+            knownChars = targetChars.filter(c => knownSet.has(c));
+            unknownChars = targetChars.filter(c => !knownSet.has(c));
+
+            document.getElementById('charsSection').style.display = 'block';
+
+            document.getElementById('charStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="value">${targetChars.length}</div>
+                    <div class="label">Target Characters</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${knownChars.length}</div>
+                    <div class="label">Already Known</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${unknownChars.length}</div>
+                    <div class="label">Need to Learn</div>
+                </div>
+            `;
+
+            const knownSection = document.getElementById('knownSection');
+            const unknownSection = document.getElementById('unknownSection');
+
+            if (knownChars.length > 0) {
+                knownSection.style.display = 'block';
+                document.getElementById('knownCount').textContent = knownChars.length;
+                document.getElementById('knownChars').innerHTML = knownChars.map(c => `<span class="char-badge">${c}</span>`).join('');
+            } else {
+                knownSection.style.display = 'none';
+            }
+
+            if (unknownChars.length > 0) {
+                unknownSection.style.display = 'block';
+                document.getElementById('unknownCount').textContent = unknownChars.length;
+                document.getElementById('unknownChars').innerHTML = unknownChars.map(c => `<span class="char-badge">${c}</span>`).join('');
+            } else {
+                unknownSection.style.display = 'none';
+            }
+        }
+
+        function findCandidates() {
+            if (!wikiIndex || unknownChars.length === 0) {
+                return;
+            }
+
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+
+            const progressFill = document.getElementById('progressFill');
+            const progressStatus = document.getElementById('progressStatus');
+
+            progressStatus.textContent = 'Counting coverage for each Wikipedia page...';
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+
+            setTimeout(() => {
+                const pageCoverage = new Map();
+
+                for (let i = 0; i < unknownChars.length; i++) {
+                    const char = unknownChars[i];
+                    const postingList = wikiIndex.index[char] || [];
+
+                    for (const pageId of postingList) {
+                        if (!pageCoverage.has(pageId)) {
+                            pageCoverage.set(pageId, new Set());
+                        }
+                        pageCoverage.get(pageId).add(char);
+                    }
+
+                    if ((i + 1) % 100 === 0 || i === unknownChars.length - 1) {
+                        const progress = Math.round(((i + 1) / unknownChars.length) * 50);
+                        progressFill.style.width = progress + '%';
+                        progressFill.textContent = progress + '%';
+                    }
+                }
+
+                progressStatus.textContent = 'Building candidate pool...';
+
+                candidatePool = [];
+                for (const [pageId, chars] of pageCoverage) {
+                    const pageData = wikiIndex.pages[pageId];
+                    if (pageData) {
+                        candidatePool.push({
+                            id: pageId,
+                            title: pageData.title,
+                            chars: [...chars],
+                            coverage: chars.size
+                        });
+                    }
+                }
+
+                candidatePool.sort((a, b) => b.coverage - a.coverage);
+                candidatePool = candidatePool.slice(0, MAX_POOL_SIZE);
+
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
+
+                setTimeout(() => {
+                    document.getElementById('progressSection').style.display = 'none';
+                    displayResults();
+                }, 300);
+            }, 50);
+        }
+
+        function displayResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.style.display = 'block';
+
+            const filteredPool = candidatePool.filter(c => c.coverage >= minCoverageFilter);
+            const totalPages = Math.ceil(filteredPool.length / PAGE_SIZE);
+
+            if (currentPage > totalPages) {
+                currentPage = 1;
+            }
+
+            document.getElementById('resultStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="value">${candidatePool.length}</div>
+                    <div class="label">Total Candidates</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${filteredPool.length}</div>
+                    <div class="label">After Filter</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${totalPages}</div>
+                    <div class="label">Result Pages</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">${unknownChars.length}</div>
+                    <div class="label">Target Unknowns</div>
+                </div>
+            `;
+
+            renderResultsTable(filteredPool);
+            renderPagination(totalPages);
+        }
+
+        function renderResultsTable(pool) {
+            const start = (currentPage - 1) * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageItems = pool.slice(start, end);
+
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = pageItems.map((item, index) => {
+                const globalIndex = start + index + 1;
+                const wikiUrl = `https://zh.wikipedia.org/wiki/${encodeURIComponent(item.title)}`;
+                const charsDisplay = item.chars.slice(0, 10).join(' ') + (item.chars.length > 10 ? '...' : '');
+
+                return `
+                    <tr>
+                        <td>${globalIndex}</td>
+                        <td class="title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</td>
+                        <td class="coverage">${item.coverage}</td>
+                        <td><span class="char-badge">${charsDisplay.replace(/ /g, '</span><span class="char-badge">')}</span></td>
+                        <td><a href="${wikiUrl}" target="_blank" rel="noopener">🔗 View</a></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            html += `<button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>`;
+            html += `<span class="page-info">Page ${currentPage} of ${totalPages}</span>`;
+            html += `<button id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>`;
+
+            pagination.innerHTML = html;
+
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayResults();
+                }
+            });
+
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayResults();
+                }
+            });
+        }
+
+        function exportPool() {
+            const filteredPool = candidatePool.filter(c => c.coverage >= minCoverageFilter);
+
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                targetText: document.getElementById('targetText').value,
+                unknownChars: unknownChars,
+                totalCandidates: filteredPool.length,
+                candidates: filteredPool
+            };
+
+            const jsonStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wiki_candidates_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportCsv() {
+            const filteredPool = candidatePool.filter(c => c.coverage >= minCoverageFilter);
+
+            let csv = 'Rank,Title,Page ID,Coverage,Characters\n';
+
+            filteredPool.forEach((item, index) => {
+                const title = item.title.replace(/"/g, '""');
+                const chars = item.chars.join(' ');
+                csv += `${index + 1},"${title}",${item.id},${item.coverage},"${chars}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wiki_candidates_${Date.now()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadExample() {
+            document.getElementById('targetText').value = '北京是中国的首都，有很多著名的景点，比如故宫、天安门广场和长城。上海是中国的经济中心，有外滩和东方明珠塔。';
+            analyzeTargetText();
+        }
+
+        function clearAll() {
+            document.getElementById('targetText').value = '';
+            document.getElementById('charsSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'none';
+            candidatePool = [];
+            unknownChars = [];
+            currentPage = 1;
+        }
+
+        document.getElementById('indexFileInput').addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                loadIndexFile(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+
+        document.getElementById('loadIndexBtn').addEventListener('click', () => {
+            document.getElementById('indexFileInput').click();
+        });
+
+        document.getElementById('checkDefaultBtn').addEventListener('click', checkDefaultIndex);
+
+        document.getElementById('targetText').addEventListener('input', analyzeTargetText);
+
+        document.getElementById('findCandidatesBtn').addEventListener('click', findCandidates);
+        document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+        document.getElementById('exportBtn').addEventListener('click', exportPool);
+        document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+
+        document.getElementById('minCoverage').addEventListener('input', (e) => {
+            minCoverageFilter = parseInt(e.target.value);
+            document.getElementById('minCoverageLabel').textContent = minCoverageFilter;
+            currentPage = 1;
+            if (candidatePool.length > 0) {
+                displayResults();
+            }
+        });
+
+        updateIndexStatus('Click "Check Default Location" or "Load Index File" to load the Wikipedia index.');
+    </script>
+</body>
+</html>

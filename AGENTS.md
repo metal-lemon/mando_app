@@ -22,21 +22,27 @@ http://localhost:8000/index.html
 ## File Structure
 
 ```
-├── index.html              # Home page with navigation
-├── setup.html              # One-click file setup
-├── mandarin_learner.html   # Track known characters
-├── can_i_read_this.html    # Text readability analyzer
-├── study_guide.html        # Generate study materials
-├── story_suggester.html    # Find stories by difficulty
-├── story_library.html      # Manage story database
-├── traditional_finder.html # Identify/convert traditional chars
-├── shared_state.js         # Central state management
+├── index.html                  # Home page with navigation
+├── setup.html                  # One-click file setup
+├── mandarin_learner.html       # Track known characters
+├── can_i_read_this.html        # Text readability analyzer
+├── study_guide.html            # Generate study materials
+├── story_suggester.html        # Find stories by difficulty
+├── story_library.html          # Manage story database
+├── traditional_finder.html     # Identify/convert traditional chars
+├── curriculum_builder.html     # Story-based curriculum builder
+├── lite_builder.html          # Simplified curriculum builder
+├── wiki_curriculum_builder.html # Wikipedia-based curriculum builder
+├── shared_state.js             # Central state management
 ├── data/
-│   ├── dictionary.json     # CC-CEDICT word database
-│   ├── stories.json        # Story library
-│   └── trad_simp_map.json  # Traditional→simplified mapping
-├── serve.py                # Optional: HTTP server with log capture
-└── AGENTS.md               # This file
+│   ├── dictionary.json         # CC-CEDICT word database
+│   ├── stories.json            # Story library
+│   ├── trad_simp_map.json      # Traditional→simplified mapping
+│   └── wiki_index.json         # Wikipedia inverted index (user-generated)
+├── scripts/
+│   └── build_wiki_index.py     # Build Wikipedia index from dump
+├── serve.py                    # Optional: HTTP server with log capture
+└── AGENTS.md                   # This file
 ```
 
 ## Testing
@@ -285,5 +291,74 @@ Update all `fetch()` calls and file download paths. Default is `data/` for dicti
 - **Canonical location for stories**: `data/stories.json`
 - **Canonical location for dictionary**: `data/dictionary.json`
 - **Canonical location for character data**: `data/trad_simp_map.json`
+- **Canonical location for Wikipedia index**: `data/wiki_index.json`
 - When exporting, use timestamped backup filenames (e.g., `stories_backup_2026-03-28.json`)
 - All pages should read from `data/stories.json` - do not use root-level `stories.json`
+
+## Wiki Curriculum Builder
+
+The Wiki Curriculum Builder uses Chinese Wikipedia as a content library to find reading material for learning specific characters.
+
+### Setup Process
+
+1. **Download Wikipedia dump**: Download from one of these sources:
+   - **XML bz2** (recommended): Download from Wikimedia dumps
+     ```bash
+     python scripts/build_wiki_index.py --download
+     ```
+   - **ZIM file**: Download from Kiwix (e.g., `wikipedia_zh_all_maxi.zim`)
+
+2. **Build the index**: The script parses Wikipedia pages, extracts Chinese characters, and builds an inverted index:
+   ```bash
+   # For XML bz2
+   python scripts/build_wiki_index.py --input zhwiki-latest-pages-articles.xml.bz2
+   
+   # For ZIM file (requires zim-tools or libzim)
+   python scripts/build_wiki_index.py --input wikipedia_zh_all_maxi.zim
+   ```
+
+3. **Place the index**: Copy `data/wiki_index.json` to your web app's `data/` folder.
+
+#### ZIM Support Requirements
+
+For processing ZIM files, install one of:
+- **libzim Python bindings**: `pip install libzim` (may require compilation tools)
+- **zim-tools** (includes `zimdump` CLI):
+  - Ubuntu/Debian: `sudo apt install zim-tools`
+  - macOS: `brew install zim-tools`
+  - Windows: Download from https://github.com/kiwix/kiwix-tools/releases
+
+### Index JSON Format
+
+```json
+{
+    "version": "1.0",
+    "buildDate": "2026-04-02T00:00:00.000Z",
+    "totalPages": 1400000,
+    "pagesWithChars": 500000,
+    "uniqueChars": 12000,
+    "pages": {
+        "12345": { "title": "北京", "chars": ["北", "京"] }
+    },
+    "index": {
+        "北": ["12345", "67890"],
+        "京": ["12345", "11111"]
+    }
+}
+```
+
+### Browser Tool Workflow
+
+1. Load the Wikipedia index (`data/wiki_index.json` or via file upload)
+2. Enter target text (what you want to learn to read)
+3. System identifies unknown characters (target - known from shared_state)
+4. For each unknown char, retrieve posting list from index
+5. Count coverage: how many unknown chars each page contains
+6. Sort by coverage, return top 2000 candidates
+7. Export candidate pool as JSON or CSV
+
+### Future Enhancements
+
+- **Stage 2**: Jaccard clustering of candidates by character overlap
+- **Stage 3**: Path optimization to minimize jumpsize
+- **Stage 4**: Wikipedia article preview within the tool
