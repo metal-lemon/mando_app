@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Study Guide Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -216,7 +216,7 @@
             <h1>📘 Study Guide Generator</h1>
             <p>Turn unknown characters into a focused study guide with context and compound words</p>
         </div>
-        <a href="index.html" class="home-btn">🏠 Home</a>
+        <a href="/" class="home-btn">🏠 Home</a>
     </div>
 
     <div class="section no-print">
@@ -288,7 +288,7 @@
 
         async function loadDictionary() {
             try {
-                const response = await fetch('data/dictionary.json');
+                const response = await fetch('/data/dictionary.json');
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 dictionary = await response.json();
                 console.log(`Loaded ${dictionary.length} words.`);

@@ -5,12 +5,22 @@ Wikipedia Index Builder for Mandarin Learning Tools
 Downloads and processes the Chinese Wikipedia dump to create an inverted index
 that maps Chinese characters to the Wikipedia pages that contain them.
 
+Supports multiple input formats:
+- XML bz2: Standard Wikipedia XML dump (zhwiki-*-pages-articles.xml.bz2)
+- ZIM: Kiwix offline Wikipedia format
+
 Usage:
     python build_wiki_index.py [--download] [--input INPUT_FILE]
 
 Options:
-    --download     Download the latest Wikipedia dump before processing
-    --input FILE   Use a local Wikipedia XML dump file
+    --download     Download the latest Wikipedia dump (XML bz2 format)
+    --input FILE   Use a local Wikipedia dump file (XML bz2 or ZIM)
+
+Requirements:
+    For XML bz2: Standard library only (no extra dependencies)
+    For ZIM: Either:
+        - libzim Python bindings: pip install libzim
+        - zimdump CLI tool: Available in zim-tools package
 """
 
 import argparse
@@ -18,25 +28,26 @@ import bz2
 import json
 import os
 import re
+import shlex
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlretrieve
 
-# Wikipedia dump URL
+INDEX_FILENAME = "data/wiki_index.json"
+CHINESE_REGEX = re.compile(r'[\u4e00-\u9fff]')
+
 WIKI_DUMP_URL = "https://dumps.wikimedia.org/zhwiki/latest/zhwiki-latest-pages-articles.xml.bz2"
 DUMP_FILENAME = "zhwiki-latest-pages-articles.xml.bz2"
-INDEX_FILENAME = "data/wiki_index.json"
-
-# Chinese character regex
-CHINESE_REGEX = re.compile(r'[\u4e00-\u9fff]')
 
 
 def download_wikipedia_dump():
-    """Download the Chinese Wikipedia dump."""
+    """Download the Chinese Wikipedia dump (XML bz2 format)."""
     print(f"Downloading Chinese Wikipedia dump from {WIKI_DUMP_URL}")
     print("This may take a while (several GB)...")
+    print("For ZIM files, download manually from https://download.kiwix.org/zim/wikipedia/")
 
     try:
         urlretrieve(WIKI_DUMP_URL, DUMP_FILENAME)
@@ -47,24 +58,23 @@ def download_wikipedia_dump():
         return False
 
 
-def extract_plain_text(xml_content):
+def extract_plain_text(content):
     """
-    Extract plain text from Wikipedia XML content.
-    Removes wiki markup, templates, and HTML tags.
+    Extract plain text from Wikipedia content.
+    Handles both wiki markup (for XML) and HTML (for ZIM).
     """
-    text = xml_content
+    text = content
 
-    # Remove comments
+    if not text:
+        return ""
+
     text = re.sub(r'<!--.*?-->', '', text, flags=re.DOTALL)
 
-    # Remove <ref>...</ref> tags (references)
     text = re.sub(r'<ref[^>]*>.*?</ref>', '', text, flags=re.DOTALL)
     text = re.sub(r'<ref[^>]*/>', '', text)
 
-    # Remove <gallery>...</gallery>
     text = re.sub(r'<gallery>.*?</gallery>', '', text, flags=re.DOTALL)
 
-    # Remove templates {{...}}
     depth = 0
     result = []
     i = 0
@@ -82,22 +92,16 @@ def extract_plain_text(xml_content):
             i += 1
     text = ''.join(result)
 
-    # Remove HTML tags
     text = re.sub(r'<[^>]+>', '', text)
 
-    # Remove wiki links [[...]]
     text = re.sub(r'\[\[([^|\]]+\|)?([^\]]+)\]\]', r'\2', text)
 
-    # Remove wiki headings ===...===
     text = re.sub(r"={2,}\s*([^=]+)\s*={2,}", r'\1', text)
 
-    # Remove wiki lists
     text = re.sub(r'^[*#]+', '', text, flags=re.MULTILINE)
 
-    # Remove wiki horizontal rules
     text = re.sub(r'^----+', '', text, flags=re.MULTILINE)
 
-    # Clean up whitespace
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = text.strip()
 
@@ -109,19 +113,229 @@ def extract_characters(text):
     return list(set(CHINESE_REGEX.findall(text)))
 
 
-def process_wikipedia_dump(input_file):
-    """
-    Process the Wikipedia XML dump and build inverted index.
+def check_zim_tools():
+    """Check if zimdump command-line tool is available."""
+    try:
+        result = subprocess.run(
+            ['zimdump', '--version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            return True
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    return False
 
-    Returns a dictionary with:
-    - version: index format version
-    - buildDate: when the index was built
-    - totalPages: number of pages processed
-    - uniqueChars: number of unique characters found
-    - pages: dict mapping page_id -> {title, chars}
-    - index: dict mapping char -> [page_ids]
+
+def try_import_libzim():
+    """Try to import libzim Python bindings."""
+    try:
+        import libzim
+        return True
+    except ImportError:
+        return False
+
+
+def process_zim_with_libzim(input_file):
+    """Process ZIM file using libzim Python bindings."""
+    import libzim
+
+    print(f"Processing ZIM file with libzim: {input_file}")
+
+    reader = libzim.Library(input_file).allbooks()
+    searcher = libzim.Searcher(libzim.Library(input_file))
+    
+    pages = {}
+    char_index = {}
+    total_pages = 0
+    pages_with_chars = 0
+    progress_interval = 1000
+
+    for entry in reader.iter():
+        total_pages += 1
+
+        if total_pages % progress_interval == 0:
+            print(f"  Processed {total_pages} pages...")
+
+        try:
+            article = entry.get_article()
+            title = article.title
+            content = article.content
+
+            if not title or not content:
+                continue
+
+            plain_text = extract_plain_text(content)
+            chars = extract_characters(plain_text)
+
+            if chars:
+                pages_with_chars += 1
+                page_id = str(total_pages)
+
+                pages[page_id] = {
+                    'title': title,
+                    'chars': chars
+                }
+
+                for char in chars:
+                    if char not in char_index:
+                        char_index[char] = []
+                    char_index[char].append(page_id)
+
+        except Exception as e:
+            continue
+
+    return {
+        'version': '1.0',
+        'buildDate': datetime.now().isoformat(),
+        'totalPages': total_pages,
+        'pagesWithChars': pages_with_chars,
+        'uniqueChars': len(char_index),
+        'pages': pages,
+        'index': char_index
+    }
+
+
+def process_zim_with_zimdump(input_file):
+    """Process ZIM file using zimdump command-line tool."""
+    print(f"Processing ZIM file with zimdump: {input_file}")
+
+    pages = {}
+    char_index = {}
+    total_pages = 0
+    pages_with_chars = 0
+    progress_interval = 1000
+
+    cmd = ['zimdump', 'dump', '--dir', input_file]
+    
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode != 0:
+            print(f"zimdump error: {result.stderr}")
+            return None
+
+        lines = result.stdout.split('\n')
+        current_title = None
+        current_content = []
+
+        for line in lines:
+            if line.startswith('M/'):
+                if current_title:
+                    plain_text = extract_plain_text(''.join(current_content))
+                    chars = extract_characters(plain_text)
+
+                    if chars:
+                        pages_with_chars += 1
+                        page_id = str(total_pages)
+
+                        pages[page_id] = {
+                            'title': current_title,
+                            'chars': chars
+                        }
+
+                        for char in chars:
+                            if char not in char_index:
+                                char_index[char] = []
+                            char_index[char].append(page_id)
+
+                total_pages += 1
+                if total_pages % progress_interval == 0:
+                    print(f"  Processed {total_pages} pages...")
+
+                current_title = line[2:].strip()
+                current_content = []
+
+            elif current_title and line.strip():
+                current_content.append(line)
+
+        if current_title:
+            plain_text = extract_plain_text(''.join(current_content))
+            chars = extract_characters(plain_text)
+
+            if chars:
+                pages_with_chars += 1
+                page_id = str(total_pages)
+
+                pages[page_id] = {
+                    'title': current_title,
+                    'chars': chars
+                }
+
+                for char in chars:
+                    if char not in char_index:
+                        char_index[char] = []
+                    char_index[char].append(page_id)
+
+    except subprocess.TimeoutExpired:
+        print("zimdump timed out")
+        return None
+    except Exception as e:
+        print(f"Error running zimdump: {e}")
+        return None
+
+    return {
+        'version': '1.0',
+        'buildDate': datetime.now().isoformat(),
+        'totalPages': total_pages,
+        'pagesWithChars': pages_with_chars,
+        'uniqueChars': len(char_index),
+        'pages': pages,
+        'index': char_index
+    }
+
+
+def process_zim_file(input_file):
+    """Process ZIM file using available tools."""
+    has_libzim = try_import_libzim()
+    has_zimdump = check_zim_tools()
+
+    if has_libzim:
+        return process_zim_with_libzim(input_file)
+    elif has_zimdump:
+        return process_zim_with_zimdump(input_file)
+    else:
+        print("\n" + "="*60)
+        print("ERROR: Cannot process ZIM file - no ZIM library found")
+        print("="*60)
+        print("\nPlease install one of the following:")
+        print()
+        print("Option 1: Install libzim Python bindings")
+        print("  pip install libzim")
+        print("  (May require compilation tools)")
+        print()
+        print("Option 2: Install zim-tools (includes zimdump)")
+        print("  Ubuntu/Debian: sudo apt install zim-tools")
+        print("  macOS: brew install zim-tools")
+        print("  Windows: Download from https://github.com/kiwix/kiwix-tools/releases")
+        print()
+        print("Option 3: Use XML bz2 format instead")
+        print(f"  Download from: {WIKI_DUMP_URL}")
+        print("  Run: python build_wiki_index.py --download")
+        print("="*60)
+        return None
+
+
+def process_wikipedia_xml(input_file, content_dir=None, save_content=False):
+    """Process Wikipedia XML dump (plain or bz2 compressed).
+    
+    Args:
+        input_file: Path to the Wikipedia XML dump
+        content_dir: Optional directory to save extracted article content
+        save_content: If True, save each article's content to content_dir/{id}.json
     """
-    print(f"Processing Wikipedia dump: {input_file}")
+    print(f"Processing Wikipedia XML dump: {input_file}")
+    
+    if save_content and content_dir:
+        Path(content_dir).mkdir(parents=True, exist_ok=True)
+        print(f"  Will save content to: {content_dir}/")
 
     pages = {}
     char_index = {}
@@ -129,15 +343,15 @@ def process_wikipedia_dump(input_file):
     total_pages = 0
     pages_with_chars = 0
     progress_interval = 10000
+    content_save_interval = 1000
+    saved_content_count = 0
 
-    # Determine if file is bz2 compressed
     if input_file.endswith('.bz2'):
         opener = bz2.open
     else:
         opener = open
 
     with opener(input_file, 'rt', encoding='utf-8') as f:
-        # Parse XML incrementally using iterparse
         page_id = None
         page_title = None
         page_content = []
@@ -178,38 +392,52 @@ def process_wikipedia_dump(input_file):
                     if total_pages % progress_interval == 0:
                         print(f"  Processed {total_pages} pages...")
 
-                    # Only process main namespace pages with content
                     if page_id and page_title:
                         combined_content = '\n'.join(page_content)
 
-                        # Skip redirects and disambiguation pages
                         if combined_content.startswith('#REDIRECT'):
                             continue
 
-                        chars = extract_characters(combined_content)
+                        plain_text = extract_plain_text(combined_content)
+                        chars = extract_characters(plain_text)
 
                         if chars:
                             pages_with_chars += 1
 
-                            # Store page data
                             pages[page_id] = {
                                 'title': page_title,
                                 'chars': chars
                             }
 
-                            # Update inverted index
                             for char in chars:
                                 if char not in char_index:
                                     char_index[char] = []
                                 char_index[char].append(page_id)
+                            
+                            if save_content and content_dir:
+                                if total_pages % content_save_interval == 0:
+                                    print(f"  Saved content for {saved_content_count} articles...")
+                                
+                                content_file = Path(content_dir) / f'{page_id}.json'
+                                if not content_file.exists():
+                                    article_content = {
+                                        'id': page_id,
+                                        'title': page_title,
+                                        'text': plain_text,
+                                        'chars': chars
+                                    }
+                                    with open(content_file, 'w', encoding='utf-8') as cf:
+                                        json.dump(article_content, cf, ensure_ascii=False)
+                                    saved_content_count += 1
 
     print(f"Processing complete!")
     print(f"  Total pages: {total_pages}")
     print(f"  Pages with Chinese characters: {pages_with_chars}")
     print(f"  Unique characters: {len(char_index)}")
+    if save_content and content_dir:
+        print(f"  Saved content for {saved_content_count} articles")
 
-    # Build final index structure
-    index = {
+    return {
         'version': '1.0',
         'buildDate': datetime.now().isoformat(),
         'totalPages': total_pages,
@@ -219,41 +447,95 @@ def process_wikipedia_dump(input_file):
         'index': char_index
     }
 
-    return index
+
+def process_file(input_file):
+    """Process file based on its extension."""
+    input_file = input_file.strip()
+
+    if input_file.endswith('.zim'):
+        return process_zim_file(input_file)
+    elif input_file.endswith('.xml.bz2') or input_file.endswith('.xml'):
+        return process_wikipedia_xml(input_file)
+    else:
+        print(f"Unknown file format: {input_file}")
+        print("Supported formats: .xml.bz2, .xml, .zim")
+        return None
 
 
-def save_index(index, output_file):
-    """Save the index to a JSON file."""
+def save_index(index, output_file, source_name=None, source_description=None):
+    """Save the index to a JSON file with optional metadata."""
     print(f"Saving index to {output_file}")
 
-    # Ensure output directory exists
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+    
+    if source_name:
+        index['name'] = source_name
+    if source_description:
+        index['description'] = source_description
 
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(index, f, ensure_ascii=False, separators=(',', ':'))
 
-    # Calculate file size
     file_size = os.path.getsize(output_file)
     print(f"Index saved! File size: {file_size / (1024*1024):.1f} MB")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Build Wikipedia inverted index for Mandarin learning tools'
+        description='Build Wikipedia inverted index for Mandarin learning tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Download and process XML bz2 dump
+  python build_wiki_index.py --download
+
+  # Process local XML dump
+  python build_wiki_index.py --input wikipedia_zhwiki.xml.bz2
+
+  # Process ZIM file (requires zim-tools or libzim)
+  python build_wiki_index.py --input wikipedia_zh_all_maxi.zim
+
+  # Process and extract article content for Flask app
+  python build_wiki_index.py --input wikipedia.xml.bz2 --output source/wiki/wiki_data.json --extract-content --content-dir source/wiki/wiki_content
+
+Supported input formats:
+  - XML bz2: Standard Wikipedia XML dump
+  - XML: Uncompressed Wikipedia XML dump
+  - ZIM: Kiwix offline Wikipedia format
+        """
     )
     parser.add_argument(
         '--download', '-d',
         action='store_true',
-        help='Download the latest Wikipedia dump before processing'
+        help='Download the latest Wikipedia XML dump before processing'
     )
     parser.add_argument(
         '--input', '-i',
-        help='Path to local Wikipedia XML dump file (overrides download)'
+        help='Path to local Wikipedia dump file (XML bz2, XML, or ZIM)'
     )
     parser.add_argument(
         '--output', '-o',
         default=INDEX_FILENAME,
         help=f'Output index file path (default: {INDEX_FILENAME})'
+    )
+    parser.add_argument(
+        '--extract-content',
+        action='store_true',
+        help='Extract article content to individual JSON files (for Flask app)'
+    )
+    parser.add_argument(
+        '--content-dir',
+        help='Directory to save extracted content (used with --extract-content)'
+    )
+    parser.add_argument(
+        '--name',
+        default='Wikipedia',
+        help='Source name for metadata (default: Wikipedia)'
+    )
+    parser.add_argument(
+        '--description',
+        default='Chinese Wikipedia articles',
+        help='Source description for metadata'
     )
 
     args = parser.parse_args()
@@ -263,9 +545,10 @@ def main():
     if not input_file:
         if args.download or not os.path.exists(DUMP_FILENAME):
             if not download_wikipedia_dump():
-                print("Error: Could not download Wikipedia dump.")
+                print("\nError: Could not download Wikipedia dump.")
                 print(f"Please download manually from: {WIKI_DUMP_URL}")
-                print("Then run with: python build_wiki_index.py --input <path_to_dump>")
+                print("\nFor ZIM files, download from: https://download.kiwix.org/zim/wikipedia/")
+                print("Then run with: python build_wiki_index.py --input <path_to_file>")
                 sys.exit(1)
             input_file = DUMP_FILENAME
         else:
@@ -278,17 +561,40 @@ def main():
 
     print(f"\nInput file: {input_file}")
     print(f"Output file: {args.output}")
+    if args.extract_content:
+        print(f"Content directory: {args.content_dir or 'source/wiki/wiki_content/'}")
     print()
 
-    # Process the dump
-    index = process_wikipedia_dump(input_file)
+    content_dir = args.content_dir
+    if args.extract_content and not content_dir:
+        output_path = Path(args.output)
+        content_dir = str(output_path.parent / f'{output_path.stem}_content')
+    
+    if input_file.endswith('.xml.bz2') or input_file.endswith('.xml'):
+        index = process_wikipedia_xml(input_file, content_dir=content_dir, save_content=args.extract_content)
+    else:
+        index = process_file(input_file)
 
-    # Save the index
-    save_index(index, args.output)
+    if index is None:
+        sys.exit(1)
 
-    print("\nDone! Copy the index file to your web app's data folder:")
-    print(f"  {args.output}")
-    print("\nThen use it with wiki_curriculum_builder.html")
+    print(f"\nSummary:")
+    print(f"  Total pages: {index['totalPages']}")
+    print(f"  Pages with Chinese: {index['pagesWithChars']}")
+    print(f"  Unique characters: {index['uniqueChars']}")
+
+    save_index(index, args.output, source_name=args.name, source_description=args.description)
+
+    print("\nDone!")
+    if args.extract_content:
+        print(f"  Index: {args.output}")
+        print(f"  Content: {content_dir}/")
+        print("\nCopy to your Flask app's source/ directory:")
+        print(f"  cp {args.output} <app_dir>/source/wiki/")
+        print(f"  cp -r {content_dir} <app_dir>/source/wiki/")
+    else:
+        print(f"  Index: {args.output}")
+        print("\nThen use it with wiki_curriculum_builder.html")
 
 
 if __name__ == '__main__':

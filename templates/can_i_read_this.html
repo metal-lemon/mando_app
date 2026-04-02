@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Can I Read This? - Text Readability Analyzer</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -80,7 +80,7 @@
             <h1>📖 Can I Read This?</h1>
             <p>Paste any Chinese text to see the percentage of characters you know</p>
         </div>
-        <a href="index.html" class="home-btn">🏠 Home</a>
+        <a href="/" class="home-btn">🏠 Home</a>
     </div>
 
     <div class="section">
@@ -482,7 +482,7 @@
         }
 
         // Auto-load traditional character map
-        fetch('data/trad_simp_map.json').then(response => {
+        fetch('/data/trad_simp_map.json').then(response => {
             if (response.ok) {
                 return response.json();
             }

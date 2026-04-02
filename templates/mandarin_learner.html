@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Mandarin Learner - Words by Known Characters</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -51,7 +51,7 @@
             <h1>Mandarin Learner</h1>
             <p>Add characters you know, and we'll suggest words you can learn because you already know all their characters.</p>
         </div>
-        <a href="index.html" class="home-btn">🏠 Home</a>
+        <a href="/" class="home-btn">🏠 Home</a>
     </div>
 
     <div class="section">
@@ -281,7 +281,7 @@
     async function loadDictionary() {
         try {
             console.log("Loading dictionary...");
-            const response = await fetch('data/dictionary.json');
+            const response = await fetch('/data/dictionary.json');
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             dictionary = await response.json();
             console.log(`Loaded ${dictionary.length} words.`);

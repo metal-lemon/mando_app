@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Story Suggester - Find Your Next Read</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -306,7 +306,7 @@
             <h1>📖 Story Suggester</h1>
             <p>Find stories you're ready to read based on characters you know</p>
         </div>
-        <a href="index.html" class="home-btn">🏠 Home</a>
+        <a href="/" class="home-btn">🏠 Home</a>
     </div>
 
     <div class="section">
@@ -661,7 +661,7 @@
         updateKnownCount();
         
         // Auto-load stories.json from data folder
-        fetch('data/stories.json').then(response => {
+        fetch('/data/stories.json').then(response => {
             if (response.ok) {
                 return response.json();
             }

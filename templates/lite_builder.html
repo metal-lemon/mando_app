@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Lite Builder - Simple Learning Path Generator</title>
+    <title>Curriculum Builder Lite - Simple Learning Path Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y=".9em" font-size="90">📚</text></svg>">
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -89,16 +89,25 @@
         .sort-buttons { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
         .sort-btn { padding: 5px 10px; font-size: 12px; background: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 3px; cursor: pointer; }
         .sort-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .pool-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .pool-controls label { font-weight: bold; }
+        .pool-list { padding: 10px; }
+        .pool-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .pool-item:last-child { border-bottom: none; }
+        .pool-item:hover { background-color: #f5f5f5; }
+        .pool-item-title { font-weight: bold; flex: 1; }
+        .pool-item-stats { font-size: 12px; color: #666; white-space: nowrap; margin-left: 10px; }
+        .pool-item-score { font-size: 14px; color: #4CAF50; font-weight: bold; margin-left: 10px; }
         @media (max-width: 600px) { body { padding: 10px; } .header { flex-direction: column; text-align: center; } .lesson-item { flex-direction: column; align-items: flex-start; } }
     </style>
 </head>
 <body>
     <div class="header">
         <div>
-            <h1>⚡ Lite Builder</h1>
+            <h1>⚡ Curriculum Builder Lite</h1>
             <p>Simple learning path using knapsack-style selection</p>
         </div>
-        <a href="index.html" class="home-btn">🏠 Home</a>
+        <a href="/" class="home-btn">🏠 Home</a>
     </div>
 
     <div class="section">
@@ -129,7 +138,27 @@
             <label for="remainderPermitted">Remainder permitted</label>
             <span class="info-text">(OFF = all target characters must be covered by story chain)</span>
         </div>
-        <button id="generateBtn" class="secondary">🎯 Build plan to read: <span id="targetTitleDisplay"></span></button>
+        <div class="pool-controls">
+            <label for="efficiencyThreshold">Efficiency threshold (0.01-1):</label>
+            <input type="number" id="efficiencyThreshold" value="1" min="0.01" max="1" step="0.01" style="width: 80px; padding: 5px; margin: 0 10px;">
+            <label for="clusterSize">Cluster size (>1):</label>
+            <input type="number" id="clusterSize" value="2" min="2" step="1" style="width: 50px; padding: 5px; margin: 0 10px;">
+            <button id="generatePoolBtn" class="secondary">🔍 Generate Pool</button>
+            <span id="targetTitleDisplay" style="margin-left: 10px; font-weight: bold; color: #667eea;"></span>
+        </div>
+    </div>
+
+    <div id="poolSection" class="section" style="display: none;">
+        <h2>📊 Pool Generated</h2>
+        <div id="poolStats" class="info-text"></div>
+        <div id="clusterResults" class="info-text" style="display: none; margin: 10px 0; padding: 10px; background: #e8f5e9; border-radius: 5px;"></div>
+        <div id="poolList" class="pool-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin: 15px 0;"></div>
+        <div class="button-group">
+            <button id="findClusterBtn" class="secondary">🔍 Find Cluster</button>
+            <button id="optimizePathBtn" class="secondary">🔧 Optimize Path</button>
+            <button id="sortPoolBtn" class="success">Sort Pool →</button>
+            <button id="exportPoolBtn" class="secondary">📤 Export Pool</button>
+        </div>
     </div>
 
     <div id="progressSection" class="section" style="display: none;">
@@ -237,6 +266,7 @@
         let frequencyScoreTable = [];
         let frequencyScoreTableSize = 0;
         let totalStories = 0;
+        let currentPool = null;
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -319,7 +349,7 @@
             }
             
             try {
-                const response = await fetch('data/stories.json');
+                const response = await fetch('/data/stories.json');
                 if (response.ok) {
                     const data = await response.json();
                     const count = Array.isArray(data) ? data.length : 0;
@@ -439,7 +469,8 @@
             return rawScore * efficiency;
         }
 
-        function findStoryForStep(knownSet, remainingTargets, remainingFreq, minTargets = 1, maxJumpsize = 100) {
+        // OLD - kept for reference, not used
+        function findStoryForStepOld(knownSet, remainingTargets, remainingFreq, minTargets = 1, maxJumpsize = 100) {
             let bestStory = null;
             let bestScore = -Infinity;
             let bestJumpsize = Infinity;
@@ -454,6 +485,32 @@
                 if (targets.length >= minTargets && jumpsize <= maxJumpsize) {
                     const score = calculateScore(targets.length, nonTargets, targets, remainingFreq);
                     if (score > bestScore || (score === bestScore && jumpsize < bestJumpsize)) {
+                        bestScore = score;
+                        bestStory = story;
+                        bestJumpsize = jumpsize;
+                    }
+                }
+            }
+
+            return bestStory ? { story: bestStory, jumpsize: bestJumpsize, score: bestScore } : null;
+        }
+
+        // NEW - simple efficient approach
+        function findStoryForStep(knownSet, remainingTargets, minTargets = 1, maxJumpsize = 100) {
+            let bestStory = null;
+            let bestScore = -Infinity;
+            let bestJumpsize = Infinity;
+
+            for (const story of stories) {
+                const storyChars = new Set(story.characters || []);
+                const newChars = [...storyChars].filter(c => !knownSet.has(c));
+                const targets = newChars.filter(c => remainingTargets.has(c));
+                const nonTargets = newChars.length - targets.length;
+                const jumpsize = newChars.length;
+                
+                if (targets.length >= minTargets && jumpsize <= maxJumpsize && targets.length >= nonTargets) {
+                    const score = targets.length / (nonTargets + 1);
+                    if (score > bestScore) {
                         bestScore = score;
                         bestStory = story;
                         bestJumpsize = jumpsize;
@@ -517,64 +574,26 @@
             document.getElementById('progressStatus').textContent = `Building path for ${totalTargets} target characters...`;
 
             while (remainingTargets.size > 0 && !stopRequested) {
-                buildFrequencyScoreTable(currentKnown);
+                // Use simple findStoryForStep - no maxJumpsize limit, just efficiency constraint
+                const result = findStoryForStep(currentKnown, remainingTargets, 1, 1000);
                 
-                // Build remainingFreq for scoring
-                const remainingFreq = {};
-                const remainingList = [...remainingTargets];
-                remainingList.sort((a, b) => (frequencyTable.get(b) || 0) - (frequencyTable.get(a) || 0));
-                let rank = 1;
-                for (const char of remainingList) {
-                    remainingFreq[char] = rank++;
-                }
-                
-                // KNAPSACK APPROACH: Find all stories that cover remaining targets
-                const candidateStories = [];
-                
-                for (const story of stories) {
-                    const storyChars = new Set(story.characters || []);
-                    const newChars = [...storyChars].filter(c => !currentKnown.has(c));
-                    const targets = newChars.filter(c => remainingTargets.has(c));
-                    const nonTargets = newChars.length - targets.length;
-                    const jumpsize = newChars.length;
-                    
-                    if (targets.length > 0) {
-                        const score = calculateScore(targets.length, nonTargets, targets, remainingFreq);
-                        const efficiency = targets.length / jumpsize;
-                        candidateStories.push({
-                            story: story,
-                            newChars: newChars,
-                            targets: targets,
-                            nonTargets: nonTargets,
-                            jumpsize: jumpsize,
-                            score: score,
-                            efficiency: efficiency
-                        });
-                    }
-                }
-                
-                if (candidateStories.length === 0) {
+                if (!result) {
                     const unreachable = [...remainingTargets];
                     return { success: false, unreachable: unreachable, lessons: lessons };
                 }
-                
-                // Sort by efficiency (highest target/jumpsize ratio first)
-                candidateStories.sort((a, b) => b.efficiency - a.efficiency);
-                
-                // Pick the best story
-                const best = candidateStories[0];
-                
-                const newChars = best.newChars;
-                const targets = best.targets;
-                const nonTargets = best.nonTargets;
+
+                const storyChars = new Set(result.story.characters || []);
+                const newChars = [...storyChars].filter(c => !currentKnown.has(c));
+                const targets = [...remainingTargets].filter(c => storyChars.has(c));
+                const nonTargets = newChars.length - targets.length;
 
                 for (const c of newChars) currentKnown.add(c);
                 for (const c of targets) remainingTargets.delete(c);
 
                 const lesson = {
                     step: step,
-                    story: best.story,
-                    jumpsize: best.jumpsize,
+                    story: result.story,
+                    jumpsize: result.jumpsize,
                     remainder: remainingTargets.size,
                     newChars: newChars,
                     targetCharsCovered: targets,
@@ -672,7 +691,7 @@
             };
         }
 
-        async function generatePath() {
+        async function generatePool() {
             const targetText = document.getElementById('targetText').value.trim();
             if (!targetText) {
                 updateTargetStatus('Please enter a target text.', false, true);
@@ -685,14 +704,10 @@
             }
 
             const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
-            const remainderPermitted = document.getElementById('remainderPermitted').checked;
             
-            stopRequested = false;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('lessonList').innerHTML = '';
             document.getElementById('resultsSection').style.display = 'none';
 
-            updateTargetStatus('Loading stories and building path...', false, false, true);
+            updateTargetStatus('Loading stories and generating pool...', false, false, true);
 
             try {
                 await loadStories();
@@ -703,27 +718,426 @@
                 }
 
                 const targetChars = new Set(extractCharacters(targetText));
-                updateTargetStatus('Building path...', false, false, true);
-
-                const result = await generateCurriculumAsync(targetText, knownSet, remainderPermitted);
+                const remainingTargets = new Set([...targetChars].filter(c => !knownSet.has(c)));
                 
-                if (stopRequested) {
-                    showResults({ success: true, lessons: result.lessons });
-                    updateTargetStatus('Path building stopped. Export when ready.', true);
+                const thresholdInput = document.getElementById('efficiencyThreshold');
+                let threshold = parseFloat(thresholdInput.value);
+                if (isNaN(threshold) || threshold < 0.01) threshold = 0.01;
+                if (threshold > 1) threshold = 1;
+                thresholdInput.value = threshold;
+
+                const pool = [];
+                const poolTargets = new Set();
+                let totalNonTargets = 0;
+                const seenStoryIds = new Set();
+                const seenCharSets = new Map();
+
+                for (const story of stories) {
+                    if (seenStoryIds.has(story.id)) continue;
+                    
+                    const storyChars = new Set(story.characters || []);
+                    const newChars = [...storyChars].filter(c => !knownSet.has(c));
+                    const targets = newChars.filter(c => remainingTargets.has(c));
+                    const nonTargets = newChars.length - targets.length;
+                    const jumpsize = newChars.length;
+                    
+                    if (targets.length > 0) {
+                        const efficiency = targets.length / (nonTargets + 1);
+                        if (efficiency >= threshold) {
+                            // Skip if this story is the target (100% coverage + content match)
+                            if (targets.length === remainingTargets.size) {
+                                const candidateContent = (story.content || '').slice(0, 50);
+                                const targetContent = targetText.slice(0, 50);
+                                if (candidateContent.includes(targetContent) || targetContent.includes(candidateContent)) {
+                                    continue;
+                                }
+                            }
+                            
+                            const charSetKey = [...storyChars].sort().join('');
+                            
+                            let isDuplicate = false;
+                            for (const [existingKey, existingId] of seenCharSets) {
+                                if (charSetKey === existingKey) {
+                                    isDuplicate = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!isDuplicate) {
+                                seenStoryIds.add(story.id);
+                                seenCharSets.set(charSetKey, story.id);
+                                
+                                pool.push({
+                                    story: story,
+                                    targets: targets,
+                                    nonTargets: nonTargets,
+                                    jumpsize: jumpsize,
+                                    efficiency: efficiency
+                                });
+                                for (const t of targets) poolTargets.add(t);
+                                totalNonTargets += nonTargets;
+                            }
+                        }
+                    }
+                }
+
+                if (pool.length === 0) {
+                    updateTargetStatus('No stories met the efficiency threshold. Try lowering it.', false, true);
                     return;
                 }
 
-                if (!result.success) {
-                    showResults(result);
-                    return;
-                }
+                currentPool = {
+                    pool: pool,
+                    poolTargets: poolTargets,
+                    totalNonTargets: totalNonTargets,
+                    remainingTargets: remainingTargets,
+                    knownSet: knownSet,
+                    targetText: targetText
+                };
 
-                showResults({ success: true, lessons: result.lessons });
-                updateTargetStatus(`Path complete!`, true);
+                document.getElementById('poolSection').style.display = 'block';
+                document.getElementById('poolStats').innerHTML = 
+                    `<strong>📚 ${pool.length} candidates</strong> | <strong>🎯 ${poolTargets.size} target chars covered</strong> | <strong>❓ ${totalNonTargets} non-target unknowns</strong>`;
+                
+                pool.sort((a, b) => b.efficiency - a.efficiency);
+                
+                document.getElementById('poolList').innerHTML = pool.map((p, i) => `
+                    <div class="pool-item">
+                        <span class="pool-item-title">${escapeHtml(p.story.title || 'Untitled')}</span>
+                        <span class="pool-item-stats">${p.jumpsize} chars | ${p.targets.length}T, ${p.nonTargets}N</span>
+                        <span class="pool-item-score">${p.efficiency.toFixed(2)}</span>
+                    </div>
+                `).join('');
+
+                updateTargetStatus(`Pool generated with ${pool.length} candidates. Click "Sort Pool" to build curriculum.`, true);
 
             } catch (err) {
                 updateTargetStatus(`Error: ${err.message}`, false, true);
             }
+        }
+
+        function findCluster() {
+            if (!currentPool || !currentPool.pool || currentPool.pool.length === 0) {
+                updateTargetStatus('No pool available. Generate a pool first.', false, true);
+                return;
+            }
+
+            const pool = currentPool.pool;
+            const clusterSizeInput = document.getElementById('clusterSize');
+            let clusterSize = parseInt(clusterSizeInput.value);
+            if (isNaN(clusterSize) || clusterSize < 2) clusterSize = 2;
+            clusterSizeInput.value = clusterSize;
+
+            updateTargetStatus('Finding cluster...', false, false, true);
+            document.getElementById('clusterResults').style.display = 'none';
+
+            setTimeout(() => {
+                const n = pool.length;
+                if (clusterSize > n) {
+                    updateTargetStatus(`Cluster size (${clusterSize}) exceeds pool size (${n}).`, false, true);
+                    return;
+                }
+
+                // Get non-target sets for each story
+                const knownSet = currentPool.knownSet;
+                const nonTargetSets = pool.map(p => {
+                    const storyChars = new Set(p.story.characters || []);
+                    const targetsSet = new Set(p.targets);
+                    return new Set([...storyChars].filter(c => !targetsSet.has(c) && !knownSet.has(c)));
+                });
+
+                // Generate all combinations of clusterSize
+                function getCombinations(arr, size) {
+                    const result = [];
+                    function combine(start, combo) {
+                        if (combo.length === size) {
+                            result.push(combo);
+                            return;
+                        }
+                        for (let i = start; i <= arr.length - (size - combo.length); i++) {
+                            combine(i + 1, [...combo, arr[i]]);
+                        }
+                    }
+                    combine(0, []);
+                    return result;
+                }
+
+                const combinations = getCombinations([...Array(n).keys()], clusterSize);
+                
+                let bestCluster = null;
+                let bestIntersectionSize = 0;
+                let bestClusterData = null;
+
+                for (const combo of combinations) {
+                    // Calculate intersection of all K non-target sets
+                    let intersection = new Set(nonTargetSets[combo[0]]);
+                    for (let i = 1; i < combo.length; i++) {
+                        for (const ch of intersection) {
+                            if (!nonTargetSets[combo[i]].has(ch)) {
+                                intersection.delete(ch);
+                            }
+                        }
+                        if (intersection.size === 0) break;
+                    }
+
+                    if (intersection.size > bestIntersectionSize) {
+                        bestIntersectionSize = intersection.size;
+                        bestCluster = combo;
+
+                        // Calculate all pairwise overlaps
+                        const pairwise = [];
+                        for (let i = 0; i < combo.length; i++) {
+                            pairwise[i] = [];
+                            for (let j = 0; j < combo.length; j++) {
+                                if (i === j) {
+                                    pairwise[i][j] = 0;
+                                } else {
+                                    let common = 0;
+                                    for (const ch of nonTargetSets[combo[i]]) {
+                                        if (nonTargetSets[combo[j]].has(ch)) common++;
+                                    }
+                                    pairwise[i][j] = common;
+                                }
+                            }
+                        }
+
+                        bestClusterData = {
+                            indices: combo,
+                            intersection: [...intersection],
+                            pairwise: pairwise
+                        };
+                    }
+                }
+
+                if (!bestCluster || bestIntersectionSize === 0) {
+                    updateTargetStatus(`No cluster found with shared non-targets.`, true);
+                    return;
+                }
+
+                const clusterStories = bestCluster.map(i => pool[i]);
+                let resultsHtml = `<strong>🔗 Best Cluster (size ${clusterSize}):</strong><br>`;
+                resultsHtml += `<strong>Shared characters (${bestIntersectionSize}):</strong> ${bestClusterData.intersection.join(', ')}<br>`;
+                resultsHtml += `<strong>Stories:</strong><br>`;
+                for (let i = 0; i < bestCluster.length; i++) {
+                    const s = clusterStories[i];
+                    resultsHtml += `  ${i + 1}. ${escapeHtml(s.story.title || 'Untitled')} (ID: ${s.story.id}, ${s.jumpsize} chars, ${s.targets.length}T/${s.nonTargets}N)<br>`;
+                }
+                resultsHtml += `<strong>Pairwise Overlaps:</strong><br>`;
+                resultsHtml += `<table style="border-collapse: collapse; margin-top: 5px; font-size: 12px;">`;
+                resultsHtml += `<tr><td></td>`;
+                for (let i = 0; i < clusterSize; i++) {
+                    resultsHtml += `<td style="border: 1px solid #ccc; padding: 3px;">S${i+1}</td>`;
+                }
+                resultsHtml += `</tr>`;
+                for (let i = 0; i < clusterSize; i++) {
+                    resultsHtml += `<tr><td style="border: 1px solid #ccc; padding: 3px;">S${i+1}</td>`;
+                    for (let j = 0; j < clusterSize; j++) {
+                        resultsHtml += `<td style="border: 1px solid #ccc; padding: 3px; text-align: center;">${bestClusterData.pairwise[i][j]}</td>`;
+                    }
+                    resultsHtml += `</tr>`;
+                }
+                resultsHtml += `</table>`;
+
+                document.getElementById('clusterResults').innerHTML = resultsHtml;
+                document.getElementById('clusterResults').style.display = 'block';
+                updateTargetStatus(`Cluster found with ${bestIntersectionSize} shared characters!`, true);
+
+            }, 10);
+        }
+
+        async function optimizePath() {
+            if (!currentPool || !currentPool.pool || currentPool.pool.length === 0) {
+                updateTargetStatus('No pool available. Generate a pool first.', false, true);
+                return;
+            }
+
+            updateTargetStatus('Building overlap matrix...', false, false, true);
+            document.getElementById('progressStatus').textContent = 'Building overlap matrix...';
+
+            const pool = currentPool.pool;
+            const n = pool.length;
+            const knownSet = currentPool.knownSet;
+
+            // Build non-target sets for each story
+            const nonTargetSets = pool.map(p => {
+                const storyChars = new Set(p.story.characters || []);
+                const targetsSet = new Set(p.targets);
+                const nonTargets = [...storyChars].filter(c => !targetsSet.has(c) && !knownSet.has(c));
+                return new Set(nonTargets);
+            });
+
+            // Build overlap matrix
+            const overlap = [];
+            for (let i = 0; i < n; i++) {
+                overlap[i] = [];
+                for (let j = 0; j < n; j++) {
+                    if (i === j) {
+                        overlap[i][j] = 0;
+                    } else {
+                        let common = 0;
+                        for (const ch of nonTargetSets[i]) {
+                            if (nonTargetSets[j].has(ch)) common++;
+                        }
+                        overlap[i][j] = common;
+                    }
+                }
+            }
+
+            // Calculate path score with dynamic known set simulation
+            function calculatePathScore(order) {
+                let known = new Set(knownSet);
+                let totalNewNonTargets = 0;
+                for (const idx of order) {
+                    const p = pool[idx];
+                    const storyChars = new Set(p.story.characters || []);
+                    const targetsSet = new Set(p.targets);
+                    const nonTargets = [...storyChars].filter(c => !targetsSet.has(c) && !known.has(c));
+                    
+                    let newNonTargets = 0;
+                    for (const ch of nonTargets) {
+                        if (!known.has(ch)) newNonTargets++;
+                    }
+                    totalNewNonTargets += newNonTargets;
+                    
+                    // Add all chars to known
+                    for (const ch of p.targets) known.add(ch);
+                    for (const ch of nonTargets) known.add(ch);
+                }
+                return -totalNewNonTargets; // Negative because we minimize
+            }
+
+            // Initial random order
+            let currentOrder = [];
+            for (let i = 0; i < n; i++) currentOrder.push(i);
+            for (let i = n - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentOrder[i], currentOrder[j]] = [currentOrder[j], currentOrder[i]];
+            }
+
+            let currentScore = calculatePathScore(currentOrder);
+            let bestOrder = [...currentOrder];
+            let bestScore = currentScore;
+
+            // Simulated annealing
+            const initialTemp = 1000;
+            const cooling = 0.9995;
+            const iterations = 100000;
+            let temp = initialTemp;
+
+            for (let iter = 0; iter < iterations; iter++) {
+                // Random swap
+                const newOrder = [...currentOrder];
+                const a = Math.floor(Math.random() * n);
+                const b = Math.floor(Math.random() * n);
+                [newOrder[a], newOrder[b]] = [newOrder[b], newOrder[a]];
+                
+                const newScore = calculatePathScore(newOrder);
+
+                if (newScore > currentScore || Math.exp((newScore - currentScore) / temp) > Math.random()) {
+                    currentOrder = newOrder;
+                    currentScore = newScore;
+                    if (currentScore > bestScore) {
+                        bestOrder = [...currentOrder];
+                        bestScore = currentScore;
+                    }
+                }
+                
+                temp *= cooling;
+                
+                if (iter % 10000 === 0) {
+                    document.getElementById('progressStatus').textContent = `Optimizing... ${Math.round(iter/1000)}k / ${Math.round(iterations/1000)}k`;
+                    await new Promise(r => setTimeout(r, 1));
+                }
+            }
+
+            // Reorder the pool based on optimized order
+            const reorderedPool = bestOrder.map(i => pool[i]);
+            currentPool.pool = reorderedPool;
+            
+            // Update pool display with reordered list
+            currentPool.pool.sort((a, b) => b.efficiency - a.efficiency);
+            
+            document.getElementById('poolList').innerHTML = currentPool.pool.map((p, i) => `
+                <div class="pool-item">
+                    <span class="pool-item-title">${escapeHtml(p.story.title || 'Untitled')}</span>
+                    <span class="pool-item-stats">${p.jumpsize} chars | ${p.targets.length}T, ${p.nonTargets}N</span>
+                    <span class="pool-item-score">${p.efficiency.toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            const newNonTargets = -bestScore;
+            updateTargetStatus(`Path optimized! Reduced new non-targets to ${newNonTargets}. Click "Sort Pool" to build curriculum.`, true);
+        }
+
+        async function sortPool() {
+            if (!currentPool || !currentPool.pool || currentPool.pool.length === 0) {
+                updateTargetStatus('No pool available. Generate a pool first.', false, true);
+                return;
+            }
+
+            const remainderPermitted = document.getElementById('remainderPermitted').checked;
+            const knownSet = currentPool.knownSet;
+            const remainingTargets = new Set(currentPool.remainingTargets);
+            const pool = currentPool.pool;
+
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('poolSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('progressStatus').textContent = 'Sorting pool and building path...';
+
+            stopRequested = false;
+            document.getElementById('stopBtn').disabled = false;
+
+            const lessons = [];
+            let currentKnown = new Set(knownSet);
+            let step = 1;
+            const totalTargets = remainingTargets.size;
+
+            pool.sort((a, b) => b.efficiency - a.efficiency);
+
+            for (const p of pool) {
+                if (stopRequested) break;
+                if (remainingTargets.size === 0) break;
+
+                const storyChars = new Set(p.story.characters || []);
+                const newChars = [...storyChars].filter(c => !currentKnown.has(c));
+                const targets = [...remainingTargets].filter(c => storyChars.has(c));
+                const nonTargets = newChars.length - targets.length;
+
+                if (targets.length > 0) {
+                    for (const c of newChars) currentKnown.add(c);
+                    for (const c of targets) remainingTargets.delete(c);
+
+                    lessons.push({
+                        step: step,
+                        story: p.story,
+                        jumpsize: p.jumpsize,
+                        remainder: remainingTargets.size,
+                        newChars: newChars,
+                        targetCharsCovered: targets,
+                        nonTargetChars: nonTargets
+                    });
+
+                    step++;
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+
+            if (remainderPermitted || remainingTargets.size === 0) {
+                lessons.push({
+                    step: '🎉',
+                    title: savedStory ? savedStory.title : 'Target Text',
+                    content: currentPool.targetText,
+                    jumpsize: 0,
+                    remainder: remainingTargets.size,
+                    targetCharsCovered: [],
+                    nonTargetChars: 0
+                });
+            }
+
+            showResults({ success: true, lessons: lessons });
+            updateTargetStatus('Path complete!', true);
         }
 
         function stopBuilding() {
@@ -857,7 +1271,7 @@
 
         function selectStoryFromLibrary(story) {
             // Get full story content from stories.json
-            fetch('data/stories.json')
+            fetch('/data/stories.json')
                 .then(response => response.json())
                 .then(allStories => {
                     const fullStory = allStories.find(s => s.id === story.id);
@@ -903,11 +1317,11 @@
             document.getElementById('step2Section').style.display = 'block';
             
             closeSaveModal();
-            updateTargetStatus(`Target saved as "${title}". Click "Build plan" to generate your learning path.`, true);
+            updateTargetStatus(`Target saved as "${title}". Click "Generate Pool" to build your learning path.`, true);
         }
 
         function downloadStoriesData() {
-            fetch('data/stories_data.json')
+            fetch('/data/stories_data.json')
                 .then(response => {
                     if (!response.ok) throw new Error('File not found');
                     return response.blob();
@@ -940,14 +1354,58 @@
             URL.revokeObjectURL(url);
         }
 
+        function exportPool() {
+            if (!currentPool || !currentPool.pool) return;
+            
+            const threshold = parseFloat(document.getElementById('efficiencyThreshold').value) || 1;
+            const title = savedStory ? savedStory.title : 'unknown';
+            const safeTitle = title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 50);
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+            
+            const poolData = {
+                version: "1.0",
+                type: "pool_export",
+                generated: new Date().toISOString(),
+                threshold: threshold,
+                targetTitle: title,
+                targetText: currentPool.targetText,
+                stats: {
+                    candidateCount: currentPool.pool.length,
+                    targetCharsCovered: currentPool.poolTargets.size,
+                    nonTargetUnknowns: currentPool.totalNonTargets
+                },
+                pool: currentPool.pool.map(p => ({
+                    storyId: p.story.id,
+                    title: p.story.title,
+                    jumpsize: p.jumpsize,
+                    targets: [...p.targets],
+                    nonTargets: [...p.story.characters].filter(c => !p.targets.includes(c) && !currentPool.knownSet.has(c)),
+                    efficiency: Math.round(p.efficiency * 100) / 100
+                }))
+            };
+            
+            const jsonStr = JSON.stringify(poolData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.download = `pool_${threshold}_${safeTitle}_${timestamp}.json`;
+            a.href = url;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
         // Event listeners
         document.getElementById('setupBtn').addEventListener('click', openSetupModal);
         document.getElementById('saveToLibraryBtn').addEventListener('click', openSaveModal);
         document.getElementById('pickFromLibraryBtn').addEventListener('click', openStoryPicker);
-        document.getElementById('generateBtn').addEventListener('click', generatePath);
+        document.getElementById('generatePoolBtn').addEventListener('click', generatePool);
+        document.getElementById('findClusterBtn').addEventListener('click', findCluster);
+        document.getElementById('optimizePathBtn').addEventListener('click', optimizePath);
+        document.getElementById('sortPoolBtn').addEventListener('click', sortPool);
         document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
         document.getElementById('clearBtn').addEventListener('click', clearAll);
         document.getElementById('exportBtn').addEventListener('click', exportJSON);
+        document.getElementById('exportPoolBtn').addEventListener('click', exportPool);
         document.getElementById('stopBtn').addEventListener('click', stopBuilding);
         document.getElementById('downloadStoriesDataBtn').addEventListener('click', downloadStoriesData);
 

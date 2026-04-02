@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
     <title>Mandarin Learning Tools</title>
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         * {
             margin: 0;
@@ -276,7 +276,7 @@
 
     <div class="setup-banner">
         <p>⚙️ First time using these tools? Run setup to create all required files!</p>
-        <a href="setup.html" class="setup-btn">🚀 Run Setup</a>
+        <a href="/setup" class="setup-btn">🚀 Run Setup</a>
     </div>
 
     <!-- Data Management Section -->
@@ -314,7 +314,7 @@
             <div class="card-content">
                 <h2>Mandarin Learner</h2>
                 <p>Track characters you know and get suggestions for words you can learn because you already know all their characters. Build your vocabulary systematically.</p>
-                <a href="mandarin_learner.html" class="btn">Open Tool →</a>
+                <a href="/mandarin_learner" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -324,7 +324,7 @@
             <div class="card-content">
                 <h2>Can I Read This?</h2>
                 <p>Paste any Chinese text, upload your character list, and see the percentage you already know. Click on unknown characters to mark them known and export an updated list.</p>
-                <a href="can_i_read_this.html" class="btn">Open Tool →</a>
+                <a href="/can_i_read_this" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -334,7 +334,7 @@
             <div class="card-content">
                 <h2>Study Guide Generator</h2>
                 <p>Turn unknown characters (exported from Can I Read This?) into a personalized study guide. Includes example sentences from your text and compound words using your known characters.</p>
-                <a href="study_guide.html" class="btn">Open Tool →</a>
+                <a href="/study_guide" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -344,7 +344,7 @@
             <div class="card-content">
                 <h2>Story Suggester</h2>
                 <p>Find stories you're ready to read based on characters you know. Stories are ranked by difficulty, with both occurrence and unique character percentages. Long texts can be split into chunks.</p>
-                <a href="story_suggester.html" class="btn">Open Tool →</a>
+                <a href="/story_suggester" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -354,7 +354,7 @@
             <div class="card-content">
                 <h2>Story Library</h2>
                 <p>Manage your story database – view, add, edit, delete, and export stories. Build your personal collection of reading materials.</p>
-                <a href="story_library.html" class="btn">Open Tool →</a>
+                <a href="/story_library" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -364,7 +364,7 @@
             <div class="card-content">
                 <h2>Traditional Finder</h2>
                 <p>Identify traditional characters in any text. Load your own list or use the built-in list. Perfect for recognizing characters that differ from simplified Chinese.</p>
-                <a href="traditional_finder.html" class="btn">Open Tool →</a>
+                <a href="/traditional_finder" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -374,7 +374,27 @@
             <div class="card-content">
                 <h2>Curriculum Builder</h2>
                 <p>Generate a learning path from your target text. Uses the story library to create a step-by-step curriculum that bridges your known characters to your goal.</p>
-                <a href="curriculum_builder.html" class="btn">Open Tool →</a>
+                <a href="/curriculum_builder" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 8: Curriculum Builder Lite -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #673ab7);">⚡</div>
+            <div class="card-content">
+                <h2>Curriculum Builder Lite</h2>
+                <p>Simplified learning path generator using efficient story selection.</p>
+                <a href="/lite_builder" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 9: Wiki Curriculum Builder -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #2196F3, #0d47a1);">🗺️</div>
+            <div class="card-content">
+                <h2>Wiki Curriculum Builder</h2>
+                <p>Build learning paths using Wikipedia as a content library. Generate candidate pools from Chinese Wikipedia articles.</p>
+                <a href="/wiki_curriculum_builder" class="btn">Open Tool →</a>
             </div>
         </div>
 
@@ -507,7 +527,7 @@
         }
     });
     // Try to load existing stories.json from data/ to populate storyDatabase for the home page.
-    fetch('data/stories.json').then(r => r.ok ? r.json() : null).then(data => {
+    fetch('/data/stories.json').then(r => r.ok ? r.json() : null).then(data => {
         if (data && Array.isArray(data)) {
             storyDatabase = data;
             console.log(`Loaded ${storyDatabase.length} stories from data/stories.json.`);

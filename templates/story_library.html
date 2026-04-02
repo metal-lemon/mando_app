@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Story Library - Manage Your Story Database</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -247,7 +247,7 @@
             <h1>📚 Story Library</h1>
             <p>Manage your story database – view, add, edit, delete, and export stories</p>
         </div>
-        <a href="index.html" class="home-btn">🏠 Home</a>
+        <a href="/" class="home-btn">🏠 Home</a>
     </div>
 
     <div class="section">
@@ -575,7 +575,7 @@
         });
 
         // Auto-load if stories.json exists
-        fetch('data/stories.json').then(response => {
+        fetch('/data/stories.json').then(response => {
             if (response.ok) return response.json();
             throw new Error('Not found');
         }).then(data => {
