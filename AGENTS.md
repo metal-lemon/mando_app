@@ -2,56 +2,98 @@
 
 ## Project Overview
 
-A suite of client-side web applications for learning Chinese characters. The app runs entirely in the browser with no build step required. Data persists via localStorage and JSON file exports.
+A suite of web applications for learning Chinese characters. The app runs in the browser with Flask serving the frontend. Data persists via localStorage and JSON file exports.
 
 ## Running the Application
 
-**Note**: The user runs the local server manually. Agents can monitor the application logs while the user runs it.
-
 ```bash
-# User runs this in their terminal:
-python -m http.server 8000
+# Install dependencies
+pip install -r requirements.txt
 
-# Or using Node.js if Python not available
-npx serve .
+# Start Flask server
+python app.py
 
 # Open in browser
-http://localhost:8000/index.html
+http://localhost:5000/
 ```
 
 ## File Structure
 
 ```
-├── index.html                  # Home page with navigation
-├── setup.html                  # One-click file setup
-├── mandarin_learner.html       # Track known characters
-├── can_i_read_this.html        # Text readability analyzer
-├── study_guide.html            # Generate study materials
-├── story_suggester.html        # Find stories by difficulty
-├── story_library.html          # Manage story database
-├── traditional_finder.html     # Identify/convert traditional chars
-├── curriculum_builder.html     # Story-based curriculum builder
-├── lite_builder.html          # Simplified curriculum builder
-├── wiki_curriculum_builder.html # Wikipedia-based curriculum builder
-├── shared_state.js             # Central state management
+├── app.py                      # Flask application with API routes
+├── requirements.txt            # Python dependencies
+├── templates/                  # HTML pages (served by Flask)
+│   ├── index.html
+│   ├── setup.html
+│   ├── mandarin_learner.html
+│   ├── can_i_read_this.html
+│   ├── study_guide.html
+│   ├── story_suggester.html
+│   ├── story_library.html
+│   ├── traditional_finder.html
+│   ├── curriculum_builder.html
+│   ├── lite_builder.html
+│   └── wiki_curriculum_builder.html
+├── static/
+│   └── js/
+│       └── shared_state.js     # Central state management
 ├── data/
 │   ├── dictionary.json         # CC-CEDICT word database
-│   ├── stories.json            # Story library
-│   ├── trad_simp_map.json      # Traditional→simplified mapping
-│   └── wiki_index.json         # Wikipedia inverted index (user-generated)
+│   ├── stories.json           # Story library
+│   ├── trad_simp_map.json     # Traditional→simplified mapping
+│   └── stories_data.json      # Story character data
+├── source/                     # Large content sources (Flask)
+│   ├── wiki/
+│   │   ├── wiki_data.json     # Inverted index
+│   │   └── wiki_content/     # Extracted article content
+│   └── classics/
+│       ├── classics_data.json
+│       └── classics_content/
 ├── scripts/
-│   └── build_wiki_index.py     # Build Wikipedia index from dump
-├── serve.py                    # Optional: HTTP server with log capture
-└── AGENTS.md                   # This file
+│   ├── build_wiki_index.py    # Build Wikipedia index from dump
+│   └── hello_mcp_server.py    # MCP server (optional)
+├── serve.py                   # Optional: HTTP server with log capture
+└── AGENTS.md                  # This file
+```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sources` | GET | List available content sources |
+| `/api/search` | POST | Search index for characters |
+| `/api/content/<source>/<id>/text` | GET | Fetch article content |
+
+### Search Request Example
+```json
+POST /api/search
+{
+    "source": "wiki",
+    "chars": ["北", "京", "中"],
+    "limit": 2000
+}
+```
+
+### Search Response Example
+```json
+{
+    "source": "wiki",
+    "query_chars": ["北", "京", "中"],
+    "total_candidates": 150,
+    "candidates": [
+        {"id": "12345", "title": "北京", "coverage": 3, "matched_chars": ["北", "京", "中"]},
+        ...
+    ]
+}
 ```
 
 ## Testing
 
-This is a vanilla HTML/CSS/JS project with no test framework. Manual testing is done by:
-1. User runs the local server
-2. Open http://localhost:8000 in browser
+1. Start Flask server: `python app.py`
+2. Open http://localhost:5000/ in browser
 3. Test features manually in the browser
 4. Check browser console (F12) for JavaScript errors
+5. Check Flask terminal for API request logs
 
 ## Code Style Guidelines
 
@@ -90,7 +132,7 @@ const storageKeys = { ... }; // should be UPPER_SNAKE_CASE
 - Use semantic HTML5 elements (`<header>`, `<section>`, `<main>`)
 - Always include `<meta charset="UTF-8">` and `<meta name="viewport">`
 - External scripts/styles before closing `</head>`, scripts before `</body>`
-- Include `shared_state.js` in all pages that need character data
+- Include shared_state.js from static path: `<script src="/static/js/shared_state.js"></script>`
 
 ```html
 <!DOCTYPE html>
@@ -99,7 +141,7 @@ const storageKeys = { ... }; // should be UPPER_SNAKE_CASE
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Page Title</title>
-    <script src="shared_state.js"></script>
+    <script src="/static/js/shared_state.js"></script>
 </head>
 <body>
     <!-- content -->
@@ -208,6 +250,35 @@ function loadFromFile(file, callback) {
 }
 ```
 
+### Flask API Pattern
+
+For Flask-powered pages, use fetch() to call API endpoints:
+
+```javascript
+// List available sources
+const res = await fetch('/api/sources');
+const data = await res.json();
+console.log(data.sources);
+
+// Search for characters
+const res = await fetch('/api/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        source: 'wiki',
+        chars: ['北', '京'],
+        limit: 2000
+    })
+});
+const data = await res.json();
+console.log(data.candidates);
+
+// Fetch article content
+const res = await fetch('/api/content/wiki/12345/text');
+const article = await res.json();
+console.log(article.title, article.text);
+```
+
 ## JSON Data Formats
 
 ### Character List
@@ -228,6 +299,36 @@ function loadFromFile(file, callback) {
     "source": "Source or Author",
     "content": "Chinese text content...",
     "characters": ["字", "符", "列", "表"]
+}
+```
+
+### Source Index Format
+```json
+{
+    "version": "1.0",
+    "name": "Wikipedia",
+    "description": "Chinese Wikipedia articles",
+    "buildDate": "2026-04-02T00:00:00.000Z",
+    "totalPages": 1400000,
+    "pagesWithChars": 500000,
+    "uniqueChars": 12000,
+    "pages": {
+        "12345": { "title": "北京", "chars": ["北", "京"] }
+    },
+    "index": {
+        "北": ["12345", "67890"],
+        "京": ["12345", "11111"]
+    }
+}
+```
+
+### Article Content Format
+```json
+{
+    "id": "12345",
+    "title": "北京",
+    "text": "北京是中国的首都...",
+    "chars": ["北", "京", "是", "中", "国", "的", "首", "都"]
 }
 ```
 
@@ -264,14 +365,22 @@ try {
 - Use event delegation where multiple similar elements exist
 - Debounce input handlers for search/filter operations
 - Use `analysisCache` Map to avoid re-analyzing unchanged data
+- For large data, use Flask API endpoints instead of loading entire files
 
 ## Common Tasks
 
 ### Add a new page
 1. Copy structure from existing page (e.g., `study_guide.html`)
-2. Include `<script src="shared_state.js"></script>`
-3. Add link in `index.html` tools-grid section
-4. Update README.txt file structure
+2. Place in `templates/` directory
+3. Include `<script src="/static/js/shared_state.js"></script>`
+4. Add link in `templates/index.html` tools-grid section
+5. Add route in `app.py` if custom handling needed
+
+### Add a new content source
+1. Process source data with `scripts/build_wiki_index.py`
+2. Output index to `source/<name>/<name>_data.json`
+3. Output content to `source/<name>/<name>_content/`
+4. Source will auto-appear in wiki_curriculum_builder dropdown
 
 ### Add a new button style
 Add to existing button styles in the page's `<style>` block:
@@ -285,19 +394,20 @@ button.secondary:hover {
 ```
 
 ### Modify data folder location
-Update all `fetch()` calls and file download paths. Default is `data/` for dictionary and stories.
+Update Flask route in `app.py` and all `fetch()` calls.
 
 ### File Location Conventions
 - **Canonical location for stories**: `data/stories.json`
 - **Canonical location for dictionary**: `data/dictionary.json`
 - **Canonical location for character data**: `data/trad_simp_map.json`
-- **Canonical location for Wikipedia index**: `data/wiki_index.json`
+- **Source data**: `source/<name>/<name>_data.json`
+- **Source content**: `source/<name>/<name>_content/`
 - When exporting, use timestamped backup filenames (e.g., `stories_backup_2026-03-28.json`)
 - All pages should read from `data/stories.json` - do not use root-level `stories.json`
 
 ## Wiki Curriculum Builder
 
-The Wiki Curriculum Builder uses Chinese Wikipedia as a content library to find reading material for learning specific characters.
+The Wiki Curriculum Builder uses content sources as libraries to find reading material for learning specific characters.
 
 ### Setup Process
 
@@ -312,12 +422,20 @@ The Wiki Curriculum Builder uses Chinese Wikipedia as a content library to find 
    ```bash
    # For XML bz2
    python scripts/build_wiki_index.py --input zhwiki-latest-pages-articles.xml.bz2
-   
+
    # For ZIM file (requires zim-tools or libzim)
    python scripts/build_wiki_index.py --input wikipedia_zh_all_maxi.zim
    ```
 
-3. **Place the index**: Copy `data/wiki_index.json` to your web app's `data/` folder.
+3. **Build with content extraction** (for Flask app):
+   ```bash
+   python scripts/build_wiki_index.py --input dump.xml.bz2 \
+     --output source/wiki/wiki_data.json \
+     --extract-content \
+     --content-dir source/wiki/wiki_content
+   ```
+
+4. **Start Flask and access**: Run `python app.py` and open http://localhost:5000/wiki_curriculum_builder
 
 #### ZIM Support Requirements
 
@@ -328,34 +446,18 @@ For processing ZIM files, install one of:
   - macOS: `brew install zim-tools`
   - Windows: Download from https://github.com/kiwix/kiwix-tools/releases
 
-### Index JSON Format
-
-```json
-{
-    "version": "1.0",
-    "buildDate": "2026-04-02T00:00:00.000Z",
-    "totalPages": 1400000,
-    "pagesWithChars": 500000,
-    "uniqueChars": 12000,
-    "pages": {
-        "12345": { "title": "北京", "chars": ["北", "京"] }
-    },
-    "index": {
-        "北": ["12345", "67890"],
-        "京": ["12345", "11111"]
-    }
-}
-```
-
 ### Browser Tool Workflow
 
-1. Load the Wikipedia index (`data/wiki_index.json` or via file upload)
-2. Enter target text (what you want to learn to read)
-3. System identifies unknown characters (target - known from shared_state)
-4. For each unknown char, retrieve posting list from index
-5. Count coverage: how many unknown chars each page contains
-6. Sort by coverage, return top 2000 candidates
-7. Export candidate pool as JSON or CSV
+1. Start Flask server: `python app.py`
+2. Open http://localhost:5000/wiki_curriculum_builder
+3. Select content source from dropdown (e.g., Wikipedia)
+4. Enter target text (what you want to learn to read)
+5. System identifies unknown characters (target - known from shared_state)
+6. Flask API searches inverted index for pages containing unknown chars
+7. Count coverage: how many unknown chars each page contains
+8. Sort by coverage, return top 2000 candidates
+9. Click "Read" to fetch specific article content
+10. Export candidate pool as JSON or CSV
 
 ### Future Enhancements
 
