@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Traditional Character Finder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+    <script src="/static/js/shared_state.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header h1 { margin: 0; }
+        .header p { margin: 5px 0 0 0; opacity: 0.9; }
+        .home-btn { background-color: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; transition: background-color 0.3s; }
+        .home-btn:hover { background-color: rgba(255,255,255,0.3); }
+        .section { background: white; margin-bottom: 25px; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section h2 { margin-top: 0; color: #333; border-bottom: 2px solid #f5576c; padding-bottom: 10px; }
+        textarea { width: 100%; min-height: 200px; padding: 12px; font-size: 16px; font-family: monospace; border: 2px solid #ddd; border-radius: 8px; resize: vertical; margin: 10px 0; }
+        textarea:focus { outline: none; border-color: #f5576c; }
+        button { background-color: #f5576c; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 5px; transition: background-color 0.3s; }
+        button:hover { background-color: #e8465a; }
+        button.secondary { background-color: #48bb78; }
+        button.secondary:hover { background-color: #38a169; }
+        button.danger { background-color: #f56565; }
+        button.danger:hover { background-color: #e53e3e; }
+        .char-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; max-height: 300px; overflow-y: auto; padding: 10px; background-color: #f9f9f9; border-radius: 8px; }
+        .char-tile { background-color: #ffe0b2; color: #e65100; padding: 6px 12px; border-radius: 20px; font-size: 16px; font-family: monospace; cursor: pointer; transition: transform 0.1s; }
+        .char-tile:hover { transform: scale(1.05); }
+        .char-tile.known { background-color: #c8e6c9; color: #2e7d32; }
+        .char-tile.trad-found { background-color: #e1bee7; color: #6a1b9a; }
+        .highlight { background-color: #e1bee7; color: #6a1b9a; font-weight: bold; text-decoration: underline; text-decoration-color: #6a1b9a; }
+        .info-text { color: #666; font-style: italic; margin: 10px 0; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+        .file-status { background-color: #e3f2fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2196F3; }
+        .file-status.success { background-color: #e8f5e9; border-left-color: #4CAF50; }
+        .file-status.error { background-color: #ffebee; border-left-color: #f44336; }
+        .result-text { line-height: 1.6; font-size: 18px; background-color: #fafafa; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .result-text span.highlight { background-color: #e1bee7; color: #6a1b9a; padding: 2px 4px; border-radius: 4px; font-weight: bold; text-decoration: underline; text-decoration-color: #6a1b9a; }
+        .known-badge { font-size: 12px; margin-left: 8px; color: #2e7d32; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; margin: 10px 0; cursor: pointer; }
+        @media (max-width: 600px) { .header { flex-direction: column; text-align: center; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📜 Traditional Character Finder</h1>
+            <p>Paste Chinese text to identify traditional characters and optionally convert to simplified</p>
+        </div>
+        <a href="/" class="home-btn">🏠 Home</a>
+    </div>
+
+    <div class="section">
+        <h2>📁 Step 1: Load Traditional Character Map</h2>
+        <p>Load a mapping from traditional to simplified characters.</p>
+        <div class="button-group">
+            <input type="file" id="tradTxtInput" accept=".txt" style="display: none;">
+            <button id="loadTxtBtn" class="secondary">📄 Load from trad-simp.txt</button>
+            <input type="file" id="tradJsonInput" accept=".json" style="display: none;">
+            <button id="loadJsonBtn" class="secondary">📂 Load JSON Map</button>
+            <button id="clearTradBtn" class="danger">🗑️ Clear Map</button>
+        </div>
+        <div id="tradFileStatus" class="file-status">
+            No traditional character map loaded.
+        </div>
+        <div id="tradListPreview" class="char-list" style="margin-top: 10px;"></div>
+        <div class="info-text">💡 Tip: Click on any traditional character tile to add its simplified version to your known characters (shared across all tools).</div>
+    </div>
+
+    <div class="section">
+        <h2>📝 Step 2: Paste Text to Analyze</h2>
+        <textarea id="textInput" placeholder="Paste Chinese text here...&#10;&#10;Example:&#10;我喜歡學習中文，今天天氣很好。"></textarea>
+        <div class="button-group">
+            <button id="findTradBtn" class="secondary">🔍 Find Traditional</button>
+            <button id="convertBtn" class="secondary">🧹 Convert Trad → Simp</button>
+            <button id="addToStoriesBtn" class="secondary">📚 Add to Stories</button>
+        </div>
+        <div class="button-group">
+            <button id="clearTextBtn" class="danger">🗑️ Clear Text</button>
+            <button id="loadExampleBtn" class="secondary">📄 Load Example</button>
+        </div>
+    </div>
+
+    <div id="results" style="display: none;">
+        <div class="section">
+            <h2>📊 Results</h2>
+            <div id="stats" class="info-text"></div>
+            <div id="tradListResult" class="char-list"></div>
+            <div id="resultText" class="result-text"></div>
+            <div class="button-group">
+                <button id="exportTradBtn">💾 Export Traditional Characters</button>
+                <button id="copyTradBtn">📋 Copy Traditional Characters</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tradMap = new Map();   // key: traditional, value: simplified
+
+        function updateTradStatus(message, isSuccess = false, isError = false) {
+            const statusDiv = document.getElementById("tradFileStatus");
+            statusDiv.textContent = message;
+            statusDiv.className = "file-status";
+            if (isSuccess) statusDiv.classList.add("success");
+            if (isError) statusDiv.classList.add("error");
+        }
+
+        function displayTradListPreview() {
+            const previewDiv = document.getElementById("tradListPreview");
+            previewDiv.innerHTML = "";
+            if (tradMap.size === 0) {
+                previewDiv.innerHTML = "<p class='info-text'>No traditional characters loaded.</p>";
+                return;
+            }
+            const sorted = Array.from(tradMap.keys()).sort();
+            sorted.forEach(ch => {
+                const tile = document.createElement("span");
+                tile.className = "char-tile";
+                tile.textContent = `${ch} → ${tradMap.get(ch)}`;
+                const isKnown = window.mandarinState ? window.mandarinState.has(tradMap.get(ch)) : false;
+                if (isKnown) {
+                    tile.classList.add("known");
+                    const badge = document.createElement("span");
+                    badge.className = "known-badge";
+                    badge.textContent = " ✓";
+                    tile.appendChild(badge);
+                }
+                tile.addEventListener("click", () => {
+                    const simp = tradMap.get(ch);
+                    if (!window.mandarinState.has(simp)) {
+                        window.mandarinState.addCharacter(simp);
+                        tile.classList.add("known");
+                        const badge = document.createElement("span");
+                        badge.className = "known-badge";
+                        badge.textContent = " ✓";
+                        tile.appendChild(badge);
+                        updateTradStatus(`✅ Added simplified "${simp}" to your known characters.`, true);
+                    } else {
+                        alert(`"${simp}" is already in your known list.`);
+                    }
+                });
+                previewDiv.appendChild(tile);
+            });
+        }
+
+        function loadTradFromMap(map) {
+            tradMap = map;
+            updateTradStatus(`✅ Loaded ${tradMap.size} traditional-simplified pairs.`, true);
+            displayTradListPreview();
+            document.getElementById("results").style.display = "none";
+        }
+
+        // Parse the trad-simp.txt file (lines like "錒  锕" or "錒\t锕")
+        function parseTradSimpTxt(content) {
+            const lines = content.split(/\r?\n/);
+            const map = new Map();
+            for (let line of lines) {
+                line = line.trim();
+                if (line.length === 0 || line.startsWith("#") || line.startsWith("【")) continue; // skip comments and header
+                // split by whitespace (space or tab)
+                const parts = line.split(/\s+/);
+                if (parts.length >= 2) {
+                    const trad = parts[0];
+                    const simp = parts[1];
+                    // Basic sanity: both should be single characters (or at least not empty)
+                    if (trad && simp && trad.length === 1 && simp.length === 1) {
+                        map.set(trad, simp);
+                    } else {
+                        console.warn("Skipping line (not a single character pair):", line);
+                    }
+                }
+            }
+            return map;
+        }
+
+        function loadFromTxtFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    const map = parseTradSimpTxt(content);
+                    if (map.size === 0) throw new Error("No valid pairs found in the file.");
+                    loadTradFromMap(map);
+                } catch (error) {
+                    updateTradStatus(`❌ Failed to parse file: ${error.message}`, false, true);
+                }
+            };
+            reader.onerror = () => updateTradStatus("❌ Failed to read file.", false, true);
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function loadFromJsonFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let newMap = new Map();
+                    if (typeof data === 'object' && !Array.isArray(data)) {
+                        for (let [trad, simp] of Object.entries(data)) {
+                            if (trad && simp && trad.length === 1 && simp.length === 1) {
+                                newMap.set(trad, simp);
+                            }
+                        }
+                    } else {
+                        throw new Error("Invalid format. Expected an object mapping traditional to simplified.");
+                    }
+                    if (newMap.size === 0) throw new Error("No valid entries found.");
+                    loadTradFromMap(newMap);
+                } catch (error) {
+                    updateTradStatus(`❌ Failed to load file: ${error.message}`, false, true);
+                }
+            };
+            reader.onerror = () => updateTradStatus("❌ Failed to read file.", false, true);
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function clearTradList() {
+            tradMap.clear();
+            updateTradStatus("No traditional character map loaded.", false);
+            displayTradListPreview();
+            document.getElementById("results").style.display = "none";
+        }
+
+        function findTraditional() {
+            const text = document.getElementById("textInput").value;
+            if (!text.trim()) { alert("Please paste some text."); return; }
+            if (tradMap.size === 0) { alert("Please load a traditional character map first."); return; }
+
+            const chineseRegex = /[\u4e00-\u9fff]/g;
+            const allChars = text.match(chineseRegex) || [];
+            const tradChars = allChars.filter(ch => tradMap.has(ch));
+            const uniqueTrad = [...new Set(tradChars)].sort();
+
+            // Stats
+            const statsDiv = document.getElementById("stats");
+            statsDiv.innerHTML = `Total Chinese characters: ${allChars.length}<br>Traditional characters found: ${tradChars.length}<br>Unique traditional characters: ${uniqueTrad.length}`;
+
+            // Highlight traditional in original text (purple) - escape first, then highlight
+            const escapedText = escapeHtml(text);
+            let highlightedText = escapedText;
+            uniqueTrad.forEach(ch => {
+                const escapedChar = escapeHtml(ch);
+                const regex = new RegExp(escapedChar, 'g');
+                highlightedText = highlightedText.replace(regex, `<span class="highlight">${escapedChar}</span>`);
+            });
+            const resultDiv = document.getElementById("resultText");
+            resultDiv.innerHTML = highlightedText.replace(/\n/g, '<br>');
+
+            // Display unique trad list with click-to-add simplified
+            const listDiv = document.getElementById("tradListResult");
+            listDiv.innerHTML = "";
+            if (uniqueTrad.length === 0) {
+                listDiv.innerHTML = "<p class='info-text'>No traditional characters found in the text.</p>";
+            } else {
+                uniqueTrad.forEach(ch => {
+                    const simp = tradMap.get(ch);
+                    const tile = document.createElement("span");
+                    tile.className = "char-tile trad-found";
+                    tile.textContent = `${ch} → ${simp}`;
+                    const isKnown = window.mandarinState ? window.mandarinState.has(simp) : false;
+                    if (isKnown) {
+                        tile.classList.add("known");
+                        const badge = document.createElement("span");
+                        badge.className = "known-badge";
+                        badge.textContent = " ✓";
+                        tile.appendChild(badge);
+                    }
+                    tile.addEventListener("click", () => {
+                        if (!window.mandarinState.has(simp)) {
+                            window.mandarinState.addCharacter(simp);
+                            tile.classList.add("known");
+                            const badge = document.createElement("span");
+                            badge.className = "known-badge";
+                            badge.textContent = " ✓";
+                            tile.appendChild(badge);
+                            updateTradStatus(`✅ Added simplified "${simp}" to your known characters.`, true);
+                        } else {
+                            alert(`"${simp}" is already in your known list.`);
+                        }
+                    });
+                    listDiv.appendChild(tile);
+                });
+            }
+
+            document.getElementById("results").style.display = "block";
+        }
+
+        function convertToSimplified() {
+            const text = document.getElementById("textInput").value;
+            if (!text.trim()) { alert("Please paste some text."); return; }
+            if (tradMap.size === 0) { alert("Please load a traditional character map first."); return; }
+
+            let converted = text;
+            let count = 0;
+            for (let [trad, simp] of tradMap) {
+                if (text.includes(trad)) {
+                    const regex = new RegExp(trad, 'g');
+                    const matches = (text.match(regex) || []).length;
+                    converted = converted.replace(regex, simp);
+                    count += matches;
+                }
+            }
+
+            if (count > 0) {
+                document.getElementById("textInput").value = converted;
+                updateTradStatus(`✅ Converted ${count} traditional character(s) to simplified.`, true);
+            } else {
+                updateTradStatus("No traditional characters found to convert.", false);
+            }
+        }
+
+        function addToStories() {
+            const text = document.getElementById("textInput").value;
+            if (!text.trim()) { alert("Please paste some text first."); return; }
+            // Encode the text as a URL parameter and open story library
+            const encodedText = encodeURIComponent(text);
+            window.open(`story_library.html?text=${encodedText}`, '_blank');
+        }
+
+        function exportTradChars() {
+            const listDiv = document.getElementById("tradListResult");
+            const tradChars = Array.from(listDiv.querySelectorAll(".char-tile")).map(tile => tile.textContent.split('→')[0].trim());
+            if (tradChars.length === 0) { alert("No traditional characters to export."); return; }
+            const exportData = { version: "1.0", source: "Traditional Finder", date: new Date().toISOString(), characters: tradChars, count: tradChars.length };
+            const jsonStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trad_chars_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert(`Exported ${tradChars.length} traditional characters.`);
+        }
+
+        function copyTradChars() {
+            const listDiv = document.getElementById("tradListResult");
+            const tradChars = Array.from(listDiv.querySelectorAll(".char-tile")).map(tile => tile.textContent.split('→')[0].trim());
+            if (tradChars.length === 0) { alert("No traditional characters to copy."); return; }
+            navigator.clipboard.writeText(tradChars.join("")).then(() => alert(`Copied ${tradChars.length} characters!`)).catch(() => alert("Failed to copy."));
+        }
+
+        function loadExampleText() {
+            const example = `我喜歡學習中文。今天天氣很好，我去公園散步。\n\n這是一個傳統字符的例子：體、國、學、會、書、長、門。`;
+            document.getElementById("textInput").value = example;
+        }
+
+        function clearText() {
+            document.getElementById("textInput").value = "";
+            document.getElementById("results").style.display = "none";
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById("loadTxtBtn").addEventListener("click", () => document.getElementById("tradTxtInput").click());
+        document.getElementById("tradTxtInput").addEventListener("change", (e) => { if (e.target.files.length) loadFromTxtFile(e.target.files[0]); e.target.value = ''; });
+        document.getElementById("loadJsonBtn").addEventListener("click", () => document.getElementById("tradJsonInput").click());
+        document.getElementById("tradJsonInput").addEventListener("change", (e) => { if (e.target.files.length) loadFromJsonFile(e.target.files[0]); e.target.value = ''; });
+        document.getElementById("clearTradBtn").addEventListener("click", clearTradList);
+        document.getElementById("findTradBtn").addEventListener("click", findTraditional);
+        document.getElementById("convertBtn").addEventListener("click", convertToSimplified);
+        document.getElementById("addToStoriesBtn").addEventListener("click", addToStories);
+        document.getElementById("clearTextBtn").addEventListener("click", clearText);
+        document.getElementById("loadExampleBtn").addEventListener("click", loadExampleText);
+        document.getElementById("exportTradBtn").addEventListener("click", exportTradChars);
+        document.getElementById("copyTradBtn").addEventListener("click", copyTradChars);
+
+        // Strip HTML when pasting into text input
+        document.getElementById("textInput").addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const stripped = text.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+            document.execCommand('insertText', false, stripped);
+        });
+
+        // Update preview when shared state changes
+        if (window.mandarinState) {
+            window.mandarinState.subscribe(() => {
+                displayTradListPreview();
+            });
+        }
+
+        // Auto-load from data/trad_simp_map.json
+        fetch('/data/trad_simp_map.json').then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('No data/trad_simp_map.json found');
+        }).then(data => {
+            const newMap = new Map();
+            for (let [trad, simp] of Object.entries(data)) {
+                if (trad && simp && trad.length === 1 && simp.length === 1) {
+                    newMap.set(trad, simp);
+                }
+            }
+            if (newMap.size > 0) {
+                loadTradFromMap(newMap);
+                updateTradStatus(`✅ Auto-loaded ${newMap.size} pairs from data/trad_simp_map.json`, true);
+            } else {
+                updateTradStatus("No valid pairs found in data/trad_simp_map.json", false, true);
+            }
+        }).catch(() => {
+            console.log('No data/trad_simp_map.json found, please load manually.');
+            updateTradStatus("No default file found. Use 'Load JSON Map' to load your mapping.", false);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mandarin Learner - Words by Known Characters</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+    <script src="/static/js/shared_state.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header h1 { margin: 0 0 5px 0; }
+        .header p { margin: 0; opacity: 0.9; }
+        .home-btn { background-color: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; transition: background-color 0.3s; }
+        .home-btn:hover { background-color: rgba(255,255,255,0.3); }
+        .section { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; }
+        h2 { margin-top: 0; }
+        h3 { margin: 10px 0; font-size: 18px; }
+        .character-list { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; min-height: 50px; max-height: 150px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; }
+        .character-tile { background-color: #e0e7ff; padding: 8px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; }
+        .remove-char { background: none; border: none; cursor: pointer; font-weight: bold; color: #666; }
+        .remove-char:hover { color: red; }
+        .word-list { list-style: none; padding: 0; max-height: 400px; overflow-y: auto; }
+        .word-list li { padding: 8px 5px; border-bottom: 1px solid #eee; }
+        .word-list li:hover { background-color: #f5f5f5; }
+        input, button, textarea { padding: 8px; font-size: 16px; margin: 5px; }
+        button { cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; }
+        button:hover { background-color: #45a049; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .export-btn { background-color: #2196F3; }
+        .export-btn:hover { background-color: #0b7dda; }
+        .clear-btn { background-color: #f44336; }
+        .clear-btn:hover { background-color: #da190b; }
+        .extract-btn { background-color: #9c27b0; }
+        .extract-btn:hover { background-color: #7b1fa2; }
+        .merge-btn { background-color: #009688; }
+        .merge-btn:hover { background-color: #00796b; }
+        .info { color: #666; font-style: italic; margin: 10px 0; }
+        .status { margin: 10px 0; padding: 8px; border-radius: 4px; background-color: #e7f3ff; color: #0066cc; }
+        .word-count { font-size: 14px; color: #666; margin-top: 5px; }
+        textarea { width: 100%; max-width: 100%; min-height: 150px; font-family: monospace; font-size: 14px; }
+        .preview-container { margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 8px; }
+        .preview-chars { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .preview-char { background-color: #e8f5e9; padding: 5px 10px; border-radius: 15px; font-size: 14px; }
+        .preview-stats { color: #666; font-size: 14px; margin-top: 5px; }
+        @media (max-width: 600px) { .header { flex-direction: column; text-align: center; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Mandarin Learner</h1>
+            <p>Add characters you know, and we'll suggest words you can learn because you already know all their characters.</p>
+        </div>
+        <a href="/" class="home-btn">🏠 Home</a>
+    </div>
+
+    <div class="section">
+        <h2>📖 Add a character you know</h2>
+        <input type="text" id="charInput" placeholder="e.g., 我" maxlength="1">
+        <button id="addCharBtn">Add</button>
+        <p class="info">(Only single Chinese characters work best)</p>
+    </div>
+
+    <div class="section">
+        <h2>✅ Characters you know</h2>
+        <div id="knownCharsContainer" class="character-list"></div>
+        <div class="button-group">
+            <button id="saveBtn" class="export-btn">💾 Save Known Characters</button>
+            <button id="loadExampleBtn" class="export-btn">🔍 Load Example</button>
+            <button id="clearBtn" class="clear-btn">🗑️ Clear All Characters</button>
+        </div>
+        <div id="statusMessage" class="status" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+        <h2>📚 Words you can learn now</h2>
+        <div id="suggestionsContainer">
+            <p class="loading">Loading dictionary...</p>
+        </div>
+        <div id="wordCount" class="word-count"></div>
+    </div>
+
+    <div class="section">
+        <h2>📄 Extract Characters from Text</h2>
+        <p class="info">Paste any Chinese text (homework, articles, etc.) to extract all unique characters. You can then add them to your known characters list.</p>
+        <textarea id="textInput" placeholder="Paste your Chinese text here...&#10;&#10;Example:&#10;我喜欢学习中文。&#10;今天天气很好。"></textarea>
+        <div class="button-group">
+            <button id="extractBtn" class="extract-btn">🔍 Extract Characters</button>
+            <button id="mergeBtn" class="merge-btn" style="display: none;">➕ Add Extracted to My Known Characters</button>
+        </div>
+        <div id="extractPreview" class="preview-container" style="display: none;">
+            <h3>📋 Extracted Characters (Unique)</h3>
+            <div id="extractedCharsPreview" class="preview-chars"></div>
+            <div id="extractStats" class="preview-stats"></div>
+            <div class="button-group">
+                <button id="confirmMergeBtn">✅ Add to My Known Characters</button>
+                <button id="cancelExtractBtn">❌ Cancel</button>
+                <button id="exportExtractedBtn">💾 Export Extracted Only</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let dictionary = [];
+    let lastExtractedChars = new Set();
+
+    function showStatus(message, isError = false) {
+        const statusDiv = document.getElementById("statusMessage");
+        statusDiv.textContent = message;
+        statusDiv.style.backgroundColor = isError ? '#ffe6e6' : '#e7f3ff';
+        statusDiv.style.color = isError ? '#cc0000' : '#0066cc';
+        statusDiv.style.display = 'block';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 3000);
+    }
+
+    function updateUI() {
+        // Show known characters using shared state
+        const container = document.getElementById("knownCharsContainer");
+        container.innerHTML = "";
+        const charsArray = window.mandarinState.getCharacters().sort();
+        for (let ch of charsArray) {
+            const tile = document.createElement("div");
+            tile.className = "character-tile";
+            tile.innerHTML = `${ch} <button class="remove-char" data-char="${ch}">✖</button>`;
+            container.appendChild(tile);
+        }
+
+        if (!dictionary.length) {
+            document.getElementById("suggestionsContainer").innerHTML = "<p class='info'>Dictionary not loaded yet.</p>";
+            document.getElementById("wordCount").innerHTML = "";
+            return;
+        }
+
+        // Filter learnable words
+        let suggestions = dictionary.filter(word => {
+            const allCharsKnown = word.chars.every(char => window.mandarinState.has(char));
+            const isMultiChar = word.word.length > 1;
+            return allCharsKnown && isMultiChar;
+        });
+
+        // Sort suggestions by length, then alphabetically
+        suggestions.sort((a, b) => {
+            if (a.word.length !== b.word.length) return a.word.length - b.word.length;
+            return a.word.localeCompare(b.word);
+        });
+
+        // Update word count
+        document.getElementById("wordCount").innerHTML = `📊 ${suggestions.length} words available to learn`;
+
+        // Display suggestions
+        const suggestionsDiv = document.getElementById("suggestionsContainer");
+        if (suggestions.length === 0) {
+            suggestionsDiv.innerHTML = "<p class='info'>Add more characters to see words you can learn.</p>";
+        } else {
+            const ul = document.createElement("ul");
+            ul.className = "word-list";
+            for (let word of suggestions) {
+                const li = document.createElement("li");
+                const pinyinPart = word.pinyin ? ` [${word.pinyin}]` : '';
+                const meaningPart = word.meaning ? ` – ${word.meaning}` : '';
+                li.textContent = `${word.word}${pinyinPart}${meaningPart}`;
+                ul.appendChild(li);
+            }
+            suggestionsDiv.innerHTML = "";
+            suggestionsDiv.appendChild(ul);
+        }
+    }
+
+    // Subscribe to state changes
+    window.mandarinState.subscribe(() => {
+        updateUI();
+    });
+
+    // Save to canonical file
+    document.getElementById("saveBtn").addEventListener("click", () => {
+        window.mandarinState.exportToFile();
+        showStatus("Known characters saved to known_chars.json");
+    });
+
+    // Clear all characters
+    document.getElementById("clearBtn").addEventListener("click", () => {
+        if (confirm(`Are you sure you want to remove all ${window.mandarinState.getCount()} characters?`)) {
+            window.mandarinState.clear();
+            updateUI();
+            showStatus("All characters have been cleared.");
+        }
+    });
+
+    // Load example characters
+    document.getElementById("loadExampleBtn").addEventListener("click", () => {
+        const example = ["我","学","习","中","文","你","好","老","师","学","生","大","小","多","少","去","来","吃","喝","看","听","说","话","天","地","人","口","手","心","日","月","水","火","山","石","田","土","木","林","森"];
+        window.mandarinState.setCharacters(example);
+        showStatus(`Loaded example character set (${example.length} common characters)`);
+    });
+
+    // Extract Chinese characters from text
+    function extractChineseCharacters(text) {
+        const chineseRegex = /[\u4e00-\u9fff]/g;
+        const matches = text.match(chineseRegex);
+        if (!matches) return new Set();
+        return new Set(matches);
+    }
+
+    function displayExtractedPreview(extractedSet) {
+        const previewDiv = document.getElementById("extractPreview");
+        const charsContainer = document.getElementById("extractedCharsPreview");
+        const statsDiv = document.getElementById("extractStats");
+        
+        const sortedChars = Array.from(extractedSet).sort();
+        
+        charsContainer.innerHTML = "";
+        for (let ch of sortedChars) {
+            const charTile = document.createElement("span");
+            charTile.className = "preview-char";
+            charTile.textContent = ch;
+            charsContainer.appendChild(charTile);
+        }
+        
+        const newChars = Array.from(extractedSet).filter(ch => !window.mandarinState.has(ch));
+        const alreadyKnown = sortedChars.length - newChars.length;
+        
+        statsDiv.innerHTML = `
+            Total unique characters: ${sortedChars.length}<br>
+            New characters (not in your list): ${newChars.length}<br>
+            Already in your list: ${alreadyKnown}
+        `;
+        
+        previewDiv.style.display = "block";
+        document.getElementById("mergeBtn").style.display = "inline-block";
+        
+        lastExtractedChars = extractedSet;
+    }
+
+    function mergeExtractedWithKnown() {
+        if (lastExtractedChars.size === 0) {
+            showStatus("No extracted characters to merge.", true);
+            return;
+        }
+        
+        const newChars = Array.from(lastExtractedChars).filter(ch => !window.mandarinState.has(ch));
+        
+        if (newChars.length === 0) {
+            showStatus("All extracted characters are already in your list!");
+            return;
+        }
+        
+        const added = window.mandarinState.addCharacters(newChars);
+        updateUI();
+        showStatus(`Added ${added} new characters. Total now: ${window.mandarinState.getCount()}`);
+        
+        document.getElementById("extractPreview").style.display = "none";
+        document.getElementById("mergeBtn").style.display = "none";
+        document.getElementById("textInput").value = "";
+        lastExtractedChars.clear();
+    }
+
+    function addCharacter(char) {
+        if (char && char.length === 1) {
+            if (window.mandarinState.addCharacter(char)) {
+                updateUI();
+                showStatus(`Added: ${char}`);
+            } else if (window.mandarinState.has(char)) {
+                showStatus(`You already know "${char}".`, true);
+            } else {
+                showStatus("Please enter a valid Chinese character.", true);
+            }
+        } else if (char && char.length !== 1) {
+            showStatus("Please enter exactly one character.", true);
+        }
+    }
+
+    function removeCharacter(char) {
+        if (window.mandarinState.removeCharacter(char)) {
+            updateUI();
+            showStatus(`Removed: ${char}`);
+        }
+    }
+
+    async function loadDictionary() {
+        try {
+            console.log("Loading dictionary...");
+            const response = await fetch('/data/dictionary.json');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            dictionary = await response.json();
+            console.log(`Loaded ${dictionary.length} words.`);
+            updateUI();
+        } catch (error) {
+            console.error('Failed to load dictionary:', error);
+            document.getElementById("suggestionsContainer").innerHTML = 
+                '<p class="info">Error loading dictionary. Make sure data/dictionary.json is in the data folder and you are using a local web server.</p>';
+            document.getElementById("wordCount").innerHTML = "";
+        }
+    }
+
+    // Event listeners
+    document.getElementById("addCharBtn").addEventListener("click", () => {
+        const input = document.getElementById("charInput");
+        const char = input.value.trim();
+        if (char) {
+            addCharacter(char);
+            input.value = "";
+            input.focus();
+        } else {
+            showStatus("Please enter a character.", true);
+        }
+    });
+
+    document.getElementById("charInput").addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            document.getElementById("addCharBtn").click();
+        }
+    });
+
+    document.getElementById("knownCharsContainer").addEventListener("click", (event) => {
+        if (event.target.classList.contains("remove-char")) {
+            const charToRemove = event.target.getAttribute("data-char");
+            removeCharacter(charToRemove);
+        }
+    });
+    
+    document.getElementById("extractBtn").addEventListener("click", () => {
+        const text = document.getElementById("textInput").value;
+        if (!text.trim()) {
+            showStatus("Please paste some Chinese text first.", true);
+            return;
+        }
+        
+        const extracted = extractChineseCharacters(text);
+        if (extracted.size === 0) {
+            showStatus("No Chinese characters found in the text.", true);
+            return;
+        }
+        
+        displayExtractedPreview(extracted);
+        showStatus(`Found ${extracted.size} unique Chinese characters.`);
+    });
+    
+    document.getElementById("confirmMergeBtn").addEventListener("click", mergeExtractedWithKnown);
+    
+    document.getElementById("cancelExtractBtn").addEventListener("click", () => {
+        document.getElementById("extractPreview").style.display = "none";
+        document.getElementById("mergeBtn").style.display = "none";
+        document.getElementById("textInput").value = "";
+        lastExtractedChars.clear();
+        showStatus("Extraction cancelled.");
+    });
+    
+    document.getElementById("exportExtractedBtn").addEventListener("click", () => {
+        if (lastExtractedChars.size === 0) {
+            showStatus("No extracted characters to export.", true);
+            return;
+        }
+        const charsArray = Array.from(lastExtractedChars);
+        const exportData = {
+            version: "1.0",
+            date: new Date().toISOString(),
+            characters: charsArray,
+            count: charsArray.length
+        };
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `extracted_chars_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showStatus(`Exported ${charsArray.length} extracted characters!`);
+    });
+
+    loadDictionary();
+</script>
+</body>
+</html>

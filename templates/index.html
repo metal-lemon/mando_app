@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <title>Mandarin Learning Tools</title>
+    <script src="/static/js/shared_state.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #5a6e7c;
+        }
+
+        .setup-banner {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .setup-banner p {
+            margin: 0;
+        }
+
+        .setup-btn {
+            background: white;
+            color: #f57c00;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .setup-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 3rem;
+        }
+
+        .card-header.mandarin {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .card-header.readability {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .card-header.traditional {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .card-header.study {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+
+        .card-header.story {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-content h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #2c3e50;
+        }
+
+        .card-content p {
+            color: #5a6e7c;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: #4a5568;
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #2d3748;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 2rem;
+        }
+
+        /* Data Management Styles */
+        .data-section {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .data-section h2 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            border-bottom: 2px solid #ff6b6b;
+            display: inline-block;
+            padding-bottom: 0.5rem;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .data-card {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 1.2rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .data-card h3 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .data-card p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .data-card code {
+            background: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        button {
+            background-color: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #5a67d8;
+        }
+
+        button.secondary {
+            background-color: #48bb78;
+        }
+
+        button.secondary:hover {
+            background-color: #38a169;
+        }
+
+        button.warning {
+            background-color: #ff9800;
+        }
+
+        button.warning:hover {
+            background-color: #e68a00;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            .tools-grid {
+                gap: 1.5rem;
+            }
+            .setup-banner {
+                flex-direction: column;
+                text-align: center;
+            }
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📚 Mandarin Learning Tools</h1>
+        <p>Your personal suite of tools to master Chinese characters and reading</p>
+    </div>
+
+    <div class="setup-banner">
+        <p>⚙️ First time using these tools? Run setup to create all required files!</p>
+        <a href="/setup" class="setup-btn">🚀 Run Setup</a>
+    </div>
+
+    <!-- Data Management Section -->
+    <div class="data-section">
+        <h2>📁 Data Management</h2>
+        <div class="data-grid">
+            <div class="data-card">
+                <h3>📖 Known Characters</h3>
+                <p>Load or save your current character list. The canonical file is <code>data/known_chars.json</code>.</p>
+                <div class="button-group">
+                    <button id="saveKnownBtn">💾 Save to File (known_chars.json)</button>
+                    <button id="backupKnownBtn" class="secondary">📦 Backup (timestamped)</button>
+                    <input type="file" id="loadKnownInput" accept=".json" style="display: none;">
+                    <button id="loadKnownBtn">📂 Load and Merge</button>
+                    <button id="replaceKnownBtn" class="warning">🔄 Replace (overwrite)</button>
+                </div>
+            </div>
+            <div class="data-card">
+                <h3>📚 Story Library</h3>
+                <p>Load or save your story database. The canonical file is <code>data/stories.json</code>.</p>
+                <div class="button-group">
+                    <button id="saveStoriesBtn">💾 Save Stories (stories.json)</button>
+                    <button id="backupStoriesBtn" class="secondary">📦 Backup (timestamped)</button>
+                    <input type="file" id="loadStoriesInput" accept=".json" style="display: none;">
+                    <button id="loadStoriesBtn">📂 Load and Replace</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tools-grid">
+        <!-- Tool 1: Mandarin Learner -->
+        <div class="card">
+            <div class="card-header mandarin">📖</div>
+            <div class="card-content">
+                <h2>Mandarin Learner</h2>
+                <p>Track characters you know and get suggestions for words you can learn because you already know all their characters. Build your vocabulary systematically.</p>
+                <a href="/mandarin_learner" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 2: Can I Read This? -->
+        <div class="card">
+            <div class="card-header readability">📊</div>
+            <div class="card-content">
+                <h2>Can I Read This?</h2>
+                <p>Paste any Chinese text, upload your character list, and see the percentage you already know. Click on unknown characters to mark them known and export an updated list.</p>
+                <a href="/can_i_read_this" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 3: Study Guide Generator -->
+        <div class="card">
+            <div class="card-header study">📘</div>
+            <div class="card-content">
+                <h2>Study Guide Generator</h2>
+                <p>Turn unknown characters (exported from Can I Read This?) into a personalized study guide. Includes example sentences from your text and compound words using your known characters.</p>
+                <a href="/study_guide" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 4: Story Suggester -->
+        <div class="card">
+            <div class="card-header story">📖</div>
+            <div class="card-content">
+                <h2>Story Suggester</h2>
+                <p>Find stories you're ready to read based on characters you know. Stories are ranked by difficulty, with both occurrence and unique character percentages. Long texts can be split into chunks.</p>
+                <a href="/story_suggester" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 5: Story Library -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #ffa500, #ff6b6b);">📚</div>
+            <div class="card-content">
+                <h2>Story Library</h2>
+                <p>Manage your story database – view, add, edit, delete, and export stories. Build your personal collection of reading materials.</p>
+                <a href="/story_library" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 6: Traditional Character Finder -->
+        <div class="card">
+            <div class="card-header traditional">📜</div>
+            <div class="card-content">
+                <h2>Traditional Finder</h2>
+                <p>Identify traditional characters in any text. Load your own list or use the built-in list. Perfect for recognizing characters that differ from simplified Chinese.</p>
+                <a href="/traditional_finder" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 7: Curriculum Builder -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #673ab7);">🗺️</div>
+            <div class="card-content">
+                <h2>Curriculum Builder</h2>
+                <p>Generate a learning path from your target text. Uses the story library to create a step-by-step curriculum that bridges your known characters to your goal.</p>
+                <a href="/curriculum_builder" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 8: Curriculum Builder Lite -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #673ab7);">⚡</div>
+            <div class="card-content">
+                <h2>Curriculum Builder Lite</h2>
+                <p>Simplified learning path generator using efficient story selection.</p>
+                <a href="/lite_builder" class="btn">Open Tool →</a>
+            </div>
+        </div>
+
+        <!-- Tool 9: Wiki Curriculum Builder -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #2196F3, #0d47a1);">🗺️</div>
+            <div class="card-content">
+                <h2>Wiki Curriculum Builder</h2>
+                <p>Build learning paths using Wikipedia as a content library. Generate candidate pools from Chinese Wikipedia articles.</p>
+                <a href="/wiki_curriculum_builder" class="btn">Open Tool →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>All tools work offline and store your data locally in your browser. Export your progress to share or back up.</p>
+        <p>Recommended workflow: <strong>Mandarin Learner</strong> → <strong>Can I Read This?</strong> → <strong>Study Guide Generator</strong> → <strong>Story Suggester</strong> → learn → repeat. Use <strong>Story Library</strong> to manage your story collection.</p>
+    </div>
+</div>
+
+<script>
+    // Data Management Scripts
+    function timestampedFilename(base) {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0,19).replace(/:/g, '-');
+        return `${base}_${dateStr}.json`;
+    }
+
+    // Known characters
+    document.getElementById('saveKnownBtn').addEventListener('click', () => {
+        window.mandarinState.saveToFile();
+    });
+    document.getElementById('backupKnownBtn').addEventListener('click', () => {
+        const chars = window.mandarinState.getCharacters();
+        const data = {
+            version: "1.0",
+            date: new Date().toISOString(),
+            characters: chars,
+            count: chars.length
+        };
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = timestampedFilename('known_chars');
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+    let knownLoadMode = 'merge';
+    document.getElementById('loadKnownBtn').addEventListener('click', () => {
+        knownLoadMode = 'merge';
+        document.getElementById('loadKnownInput').click();
+    });
+    document.getElementById('replaceKnownBtn').addEventListener('click', () => {
+        knownLoadMode = 'replace';
+        document.getElementById('loadKnownInput').click();
+    });
+    document.getElementById('loadKnownInput').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            const merge = (knownLoadMode === 'merge');
+            window.mandarinState.loadFromFile(e.target.files[0], merge);
+            e.target.value = '';
+        }
+    });
+
+    // Stories
+    let storyDatabase = [];
+    function loadStoriesFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                const newStories = Array.isArray(data) ? data : [];
+                storyDatabase = newStories;
+                alert(`Loaded ${storyDatabase.length} stories.`);
+            } catch (err) {
+                alert(`Failed to load stories: ${err.message}`);
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+    function saveStoriesToFile() {
+        if (!storyDatabase.length) {
+            alert("No stories to save.");
+            return;
+        }
+        const jsonStr = JSON.stringify(storyDatabase, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stories_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    function backupStories() {
+        if (!storyDatabase.length) {
+            alert("No stories to backup.");
+            return;
+        }
+        const jsonStr = JSON.stringify(storyDatabase, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = timestampedFilename('stories');
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    document.getElementById('saveStoriesBtn').addEventListener('click', saveStoriesToFile);
+    document.getElementById('backupStoriesBtn').addEventListener('click', backupStories);
+    document.getElementById('loadStoriesBtn').addEventListener('click', () => {
+        document.getElementById('loadStoriesInput').click();
+    });
+    document.getElementById('loadStoriesInput').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            loadStoriesFromFile(e.target.files[0]);
+            e.target.value = '';
+        }
+    });
+    // Try to load existing stories.json from data/ to populate storyDatabase for the home page.
+    fetch('/data/stories.json').then(r => r.ok ? r.json() : null).then(data => {
+        if (data && Array.isArray(data)) {
+            storyDatabase = data;
+            console.log(`Loaded ${storyDatabase.length} stories from data/stories.json.`);
+        }
+    }).catch(() => {});
+</script>
+</body>
+</html>

@@ -323,9 +323,19 @@ def process_zim_file(input_file):
         return None
 
 
-def process_wikipedia_xml(input_file):
-    """Process Wikipedia XML dump (plain or bz2 compressed)."""
+def process_wikipedia_xml(input_file, content_dir=None, save_content=False):
+    """Process Wikipedia XML dump (plain or bz2 compressed).
+    
+    Args:
+        input_file: Path to the Wikipedia XML dump
+        content_dir: Optional directory to save extracted article content
+        save_content: If True, save each article's content to content_dir/{id}.json
+    """
     print(f"Processing Wikipedia XML dump: {input_file}")
+    
+    if save_content and content_dir:
+        Path(content_dir).mkdir(parents=True, exist_ok=True)
+        print(f"  Will save content to: {content_dir}/")
 
     pages = {}
     char_index = {}
@@ -333,6 +343,8 @@ def process_wikipedia_xml(input_file):
     total_pages = 0
     pages_with_chars = 0
     progress_interval = 10000
+    content_save_interval = 1000
+    saved_content_count = 0
 
     if input_file.endswith('.bz2'):
         opener = bz2.open
@@ -401,11 +413,29 @@ def process_wikipedia_xml(input_file):
                                 if char not in char_index:
                                     char_index[char] = []
                                 char_index[char].append(page_id)
+                            
+                            if save_content and content_dir:
+                                if total_pages % content_save_interval == 0:
+                                    print(f"  Saved content for {saved_content_count} articles...")
+                                
+                                content_file = Path(content_dir) / f'{page_id}.json'
+                                if not content_file.exists():
+                                    article_content = {
+                                        'id': page_id,
+                                        'title': page_title,
+                                        'text': plain_text,
+                                        'chars': chars
+                                    }
+                                    with open(content_file, 'w', encoding='utf-8') as cf:
+                                        json.dump(article_content, cf, ensure_ascii=False)
+                                    saved_content_count += 1
 
     print(f"Processing complete!")
     print(f"  Total pages: {total_pages}")
     print(f"  Pages with Chinese characters: {pages_with_chars}")
     print(f"  Unique characters: {len(char_index)}")
+    if save_content and content_dir:
+        print(f"  Saved content for {saved_content_count} articles")
 
     return {
         'version': '1.0',
@@ -432,11 +462,16 @@ def process_file(input_file):
         return None
 
 
-def save_index(index, output_file):
-    """Save the index to a JSON file."""
+def save_index(index, output_file, source_name=None, source_description=None):
+    """Save the index to a JSON file with optional metadata."""
     print(f"Saving index to {output_file}")
 
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+    
+    if source_name:
+        index['name'] = source_name
+    if source_description:
+        index['description'] = source_description
 
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(index, f, ensure_ascii=False, separators=(',', ':'))
@@ -460,6 +495,9 @@ Examples:
   # Process ZIM file (requires zim-tools or libzim)
   python build_wiki_index.py --input wikipedia_zh_all_maxi.zim
 
+  # Process and extract article content for Flask app
+  python build_wiki_index.py --input wikipedia.xml.bz2 --output source/wiki/wiki_data.json --extract-content --content-dir source/wiki/wiki_content
+
 Supported input formats:
   - XML bz2: Standard Wikipedia XML dump
   - XML: Uncompressed Wikipedia XML dump
@@ -479,6 +517,25 @@ Supported input formats:
         '--output', '-o',
         default=INDEX_FILENAME,
         help=f'Output index file path (default: {INDEX_FILENAME})'
+    )
+    parser.add_argument(
+        '--extract-content',
+        action='store_true',
+        help='Extract article content to individual JSON files (for Flask app)'
+    )
+    parser.add_argument(
+        '--content-dir',
+        help='Directory to save extracted content (used with --extract-content)'
+    )
+    parser.add_argument(
+        '--name',
+        default='Wikipedia',
+        help='Source name for metadata (default: Wikipedia)'
+    )
+    parser.add_argument(
+        '--description',
+        default='Chinese Wikipedia articles',
+        help='Source description for metadata'
     )
 
     args = parser.parse_args()
@@ -504,9 +561,19 @@ Supported input formats:
 
     print(f"\nInput file: {input_file}")
     print(f"Output file: {args.output}")
+    if args.extract_content:
+        print(f"Content directory: {args.content_dir or 'source/wiki/wiki_content/'}")
     print()
 
-    index = process_file(input_file)
+    content_dir = args.content_dir
+    if args.extract_content and not content_dir:
+        output_path = Path(args.output)
+        content_dir = str(output_path.parent / f'{output_path.stem}_content')
+    
+    if input_file.endswith('.xml.bz2') or input_file.endswith('.xml'):
+        index = process_wikipedia_xml(input_file, content_dir=content_dir, save_content=args.extract_content)
+    else:
+        index = process_file(input_file)
 
     if index is None:
         sys.exit(1)
@@ -516,11 +583,18 @@ Supported input formats:
     print(f"  Pages with Chinese: {index['pagesWithChars']}")
     print(f"  Unique characters: {index['uniqueChars']}")
 
-    save_index(index, args.output)
+    save_index(index, args.output, source_name=args.name, source_description=args.description)
 
-    print("\nDone! Copy the index file to your web app's data folder:")
-    print(f"  {args.output}")
-    print("\nThen use it with wiki_curriculum_builder.html")
+    print("\nDone!")
+    if args.extract_content:
+        print(f"  Index: {args.output}")
+        print(f"  Content: {content_dir}/")
+        print("\nCopy to your Flask app's source/ directory:")
+        print(f"  cp {args.output} <app_dir>/source/wiki/")
+        print(f"  cp -r {content_dir} <app_dir>/source/wiki/")
+    else:
+        print(f"  Index: {args.output}")
+        print("\nThen use it with wiki_curriculum_builder.html")
 
 
 if __name__ == '__main__':
