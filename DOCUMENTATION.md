@@ -132,9 +132,9 @@ Optimized version with characters as string.
 ```
 
 ### data/hsk_characters.json
-HSK vocabulary lists for quiz distractors.
+HSK vocabulary lists for quiz distractors. Contains HSK 2.0 (2001 standard) all 6 levels combined.
 ```json
-{"version": "1.0", "count": 1504, "all": ["爱", "八", "爸", ...]}
+{"version": "1.0", "source": "HSK 2.0 (2001 standard)", "description": "All 6 HSK levels combined into single set", "count": 2663, "all": ["爱", "八", ...]}
 ```
 
 ### data/trad_simp_map.json
@@ -341,3 +341,49 @@ Check `data/stories.json` exists and is valid JSON.
 
 ### Wikipedia search not working
 Run `python scripts/build_wiki_index.py --download` to build the index.
+
+---
+
+## Planned Updates
+
+### HSK Characters JSON Update
+**Status**: Not yet implemented
+
+1. **Update `data/hsk_characters.json`**:
+   - Correct `count` from 1504 → 2663 (actual unique character count)
+   - Add `source` detail: "HSK 2.0 (2001 standard), all 6 levels combined"
+   - Optionally add `description` field for clarity
+
+2. **Update `DOCUMENTATION.md`**:
+   - Fix example count from 1504 to 2663
+   - Add note about HSK version 2.0 and all 6 levels in one set
+
+---
+
+## Hypothetical Future Features
+
+### Separate HSK Level Arrays
+The current `hsk_characters.json` contains all 6 HSK levels combined into a single `all` array. A future enhancement could structure the data by level:
+
+```json
+{
+  "version": "1.0",
+  "source": "HSK 2.0 (2001 standard)",
+  "description": "All 6 levels combined",
+  "count": 2663,
+  "all": ["爱", "八", ...],
+  "levels": {
+    "1": ["爱", "八", "爸", ...],
+    "2": [...],
+    "3": [...],
+    "4": [...],
+    "5": [...],
+    "6": [...]
+  }
+}
+```
+
+This would allow:
+- Targeting quizzes at specific HSK levels
+- Progress tracking by level
+- Filtering story difficulty by HSK level
