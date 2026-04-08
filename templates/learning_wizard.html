@@ -1178,99 +1178,353 @@ Example:
                 this.updateProgress();
             }
 
-            // ==================== STEP 3: PATHFINDER ====================
+            // ==================== STEP 3: PATHFINDER (NEW ALGORITHM) ====================
             renderPathfinder(container) {
                 const hasStories = this.stories.length > 0;
                 
                 container.innerHTML = `
                     <h2><span class="step-num">3</span> Find Your Learning Path</h2>
                     <p class="step-description">
-                        ${hasStories 
-                            ? 'We\'ve analyzed your story library and found the optimal path to your goal.'
-                            : 'The pathfinder will select the best texts to use as stepping stones.'}
+                        Select cluster size, find optimal story clusters, then build the most efficient path.
                     </p>
 
                     ${!hasStories ? `
                         <div class="info-box">
                             <h4>📚 No Stories Available</h4>
-                            <p>The story library is empty. You can continue without a predefined path, 
-                            or go to Story Library to add some reading materials.</p>
+                            <p>The story library is empty. You can continue without a predefined path.</p>
                         </div>
-                    ` : ''}
-
-                    <div id="pathResults">
-                        ${this.path.length > 0 ? this.renderPathList() : `
-                            <div class="empty-state">
-                                <h3>🔍 Ready to Find Your Path</h3>
-                                <p>Click below to analyze your learning options and build an optimal path.</p>
-                                <button id="findPathBtn" class="secondary" ${!hasStories ? 'disabled' : ''}>
-                                    🧭 Find Learning Path
-                                </button>
+                    ` : `
+                        <div class="info-box" style="background: #e3f2fd; border-color: #2196F3;">
+                            <h4>📊 Pool Generation</h4>
+                            <p>Limit = known (${this.knownChars.size}) + 2 × target (${this.targetChars.length}) = ${this.knownChars.size + 2 * this.targetChars.length}</p>
+                        </div>
+                        
+                        <div class="button-group" style="margin: 15px 0;">
+                            <button id="generatePoolBtn" class="secondary">🔍 Generate Pool</button>
+                        </div>
+                        
+                        <div id="poolStats" class="file-status" style="display: none;"></div>
+                        
+                        <div id="clusterSection" style="display: none;">
+                            <h3 style="margin: 20px 0 15px 0; color: #333;">🔗 Cluster Selection</h3>
+                            <p style="color: #666; margin-bottom: 15px;">Select cluster size (3-7 stories).</p>
+                            <div class="button-group">
+                                <button class="cluster-size-btn secondary" data-size="3">3</button>
+                                <button class="cluster-size-btn secondary" data-size="4">4</button>
+                                <button class="cluster-size-btn secondary active" data-size="5">5</button>
+                                <button class="cluster-size-btn secondary" data-size="6">6</button>
+                                <button class="cluster-size-btn secondary" data-size="7">7</button>
                             </div>
-                        `}
-                    </div>
+                            <button id="findClustersBtn" class="secondary" style="margin-top: 10px;">🔍 Find Clusters</button>
+                        </div>
+                        
+                        <div id="clusterResults" style="display: none; margin-top: 20px;"></div>
+                        <div id="clusterDetailSection" style="display: none; margin-top: 20px;">
+                            <h3 style="margin: 20px 0 15px 0; color: #333;">🎯 Selected Cluster</h3>
+                            <div id="selectedClusterInfo"></div>
+                            <button id="optimizePathBtn" class="secondary" style="margin-top: 15px;">⚡ Optimize Path (Exhaustive)</button>
+                        </div>
+                        
+                        <div id="pathSection" style="display: none; margin-top: 20px;">
+                            <h3 style="margin: 20px 0 15px 0; color: #333;">📚 Your Learning Path</h3>
+                            <div id="optimizedPathStats"></div>
+                            <button id="greedyFillBtn" class="outline" style="margin-top: 10px;">➕ Fill Remaining with Greedy</button>
+                        </div>
+                        
+                        <div id="pathResults">
+                            ${this.path.length > 0 ? this.renderPathList() : `
+                                <div class="empty-state">
+                                    <h3>🔍 Ready to Find Your Path</h3>
+                                    <p>Generate pool → Select cluster → Build path.</p>
+                                </div>
+                            `}
+                        </div>
+                    `}
                 `;
 
-                if (this.path.length === 0 && hasStories) {
-                    document.getElementById('findPathBtn').addEventListener('click', () => this.findPath());
-                }
+                this.bindPathfinderEvents();
             }
 
-            findPath() {
+            bindPathfinderEvents() {
+                const generatePoolBtn = document.getElementById('generatePoolBtn');
+                if (generatePoolBtn) generatePoolBtn.addEventListener('click', () => this.generatePool());
+
+                document.querySelectorAll('.cluster-size-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.cluster-size-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.selectedClusterSize = parseInt(btn.dataset.size);
+                    });
+                });
+
+                const findClustersBtn = document.getElementById('findClustersBtn');
+                if (findClustersBtn) findClustersBtn.addEventListener('click', () => this.findClusters());
+
+                const optimizePathBtn = document.getElementById('optimizePathBtn');
+                if (optimizePathBtn) optimizePathBtn.addEventListener('click', () => this.optimizePathExhaustive());
+
+                const greedyFillBtn = document.getElementById('greedyFillBtn');
+                if (greedyFillBtn) greedyFillBtn.addEventListener('click', () => this.greedyFill());
+            }
+
+            generatePool() {
+                const knownSet = this.knownChars;
                 const targetSet = new Set(this.targetChars);
-                const knownSet = new Set(this.knownChars);
-                const remaining = new Set(this.targetChars);
-                const path = [];
-                let iteration = 0;
-                const maxIterations = 100;
+                const limit = knownSet.size + (2 * targetSet.size);
 
-                while (remaining.size > 0 && iteration < maxIterations) {
-                    iteration++;
-                    let bestStory = null;
-                    let bestScore = -Infinity;
-                    let bestNewChars = null;
+                this.pool = [];
 
-                    for (const story of this.stories) {
-                        const storyChars = new Set(story.characters || []);
-                        const intersection = [...storyChars].filter(ch => remaining.has(ch) || knownSet.has(ch));
-                        const newChars = intersection.filter(ch => !knownSet.has(ch) && remaining.has(ch));
+                for (const story of this.stories) {
+                    const chars = story.characters || [];
+                    const uniqueChars = [...new Set(chars)];
+
+                    if (uniqueChars.length > limit) continue;
+
+                    const knownChars = uniqueChars.filter(c => knownSet.has(c));
+                    const unknownChars = uniqueChars.filter(c => !knownSet.has(c));
+                    const targetChars = unknownChars.filter(c => targetSet.has(c));
+                    const nontargetChars = unknownChars.filter(c => !targetSet.has(c));
+
+                    if (nontargetChars.length > targetChars.length) continue;
+
+                    this.pool.push({
+                        story: story,
+                        uniqueChars: uniqueChars,
+                        knownChars: knownChars,
+                        unknownChars: unknownChars,
+                        targetChars: targetChars,
+                        nontargetChars: nontargetChars,
+                        jumpsize: unknownChars.length,
+                        efficiency: targetChars.length / (targetChars.length + nontargetChars.length)
+                    });
+                }
+
+                const poolStats = document.getElementById('poolStats');
+                poolStats.style.display = 'block';
+                poolStats.className = 'file-status success';
+                poolStats.innerHTML = '<strong>✅ Pool:</strong> ' + this.pool.length + ' candidates';
+
+                document.getElementById('clusterSection').style.display = 'block';
+                this.selectedClusterSize = 5;
+            }
+
+            findClusters() {
+                if (!this.pool || this.pool.length === 0) {
+                    alert('Generate pool first.');
+                    return;
+                }
+
+                const k = this.selectedClusterSize || 5;
+                if (k > this.pool.length) {
+                    alert('Reduce cluster size.');
+                    return;
+                }
+
+                const targetSet = new Set(this.targetChars);
+                const totalTargets = targetSet.size;
+
+                document.getElementById('clusterResults').style.display = 'block';
+                document.getElementById('clusterResults').innerHTML = '<p>🔄 Finding clusters...</p>';
+
+                const self = this;
+                setTimeout(function() {
+                    const combinations = self.getCombinations([...Array(self.pool.length).keys()], k);
+                    const clusterResults = [];
+
+                    for (const combo of combinations) {
+                        const stories = combo.map(i => self.pool[i]);
                         
-                        if (newChars.length === 0) continue;
+                        const unionTarget = new Set();
+                        const unionNontarget = new Set();
                         
-                        const jumpsize = storyChars.size;
-                        const coverage = newChars.length;
-                        const score = coverage / Math.max(jumpsize, 1);
+                        for (const s of stories) {
+                            for (const c of s.targetChars) unionTarget.add(c);
+                            for (const c of s.nontargetChars) unionNontarget.add(c);
+                        }
 
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestStory = story;
-                            bestNewChars = newChars;
+                        const coverage = (unionTarget.size / totalTargets) * 100;
+                        const efficiency = unionTarget.size / (unionTarget.size + unionNontarget.size);
+
+                        clusterResults.push({
+                            combo: combo,
+                            stories: stories,
+                            unionTargetSize: unionTarget.size,
+                            unionNontargetSize: unionNontarget.size,
+                            coverage: coverage,
+                            efficiency: efficiency,
+                            avgJumpsize: stories.reduce((sum, s) => sum + s.jumpsize, 0) / stories.length
+                        });
+                    }
+
+                    clusterResults.sort((a, b) => b.efficiency - a.efficiency);
+                    self.clusters = clusterResults.slice(0, 10);
+
+                    let html = '';
+                    for (let i = 0; i < self.clusters.length; i++) {
+                        const c = self.clusters[i];
+                        html += '<div class="cluster-option" data-index="' + i + '" style="background: white; border: 2px solid #ddd; border-radius: 12px; padding: 15px; margin: 10px 0; cursor: pointer;">' +
+                            '<div style="display: flex; justify-content: space-between;"><div><strong>Option ' + (i + 1) + '</strong></div>' +
+                            '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div></div>' +
+                            '<div style="font-size: 12px; color: #666;">' + c.stories.map(s => s.story.title || 'Untitled').join(' → ') + '</div></div>';
+                    }
+
+                    document.getElementById('clusterResults').innerHTML = html;
+
+                    document.querySelectorAll('.cluster-option').forEach(function(opt) {
+                        opt.addEventListener('click', function() {
+                            self.selectCluster(parseInt(opt.dataset.index));
+                            document.querySelectorAll('.cluster-option').forEach(o => o.style.borderColor = '#ddd');
+                            opt.style.borderColor = 'var(--secondary)';
+                        });
+                    });
+                }, 10);
+            }
+
+            selectCluster(index) {
+                this.selectedCluster = this.clusters[index];
+                const c = this.selectedCluster;
+                
+                document.getElementById('clusterDetailSection').style.display = 'block';
+                document.getElementById('selectedClusterInfo').innerHTML = 
+                    '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
+                    '<h4>📊 Statistics</h4>' +
+                    '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div>' +
+                    '<div>Avg Jumpsize: <strong>' + c.avgJumpsize.toFixed(1) + '</strong></div></div>' +
+                    '<h4>📚 Stories</h4>' + c.stories.map((s, i) => 
+                        '<div style="padding: 8px; border-bottom: 1px solid #eee;">' + (i+1) + '. ' + (s.story.title || 'Untitled') + '</div>'
+                    ).join('');
+            }
+
+            optimizePathExhaustive() {
+                if (!this.selectedCluster) {
+                    alert('Select a cluster first.');
+                    return;
+                }
+
+                const stories = this.selectedCluster.stories;
+                const targetSet = new Set(this.targetChars);
+                const totalTargets = targetSet.size;
+
+                document.getElementById('optimizedPathStats').innerHTML = '<p>🔄 Finding optimal path...</p>';
+
+                const self = this;
+                setTimeout(function() {
+                    const permutations = self.getPermutations(stories);
+                    let bestPath = null;
+                    let bestAvgJumpsize = Infinity;
+
+                    for (const perm of permutations) {
+                        const knownSoFar = new Set(self.knownChars);
+                        const jumpsizes = [];
+                        const coveredTargets = new Set();
+
+                        for (const story of perm) {
+                            const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
+                            const newTargets = story.targetChars.filter(c => targetSet.has(c) && !knownSoFar.has(c));
+                            
+                            jumpsizes.push(newChars.length);
+                            newChars.forEach(c => knownSoFar.add(c));
+                            newTargets.forEach(c => coveredTargets.add(c));
+                        }
+
+                        const avgJumpsize = jumpsizes.reduce((a, b) => a + b, 0) / jumpsizes.length;
+
+                        if (avgJumpsize < bestAvgJumpsize) {
+                            bestAvgJumpsize = avgJumpsize;
+                            bestPath = { perm: perm, jumpsizes: jumpsizes, avgJumpsize: avgJumpsize, coveredTargets: coveredTargets };
                         }
                     }
 
-                    if (bestStory) {
-                        path.push({
-                            id: bestStory.id || path.length + 1,
-                            title: bestStory.title || 'Untitled',
-                            source: bestStory.source || 'Unknown',
-                            chars: bestStory.characters || [],
-                            newChars: bestNewChars,
-                            remaining: remaining.size - bestNewChars.length
-                        });
+                    self.optimizedPath = bestPath;
+                    self.remainingTargets = new Set([...targetSet].filter(c => !bestPath.coveredTargets.has(c)));
 
-                        bestNewChars.forEach(ch => {
-                            remaining.delete(ch);
-                            knownSet.add(ch);
-                        });
-                    } else {
-                        break;
+                    let html = '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
+                        '<h4>⚡ Best Path</h4>' +
+                        '<div>Avg Jumpsize: <strong>' + bestPath.avgJumpsize.toFixed(2) + '</strong></div>' +
+                        '<div>Coverage: <strong>' + (bestPath.coveredTargets.size / totalTargets * 100).toFixed(1) + '%</strong></div>' +
+                        '<div>Remaining: <strong>' + self.remainingTargets.size + '</strong></div></div>';
+
+                    const knownSoFar = new Set(self.knownChars);
+                    html += '<ul class="path-list">';
+                    for (let i = 0; i < bestPath.perm.length; i++) {
+                        const story = bestPath.perm[i];
+                        const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
+                        newChars.forEach(c => knownSoFar.add(c));
+                        html += '<li class="path-item"><div class="path-number">' + (i+1) + '</div><div class="path-info"><h4>' + (story.story.title || 'Untitled') + '</h4><p>Jumpsize: ' + bestPath.jumpsizes[i] + '</p></div></li>';
                     }
+                    html += '</ul>';
+
+                    if (self.remainingTargets.size > 0) {
+                        html += '<p>Click "Fill Remaining" to add more stories.</p>';
+                    }
+
+                    document.getElementById('pathSection').style.display = 'block';
+                    document.getElementById('optimizedPathStats').innerHTML = html;
+                    document.getElementById('greedyFillBtn').style.display = self.remainingTargets.size > 0 ? 'inline-block' : 'none';
+                }, 10);
+            }
+
+            greedyFill() {
+                const targetSet = new Set(this.remainingTargets);
+                const remaining = new Set(this.remainingTargets);
+                const greedyPath = [];
+                const usedStories = new Set(this.selectedCluster ? this.selectedCluster.stories.map(s => s.story.id) : []);
+                const remainingPool = this.pool.filter(s => !usedStories.has(s.story.id));
+
+                while (remaining.size > 0) {
+                    let best = null;
+                    let bestScore = Infinity;
+
+                    for (const candidate of remainingPool) {
+                        const newTargets = candidate.targetChars.filter(c => remaining.has(c));
+                        if (newTargets.length === 0) continue;
+                        const score = candidate.jumpsize / newTargets.length;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            best = candidate;
+                        }
+                    }
+
+                    if (!best) break;
+                    greedyPath.push(best);
+                    best.targetChars.forEach(c => remaining.delete(c));
+                    remainingPool.splice(remainingPool.indexOf(best), 1);
                 }
 
-                this.path = path;
+                this.path = [
+                    ...(this.optimizedPath ? this.optimizedPath.perm.map(s => ({
+                        id: s.story.id, title: s.story.title, source: s.story.source,
+                        chars: s.story.characters, newChars: s.unknownChars, newTargets: s.targetChars
+                    })) : []),
+                    ...greedyPath.map(s => ({
+                        id: s.story.id, title: s.story.title, source: s.story.source,
+                        chars: s.story.characters, newChars: s.unknownChars, newTargets: s.targetChars
+                    }))
+                ];
+
                 document.getElementById('pathResults').innerHTML = this.renderPathList();
                 this.updateSummary();
                 this.updateProgress();
+            }
+
+            getCombinations(arr, size) {
+                const result = [];
+                function combine(start, combo) {
+                    if (combo.length === size) { result.push(combo); return; }
+                    for (let i = start; i < arr.length; i++) combine(i + 1, [...combo, arr[i]]);
+                }
+                combine(0, []);
+                return result;
+            }
+
+            getPermutations(arr) {
+                if (arr.length <= 1) return [arr];
+                const result = [];
+                for (let i = 0; i < arr.length; i++) {
+                    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
+                    for (const perm of this.getPermutations(rest)) result.push([arr[i], ...perm]);
+                }
+                return result;
             }
 
             renderPathList() {
