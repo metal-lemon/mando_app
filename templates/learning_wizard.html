@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Wizard - Guided Path to Chinese Reading</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+    <script src="/static/js/shared_state.js"></script>
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary: #48bb78;
+            --secondary-dark: #38a169;
+            --danger: #f56565;
+            --warning: #ff9800;
+            --purple: #764ba2;
+            --teal: #11998e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 { margin: 0 0 5px 0; font-size: 1.8rem; }
+        .header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+        .home-btn {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .home-btn:hover { background-color: rgba(255,255,255,0.3); }
+
+        .progress-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            margin-top: 15px;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            right: 40px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            z-index: 1;
+        }
+
+        .progress-line-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--purple));
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        .step-indicator {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .step-indicator.completed .step-circle {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .step-indicator.current .step-circle {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.15);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            max-width: 70px;
+        }
+
+        .step-indicator.completed .step-label { color: var(--secondary); }
+        .step-indicator.current .step-label { color: var(--primary); font-weight: 600; }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content { grid-template-columns: 1fr; }
+            .sidebar { order: -1; }
+        }
+
+        .step-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-height: 500px;
+        }
+
+        .step-content h2 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-content h2 .step-num {
+            background: var(--primary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .step-description {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .summary-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            font-size: 1rem;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .summary-item:last-child { border-bottom: none; }
+        .summary-label { color: #666; }
+        .summary-value { font-weight: 600; color: #333; }
+        .summary-value.highlight { color: var(--primary); }
+
+        .navigation {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        button:hover { background-color: var(--primary-dark); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.secondary { background-color: var(--secondary); }
+        button.secondary:hover { background-color: var(--secondary-dark); }
+        button.danger { background-color: var(--danger); }
+        button.warning { background-color: var(--warning); }
+        button.outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        button.outline:hover { background: var(--primary); color: white; }
+
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            font-size: 16px;
+            font-family: monospace;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            resize: vertical;
+            margin: 10px 0;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); }
+
+        input[type="text"], input[type="number"] {
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+        }
+        input[type="text"]:focus, input[type="number"]:focus { outline: none; border-color: var(--primary); }
+
+        .file-status {
+            background-color: #e3f2fd;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .file-status.success { background-color: #e8f5e9; border-left-color: var(--secondary); }
+        .file-status.error { background-color: #ffebee; border-left-color: var(--danger); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .char-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .char-tile {
+            background: #e0e7ff;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .char-tile:hover { transform: scale(1.05); }
+        .char-tile.known { background: #c8e6c9; color: #2e7d32; }
+        .char-tile.unknown { background: #ffcdd2; color: #c62828; }
+        .char-tile.target { background: #fff3e0; color: #e65100; }
+
+        .char-input-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            align-items: center;
+        }
+
+        .char-input-group input { width: 80px; text-align: center; font-size: 24px; }
+
+        .info-box {
+            background: #fff3e0;
+            border: 2px solid var(--warning);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .info-box h4 { margin: 0 0 10px 0; color: #e65100; }
+
+        .tab-container {
+            margin: 20px 0;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 0 10px 10px 10px;
+        }
+
+        .tab-content.active { display: block; }
+
+        .story-card {
+            background: white;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .story-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .story-card.selected { border-color: var(--secondary); background: #f0fff0; }
+
+        .story-card h4 { margin: 0 0 10px 0; color: #333; }
+        .story-card .story-meta { font-size: 13px; color: #666; margin-bottom: 10px; }
+        .story-card .story-stats { display: flex; gap: 15px; font-size: 14px; }
+        .story-card .stat { display: flex; align-items: center; gap: 5px; }
+        .stat.positive { color: var(--secondary); }
+        .stat.negative { color: var(--danger); }
+        .stat.neutral { color: #666; }
+
+        .path-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .path-item {
+            background: white;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .path-item.final {
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+
+        .path-number {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .path-item.final .path-number { background: var(--secondary); }
+
+        .path-info { flex: 1; }
+        .path-info h4 { margin: 0 0 5px 0; }
+        .path-info p { margin: 0; color: #666; font-size: 14px; }
+
+        .path-stats {
+            display: flex;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .path-stat {
+            text-align: center;
+            padding: 10px 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .path-stat .value { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        .path-stat .label { font-size: 11px; color: #666; }
+
+        .quiz-container { margin: 20px 0; }
+
+        .quiz-card {
+            background: white;
+            border: 2px solid #eee;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .quiz-char {
+            font-size: 5rem;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .quiz-option {
+            padding: 15px;
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+
+        .quiz-option:hover { border-color: var(--primary); }
+        .quiz-option.correct { background: #c8e6c9; border-color: var(--secondary); }
+        .quiz-option.incorrect { background: #ffcdd2; border-color: var(--danger); }
+        .quiz-option.selected { background: #e0e7ff; border-color: var(--primary); }
+
+        .quiz-progress {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+        }
+
+        .quiz-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .completion-card {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .completion-card h2 { font-size: 2rem; margin-bottom: 15px; }
+        .completion-card p { opacity: 0.9; margin-bottom: 20px; }
+
+        .celebration {
+            font-size: 4rem;
+            margin: 20px 0;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .curriculum-section {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .curriculum-section h4 {
+            color: var(--primary);
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .word-item {
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .word-item .word { font-weight: bold; color: #333; }
+        .word-item .pinyin { color: #666; font-size: 12px; margin-left: 5px; }
+        .word-item .meaning { color: #888; font-size: 12px; }
+
+        .overlap-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .overlap-badge {
+            background: var(--primary);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state h3 { color: #ccc; margin-bottom: 10px; }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .quiz-options { grid-template-columns: 1fr; }
+            .progress-steps { flex-wrap: wrap; gap: 15px; }
+            .progress-line { display: none; }
+            .step-label { font-size: 10px; max-width: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>✨ Learning Wizard</h1>
+                <p>Your guided path to reading Chinese texts</p>
+            </div>
+            <a href="/" class="home-btn">🏠 Home</a>
+        </div>
+
+        <div class="progress-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="color: #333; margin: 0;">Your Progress</h3>
+                <span id="progressText" style="color: #666; font-size: 14px;">Step 1 of 6</span>
+            </div>
+            <div class="progress-steps">
+                <div class="progress-line">
+                    <div class="progress-line-fill" id="progressFill" style="width: 0%;"></div>
+                </div>
+                <div class="step-indicator current" data-step="1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Assessment</div>
+                </div>
+                <div class="step-indicator" data-step="2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Set Goal</div>
+                </div>
+                <div class="step-indicator" data-step="3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Find Paths</div>
+                </div>
+                <div class="step-indicator" data-step="4">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Curriculum</div>
+                </div>
+                <div class="step-indicator" data-step="5">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Test</div>
+                </div>
+                <div class="step-indicator" data-step="6">
+                    <div class="step-circle">6</div>
+                    <div class="step-label">Complete</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="step-content" id="stepContent">
+                <!-- Step content rendered dynamically -->
+            </div>
+
+            <div class="sidebar">
+                <div class="summary-card">
+                    <h3>📋 Session Summary</h3>
+                    <div class="summary-item">
+                        <span class="summary-label">Known Characters</span>
+                        <span class="summary-value" id="summaryKnown">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Target Text</span>
+                        <span class="summary-value" id="summaryTarget">Not set</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Characters to Learn</span>
+                        <span class="summary-value highlight" id="summaryToLearn">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Stories in Path</span>
+                        <span class="summary-value" id="summaryStories">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Quiz Score</span>
+                        <span class="summary-value" id="summaryQuiz">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button id="backBtn" class="outline" disabled>← Back</button>
+            <button id="nextBtn" disabled>Next →</button>
+        </div>
+    </div>
+
+    <script>
+        const WIZARD_STORAGE = {
+            PATH: "mandarin_wizard_path",
+            CURRICULUM: "mandarin_wizard_curriculum",
+            QUIZ_RESULTS: "mandarin_wizard_quiz"
+        };
+
+        class LearningWizard {
+            constructor() {
+                this.currentStep = 1;
+                this.totalSteps = 6;
+                this.knownChars = new Set(window.mandarinState.getCharacters());
+                this.targetText = window.mandarinState.getTargetText() || '';
+                this.targetChars = [];
+                this.unknownChars = [];
+                this.stories = [];
+                this.path = [];
+                this.curriculum = {};
+                this.quizResults = { correct: 0, total: 0, missed: [] };
+                this.currentQuiz = { index: 0, questions: [], answers: {} };
+
+                this.loadStories();
+                this.init();
+            }
+
+            async loadStories() {
+                try {
+                    const response = await fetch('/data/stories.json');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.stories = Array.isArray(data) ? data : [];
+                    }
+                } catch (e) {
+                    console.log('Could not load stories:', e);
+                    this.stories = [];
+                }
+            }
+
+            init() {
+                this.updateSummary();
+                this.renderStep();
+                this.bindEvents();
+            }
+
+            updateSummary() {
+                document.getElementById('summaryKnown').textContent = this.knownChars.size;
+                document.getElementById('summaryTarget').textContent = 
+                    this.targetText ? this.targetText.substring(0, 20) + '...' : 'Not set';
+                document.getElementById('summaryToLearn').textContent = 
+                    this.targetChars.length > 0 ? this.targetChars.length : '-';
+                document.getElementById('summaryStories').textContent = this.path.length;
+                document.getElementById('summaryQuiz').textContent = 
+                    this.quizResults.total > 0 ? `${this.quizResults.correct}/${this.quizResults.total}` : '-';
+            }
+
+            updateProgress() {
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const percentage = ((this.currentStep - 1) / (this.totalSteps - 1)) * 100;
+                progressFill.style.width = percentage + '%';
+                progressText.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
+
+                document.querySelectorAll('.step-indicator').forEach(indicator => {
+                    const step = parseInt(indicator.dataset.step);
+                    indicator.classList.remove('current', 'completed');
+                    if (step < this.currentStep) {
+                        indicator.classList.add('completed');
+                        indicator.querySelector('.step-circle').textContent = '✓';
+                    } else if (step === this.currentStep) {
+                        indicator.classList.add('current');
+                        indicator.querySelector('.step-circle').textContent = step;
+                    } else {
+                        indicator.querySelector('.step-circle').textContent = step;
+                    }
+                });
+
+                document.getElementById('backBtn').disabled = this.currentStep === 1;
+                document.getElementById('nextBtn').disabled = !this.canProceed();
+            }
+
+            canProceed() {
+                switch (this.currentStep) {
+                    case 1: return this.knownChars.size > 0;
+                    case 2: return this.targetChars.length > 0;
+                    case 3: return this.path.length > 0;
+                    case 4: return true;
+                    case 5: return this.quizResults.total > 0;
+                    case 6: return true;
+                    default: return false;
+                }
+            }
+
+            renderStep() {
+                const container = document.getElementById('stepContent');
+                switch (this.currentStep) {
+                    case 1: this.renderAssessment(container); break;
+                    case 2: this.renderGoal(container); break;
+                    case 3: this.renderPathfinder(container); break;
+                    case 4: this.renderCurriculum(container); break;
+                    case 5: this.renderTest(container); break;
+                    case 6: this.renderComplete(container); break;
+                }
+                this.updateProgress();
+            }
+
+            bindEvents() {
+                document.getElementById('backBtn').addEventListener('click', () => {
+                    if (this.currentStep > 1) {
+                        this.currentStep--;
+                        this.renderStep();
+                    }
+                });
+
+                document.getElementById('nextBtn').addEventListener('click', () => {
+                    if (this.currentStep < this.totalSteps && this.canProceed()) {
+                        this.onStepComplete();
+                        this.currentStep++;
+                        this.renderStep();
+                    }
+                });
+            }
+
+            onStepComplete() {
+                switch (this.currentStep) {
+                    case 1:
+                        window.mandarinState.setCharacters(Array.from(this.knownChars));
+                        break;
+                    case 2:
+                        window.mandarinState.setTargetText(this.targetText);
+                        window.mandarinState.setTargetChars(this.targetChars);
+                        break;
+                    case 3:
+                        localStorage.setItem(WIZARD_STORAGE.PATH, JSON.stringify(this.path));
+                        break;
+                    case 5:
+                        localStorage.setItem(WIZARD_STORAGE.QUIZ_RESULTS, JSON.stringify(this.quizResults));
+                        break;
+                }
+                this.updateSummary();
+            }
+
+            extractCharacters(text) {
+                const regex = /[\u4e00-\u9fff]/g;
+                const matches = text.match(regex);
+                return matches ? [...new Set(matches)] : [];
+            }
+
+            // ==================== STEP 1: ASSESSMENT ====================
+            renderAssessment(container) {
+                container.innerHTML = `
+                    <h2><span class="step-num">1</span> Let's See What You Know</h2>
+                    <p class="step-description">
+                        Build your character knowledge base. You can extract characters from any Chinese text you've studied, 
+                        or add them manually one by one.
+                    </p>
+
+                    <div class="tab-container">
+                        <div class="tab-buttons">
+                            <button class="tab-btn active" data-tab="extract">📄 Extract from Text</button>
+                            <button class="tab-btn" data-tab="manual">✍️ Add Manually</button>
+                            <button class="tab-btn" data-tab="import">📂 Import File</button>
+                        </div>
+
+                        <div id="tab-extract" class="tab-content active">
+                            <textarea id="extractText" placeholder="Paste Chinese text here to extract characters...
+
+Example:
+我喜欢学习中文。今天天气很好，我们去公园散步。"></textarea>
+                            <div class="button-group">
+                                <button id="extractBtn" class="secondary">🔍 Extract Characters</button>
+                            </div>
+                            <div id="extractPreview" class="hidden"></div>
+                        </div>
+
+                        <div id="tab-manual" class="tab-content">
+                            <div class="char-input-group">
+                                <input type="text" id="manualCharInput" placeholder="字" maxlength="1">
+                                <button id="addCharBtn" class="secondary">Add</button>
+                            </div>
+                            <p style="color: #666; font-size: 14px;">Type a character and press Enter or click Add</p>
+                        </div>
+
+                        <div id="tab-import" class="tab-content">
+                            <p style="color: #666; margin-bottom: 15px;">
+                                Import a JSON file containing your character list. This will merge with your current known set.
+                            </p>
+                            <input type="file" id="importFile" accept=".json" style="display: none;">
+                            <button id="importBtn" class="secondary">📂 Choose File</button>
+                            <button id="clearAllBtn" class="danger">🗑️ Clear All</button>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="knownCount">${this.knownChars.size}</div>
+                            <div class="stat-label">Characters Known</div>
+                        </div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);">
+                            <div class="stat-value" id="readyWords">-</div>
+                            <div class="stat-label">Words You Can Learn</div>
+                        </div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, var(--teal) 0%, #38ef7d 100%);">
+                            <div class="stat-value" id="coverage">${this.getCoverage()}%</div>
+                            <div class="stat-label">Common Text Coverage</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 25px 0 15px 0; color: #333;">Your Character Collection</h3>
+                    <div id="charCollection" class="char-grid">
+                        ${this.renderCharTiles()}
+                    </div>
+                `;
+
+                this.bindAssessmentEvents();
+            }
+
+            renderCharTiles() {
+                if (this.knownChars.size === 0) {
+                    return '<p style="color: #999; padding: 20px;">No characters yet. Add some above!</p>';
+                }
+                return Array.from(this.knownChars).sort().map(ch => 
+                    `<span class="char-tile known">${ch}</span>`
+                ).join('');
+            }
+
+            bindAssessmentEvents() {
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                    });
+                });
+
+                document.getElementById('extractBtn').addEventListener('click', () => {
+                    const text = document.getElementById('extractText').value;
+                    if (!text.trim()) {
+                        alert('Please enter some Chinese text first.');
+                        return;
+                    }
+                    const chars = this.extractCharacters(text);
+                    const newChars = chars.filter(ch => !this.knownChars.has(ch));
+                    
+                    const preview = document.getElementById('extractPreview');
+                    preview.classList.remove('hidden');
+                    preview.innerHTML = `
+                        <div class="info-box">
+                            <h4>Found ${chars.length} unique characters</h4>
+                            <p>${newChars.length} are new to your collection.</p>
+                            <div class="char-grid" style="margin-top: 10px; max-height: 150px;">
+                                ${newChars.map(ch => `<span class="char-tile target">${ch}</span>`).join('')}
+                            </div>
+                            <div class="button-group" style="margin-top: 15px;">
+                                <button id="addAllExtracted" class="secondary">➕ Add All ${newChars.length} Characters</button>
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('addAllExtracted').addEventListener('click', () => {
+                        newChars.forEach(ch => this.knownChars.add(ch));
+                        this.updateKnownUI();
+                    });
+                });
+
+                const manualInput = document.getElementById('manualCharInput');
+                document.getElementById('addCharBtn').addEventListener('click', () => this.addManualChar());
+                manualInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addManualChar();
+                });
+
+                document.getElementById('importBtn').addEventListener('click', () => {
+                    document.getElementById('importFile').click();
+                });
+
+                document.getElementById('importFile').addEventListener('change', (e) => {
+                    if (e.target.files.length) {
+                        window.mandarinState.mergeFromFile(e.target.files[0], (err, result) => {
+                            if (err) {
+                                alert('Error: ' + err.message);
+                            } else {
+                                this.knownChars = new Set(window.mandarinState.getCharacters());
+                                this.updateKnownUI();
+                                alert(`Added ${result.added} characters!`);
+                            }
+                        });
+                        e.target.value = '';
+                    }
+                });
+
+                document.getElementById('clearAllBtn').addEventListener('click', () => {
+                    if (confirm('Clear all known characters? This cannot be undone.')) {
+                        this.knownChars.clear();
+                        window.mandarinState.clear();
+                        this.updateKnownUI();
+                    }
+                });
+            }
+
+            addManualChar() {
+                const input = document.getElementById('manualCharInput');
+                const ch = input.value.trim();
+                if (ch && ch.length === 1) {
+                    if (/[\u4e00-\u9fff]/.test(ch)) {
+                        this.knownChars.add(ch);
+                        this.updateKnownUI();
+                        input.value = '';
+                    } else {
+                        alert('Please enter a Chinese character.');
+                    }
+                }
+            }
+
+            updateKnownUI() {
+                document.getElementById('knownCount').textContent = this.knownChars.size;
+                document.getElementById('charCollection').innerHTML = this.renderCharTiles();
+                this.updateSummary();
+                this.updateProgress();
+            }
+
+            getCoverage() {
+                if (this.knownChars.size === 0) return 0;
+                const common = ['的', '是', '了', '我', '在', '有', '和', '人', '这', '中', '大', '为', '上', '个', '们', '来', '到', '时', '说', '们'];
+                const known = common.filter(ch => this.knownChars.has(ch)).length;
+                return Math.round((known / common.length) * 100);
+            }
+
+            // ==================== STEP 2: GOAL ====================
+            renderGoal(container) {
+                container.innerHTML = `
+                    <h2><span class="step-num">2</span> What Do You Want to Read?</h2>
+                    <p class="step-description">
+                        Paste the Chinese text you want to learn to read. We'll analyze which characters you already know 
+                        and identify the learning gap.
+                    </p>
+
+                    <textarea id="targetTextInput" placeholder="Paste your target Chinese text here...
+
+Example:
+北京是中国的首都。今天天气很好，我们去公园散步。故宫是一个很美丽的地方。">${this.targetText}</textarea>
+                    
+                    <div class="button-group">
+                        <button id="analyzeBtn" class="secondary">🔍 Analyze Text</button>
+                        <button id="loadFromKnownBtn" class="outline">📥 Use Target from Shared</button>
+                        <button id="clearTargetBtn" class="danger">🗑️ Clear</button>
+                    </div>
+
+                    <div id="analysisResults" class="hidden">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="pctKnown">0%</div>
+                                <div class="stat-label">% Known (Occurrences)</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="pctUnique">0%</div>
+                                <div class="stat-label">% Known (Unique)</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, var(--warning) 0%, #f57c00 100%);">
+                                <div class="stat-value" id="gapCount">0</div>
+                                <div class="stat-label">Characters to Learn</div>
+                            </div>
+                        </div>
+
+                        <div id="targetCharsSection" class="hidden">
+                            <h3 style="margin: 25px 0 15px 0; color: #333;">📝 Characters to Learn</h3>
+                            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                                Click any character to mark it as known (moves it to your known set)
+                            </p>
+                            <div id="targetCharsGrid" class="char-grid"></div>
+                        </div>
+
+                        <div class="info-box" id="readabilityAdvice"></div>
+                    </div>
+                `;
+
+                this.bindGoalEvents();
+            }
+
+            bindGoalEvents() {
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeTarget());
+                document.getElementById('loadFromKnownBtn').addEventListener('click', () => {
+                    const saved = window.mandarinState.getTargetText();
+                    if (saved) {
+                        document.getElementById('targetTextInput').value = saved;
+                        this.analyzeTarget();
+                    } else {
+                        alert('No target text found in shared state.');
+                    }
+                });
+                document.getElementById('clearTargetBtn').addEventListener('click', () => {
+                    document.getElementById('targetTextInput').value = '';
+                    document.getElementById('analysisResults').classList.add('hidden');
+                    this.targetText = '';
+                    this.targetChars = [];
+                    this.unknownChars = [];
+                    this.updateSummary();
+                    this.updateProgress();
+                });
+            }
+
+            analyzeTarget() {
+                const text = document.getElementById('targetTextInput').value.trim();
+                if (!text) {
+                    alert('Please enter some text to analyze.');
+                    return;
+                }
+
+                this.targetText = text;
+                const allChars = this.extractCharacters(text);
+                this.targetChars = allChars;
+                
+                const knownSet = new Set(this.knownChars);
+                this.unknownChars = allChars.filter(ch => !knownSet.has(ch));
+
+                const totalOccurrences = text.replace(/[^\u4e00-\u9fff]/g, '').length;
+                const knownOccurrences = allChars.filter(ch => knownSet.has(ch)).length;
+                
+                const pctKnown = totalOccurrences > 0 ? Math.round((knownOccurrences / allChars.length) * 100) : 0;
+                const pctUnique = allChars.length > 0 ? Math.round(((allChars.length - this.unknownChars.length) / allChars.length) * 100) : 0;
+
+                document.getElementById('pctKnown').textContent = pctKnown + '%';
+                document.getElementById('pctUnique').textContent = pctUnique + '%';
+                document.getElementById('gapCount').textContent = this.unknownChars.length;
+
+                const targetGrid = document.getElementById('targetCharsGrid');
+                targetGrid.innerHTML = this.unknownChars.map(ch => 
+                    `<span class="char-tile unknown" data-char="${ch}">${ch}</span>`
+                ).join('');
+
+                targetGrid.querySelectorAll('.char-tile').forEach(tile => {
+                    tile.addEventListener('click', () => {
+                        const ch = tile.dataset.char;
+                        this.knownChars.add(ch);
+                        this.unknownChars = this.unknownChars.filter(c => c !== ch);
+                        tile.remove();
+                        
+                        const newCount = this.unknownChars.length;
+                        document.getElementById('gapCount').textContent = newCount;
+                        document.getElementById('pctUnique').textContent = 
+                            allChars.length > 0 ? Math.round(((allChars.length - newCount) / allChars.length) * 100) + '%' : '0%';
+                        
+                        this.updateSummary();
+                        this.updateProgress();
+                    });
+                });
+
+                document.getElementById('targetCharsSection').classList.remove('hidden');
+                document.getElementById('analysisResults').classList.remove('hidden');
+
+                const advice = document.getElementById('readabilityAdvice');
+                if (pctUnique >= 90) {
+                    advice.innerHTML = '<h4>🎉 Excellent!</h4><p>You know almost all the characters. This text is very readable for you!</p>';
+                } else if (pctUnique >= 70) {
+                    advice.innerHTML = '<h4>👍 Good</h4><p>You know most characters. A bit of study and you\'ll be reading this fluently!</p>';
+                } else if (pctUnique >= 50) {
+                    advice.innerHTML = '<h4>📚 Challenging</h4><p>This text has a moderate learning curve. Our pathfinder will find good intermediate texts.</p>';
+                } else {
+                    advice.innerHTML = '<h4>🎯 Ambitious Goal</h4><p>This is a challenging text, but we\'ll break it down into manageable steps!</p>';
+                }
+
+                this.updateSummary();
+                this.updateProgress();
+            }
+
+            // ==================== STEP 3: PATHFINDER (NEW ALGORITHM) ====================
+            renderPathfinder(container) {
+                const hasStories = this.stories.length > 0;
+                
+                container.innerHTML = `
+                    <h2><span class="step-num">3</span> Find Your Learning Path</h2>
+                    <p class="step-description">
+                        Select cluster size, find optimal story clusters, then build the most efficient path.
+                    </p>
+
+                    ${!hasStories ? `
+                        <div class="info-box">
+                            <h4>📚 No Stories Available</h4>
+                            <p>The story library is empty. You can continue without a predefined path.</p>
+                        </div>
+                    ` : `
+                        <div class="info-box" style="background: #e3f2fd; border-color: #2196F3;">
+                            <h4>📊 Pool Generation</h4>
+                            <p>Limit = known (${this.knownChars.size}) + 2 × target (${this.targetChars.length}) = ${this.knownChars.size + 2 * this.targetChars.length}</p>
+                        </div>
+                        
+                        <div class="button-group" style="margin: 15px 0;">
+                            <button id="generatePoolBtn" class="secondary">🔍 Generate Pool</button>
+                        </div>
+                        
+                        <div id="poolStats" class="file-status" style="display: none;"></div>
+                        
+                        <div id="clusterSection" style="display: none;">
+                            <h3 style="margin: 20px 0 15px 0; color: #333;">🔗 Cluster Selection</h3>
+                            <p style="color: #666; margin-bottom: 15px;">Select cluster size (3-7 stories).</p>
+                            <div class="button-group">
+                                <button class="cluster-size-btn secondary" data-size="3">3</button>
+                                <button class="cluster-size-btn secondary" data-size="4">4</button>
+                                <button class="cluster-size-btn secondary active" data-size="5">5</button>
+                                <button class="cluster-size-btn secondary" data-size="6">6</button>
+                                <button class="cluster-size-btn secondary" data-size="7">7</button>
+                            </div>
+                            <button id="findClustersBtn" class="secondary" style="margin-top: 10px;">🔍 Find Clusters</button>
+                        </div>
+                        
+                        <div id="clusterResults" style="display: none; margin-top: 20px;"></div>
+                        <div id="clusterDetailSection" style="display: none; margin-top: 20px;">
+                            <h3 style="margin: 20px 0 15px 0; color: #333;">🎯 Selected Cluster</h3>
+                            <div id="selectedClusterInfo"></div>
+                            <button id="optimizePathBtn" class="secondary" style="margin-top: 15px;">⚡ Optimize Path (Exhaustive)</button>
+                        </div>
+                        
+                        <div id="pathSection" style="display: none; margin-top: 20px;">
+                            <h3 style="margin: 20px 0 15px 0; color: #333;">📚 Your Learning Path</h3>
+                            <div id="optimizedPathStats"></div>
+                        </div>
+                        
+                        <div id="pathResults">
+                            ${this.path.length > 0 ? this.renderPathList() : `
+                                <div class="empty-state">
+                                    <h3>🔍 Ready to Find Your Path</h3>
+                                    <p>Generate pool → Select cluster → Build path.</p>
+                                </div>
+                            `}
+                        </div>
+                    `}
+                `;
+
+                this.bindPathfinderEvents();
+            }
+
+            bindPathfinderEvents() {
+                const generatePoolBtn = document.getElementById('generatePoolBtn');
+                if (generatePoolBtn) generatePoolBtn.addEventListener('click', () => this.generatePool());
+
+                document.querySelectorAll('.cluster-size-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.cluster-size-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.selectedClusterSize = parseInt(btn.dataset.size);
+                    });
+                });
+
+                const findClustersBtn = document.getElementById('findClustersBtn');
+                if (findClustersBtn) findClustersBtn.addEventListener('click', () => this.findClusters());
+
+                const optimizePathBtn = document.getElementById('optimizePathBtn');
+                if (optimizePathBtn) optimizePathBtn.addEventListener('click', () => this.optimizePathExhaustive());
+
+            }
+
+            generatePool() {
+                const knownSet = this.knownChars;
+                const targetSet = new Set(this.targetChars);
+                const limit = knownSet.size + (2 * targetSet.size);
+
+                this.pool = [];
+
+                for (const story of this.stories) {
+                    const chars = story.characters || [];
+                    const uniqueChars = [...new Set(chars)];
+
+                    if (uniqueChars.length > limit) continue;
+
+                    const knownChars = uniqueChars.filter(c => knownSet.has(c));
+                    const unknownChars = uniqueChars.filter(c => !knownSet.has(c));
+                    const targetChars = unknownChars.filter(c => targetSet.has(c));
+                    const nontargetChars = unknownChars.filter(c => !targetSet.has(c));
+
+                    if (nontargetChars.length > targetChars.length) continue;
+
+                    this.pool.push({
+                        story: story,
+                        uniqueChars: uniqueChars,
+                        knownChars: knownChars,
+                        unknownChars: unknownChars,
+                        targetChars: targetChars,
+                        nontargetChars: nontargetChars,
+                        jumpsize: unknownChars.length,
+                        efficiency: targetChars.length / (targetChars.length + nontargetChars.length)
+                    });
+                }
+
+                const poolStats = document.getElementById('poolStats');
+                poolStats.style.display = 'block';
+                poolStats.className = 'file-status success';
+                poolStats.innerHTML = '<strong>✅ Pool:</strong> ' + this.pool.length + ' candidates';
+
+                document.getElementById('clusterSection').style.display = 'block';
+                this.selectedClusterSize = 5;
+            }
+
+            findClusters() {
+                if (!this.pool || this.pool.length === 0) {
+                    alert('Generate pool first.');
+                    return;
+                }
+
+                const k = this.selectedClusterSize || 5;
+                if (k > this.pool.length) {
+                    alert('Reduce cluster size.');
+                    return;
+                }
+
+                const targetSet = new Set(this.targetChars);
+                const totalTargets = targetSet.size;
+
+                document.getElementById('clusterResults').style.display = 'block';
+                document.getElementById('clusterResults').innerHTML = '<p>🔄 Finding clusters...</p>';
+
+                const self = this;
+                setTimeout(function() {
+                    const combinations = self.getCombinations([...Array(self.pool.length).keys()], k);
+                    const clusterResults = [];
+
+                    for (const combo of combinations) {
+                        const stories = combo.map(i => self.pool[i]);
+                        
+                        const unionTarget = new Set();
+                        const unionNontarget = new Set();
+                        
+                        for (const s of stories) {
+                            for (const c of s.targetChars) unionTarget.add(c);
+                            for (const c of s.nontargetChars) unionNontarget.add(c);
+                        }
+
+                        const coverage = (unionTarget.size / totalTargets) * 100;
+                        const efficiency = unionTarget.size / (unionTarget.size + unionNontarget.size);
+
+                        clusterResults.push({
+                            combo: combo,
+                            stories: stories,
+                            unionTargetSize: unionTarget.size,
+                            unionNontargetSize: unionNontarget.size,
+                            coverage: coverage,
+                            efficiency: efficiency,
+                            avgJumpsize: stories.reduce((sum, s) => sum + s.jumpsize, 0) / stories.length
+                        });
+                    }
+
+                    clusterResults.sort((a, b) => b.efficiency - a.efficiency);
+                    self.clusters = clusterResults.slice(0, 10);
+
+                    let html = '';
+                    for (let i = 0; i < self.clusters.length; i++) {
+                        const c = self.clusters[i];
+                        html += '<div class="cluster-option" data-index="' + i + '" style="background: white; border: 2px solid #ddd; border-radius: 12px; padding: 15px; margin: 10px 0; cursor: pointer;">' +
+                            '<div style="display: flex; justify-content: space-between;"><div><strong>Option ' + (i + 1) + '</strong></div>' +
+                            '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div></div>' +
+                            '<div style="font-size: 12px; color: #666;">' + c.stories.map(s => s.story.title || 'Untitled').join(' → ') + '</div></div>';
+                    }
+
+                    document.getElementById('clusterResults').innerHTML = html;
+
+                    document.querySelectorAll('.cluster-option').forEach(function(opt) {
+                        opt.addEventListener('click', function() {
+                            self.selectCluster(parseInt(opt.dataset.index));
+                            document.querySelectorAll('.cluster-option').forEach(o => o.style.borderColor = '#ddd');
+                            opt.style.borderColor = 'var(--secondary)';
+                        });
+                    });
+                }, 10);
+            }
+
+            selectCluster(index) {
+                this.selectedCluster = this.clusters[index];
+                const c = this.selectedCluster;
+                
+                document.getElementById('clusterDetailSection').style.display = 'block';
+                document.getElementById('selectedClusterInfo').innerHTML = 
+                    '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
+                    '<h4>📊 Statistics</h4>' +
+                    '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div>' +
+                    '<div>Avg Jumpsize: <strong>' + c.avgJumpsize.toFixed(1) + '</strong></div></div>' +
+                    '<h4>📚 Stories</h4>' + c.stories.map((s, i) => 
+                        '<div style="padding: 8px; border-bottom: 1px solid #eee;">' + (i+1) + '. ' + (s.story.title || 'Untitled') + '</div>'
+                    ).join('');
+            }
+
+            optimizePathExhaustive() {
+                if (!this.selectedCluster) {
+                    alert('Select a cluster first.');
+                    return;
+                }
+
+                const stories = this.selectedCluster.stories;
+                const targetSet = new Set(this.targetChars);
+                const totalTargets = targetSet.size;
+
+                document.getElementById('optimizedPathStats').innerHTML = '<p>🔄 Finding optimal path...</p>';
+
+                const self = this;
+                setTimeout(function() {
+                    const permutations = self.getPermutations(stories);
+                    let bestPath = null;
+                    let bestAvgJumpsize = Infinity;
+
+                    for (const perm of permutations) {
+                        const knownSoFar = new Set(self.knownChars);
+                        const jumpsizes = [];
+                        const coveredTargets = new Set();
+
+                        for (const story of perm) {
+                            const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
+                            const newTargets = story.targetChars.filter(c => targetSet.has(c) && !knownSoFar.has(c));
+                            
+                            jumpsizes.push(newChars.length);
+                            newChars.forEach(c => knownSoFar.add(c));
+                            newTargets.forEach(c => coveredTargets.add(c));
+                        }
+
+                        const avgJumpsize = jumpsizes.reduce((a, b) => a + b, 0) / jumpsizes.length;
+
+                        if (avgJumpsize < bestAvgJumpsize) {
+                            bestAvgJumpsize = avgJumpsize;
+                            bestPath = { perm: perm, jumpsizes: jumpsizes, avgJumpsize: avgJumpsize, coveredTargets: coveredTargets };
+                        }
+                    }
+
+                    self.optimizedPath = bestPath;
+
+                    let html = '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
+                        '<h4>⚡ Best Path</h4>' +
+                        '<div>Avg Jumpsize: <strong>' + bestPath.avgJumpsize.toFixed(2) + '</strong></div>' +
+                        '<div>Coverage: <strong>' + (bestPath.coveredTargets.size / totalTargets * 100).toFixed(1) + '%</strong></div></div>';
+
+                    const knownSoFar = new Set(self.knownChars);
+                    html += '<ul class="path-list">';
+                    for (let i = 0; i < bestPath.perm.length; i++) {
+                        const story = bestPath.perm[i];
+                        const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
+                        newChars.forEach(c => knownSoFar.add(c));
+                        html += '<li class="path-item"><div class="path-number">' + (i+1) + '</div><div class="path-info"><h4>' + (story.story.title || 'Untitled') + '</h4><p>Jumpsize: ' + bestPath.jumpsizes[i] + '</p></div></li>';
+                    }
+                    html += '</ul>';
+
+                    document.getElementById('pathSection').style.display = 'block';
+                    document.getElementById('optimizedPathStats').innerHTML = html;
+
+                    self.path = bestPath.perm.map(s => ({
+                        id: s.story.id,
+                        title: s.story.title,
+                        source: s.story.source,
+                        chars: s.story.characters,
+                        newChars: s.unknownChars,
+                        newTargets: s.targetChars
+                    }));
+
+                    self.updateSummary();
+                    self.updateProgress();
+                }, 10);
+            }
+
+            getCombinations(arr, size) {
+                const result = [];
+                function combine(start, combo) {
+                    if (combo.length === size) { result.push(combo); return; }
+                    for (let i = start; i < arr.length; i++) combine(i + 1, [...combo, arr[i]]);
+                }
+                combine(0, []);
+                return result;
+            }
+
+            getPermutations(arr) {
+                if (arr.length <= 1) return [arr];
+                const result = [];
+                for (let i = 0; i < arr.length; i++) {
+                    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
+                    for (const perm of this.getPermutations(rest)) result.push([arr[i], ...perm]);
+                }
+                return result;
+            }
+
+            renderPathList() {
+                if (this.path.length === 0) {
+                    return '<p style="color: #999;">No optimal path found. Some characters may be unreachable.</p>';
+                }
+
+                const overlapInfo = this.path.map((story, i) => {
+                    if (i === 0) return { fromPrev: 0, newThis: story.newChars.length };
+                    const prevChars = new Set(this.path[i-1].newChars);
+                    const overlap = story.newChars.filter(ch => prevChars.has(ch)).length;
+                    return { fromPrev: overlap, newThis: story.newChars.length };
+                });
+
+                return `
+                    <h3 style="margin: 20px 0 15px 0; color: #333;">📚 Your Learning Path</h3>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        ${this.path.length} stepping stone${this.path.length > 1 ? 's' : ''} to reach your goal
+                    </p>
+                    <ul class="path-list">
+                        ${this.path.map((story, i) => `
+                            <li class="path-item ${i === this.path.length - 1 ? 'final' : ''}">
+                                <div class="path-number">${i + 1}</div>
+                                <div class="path-info">
+                                    <h4>${story.title}</h4>
+                                    <p>${story.source || 'Unknown source'} • ${story.chars.length} total characters</p>
+                                    ${overlapInfo[i].fromPrev > 0 ? `
+                                        <div class="overlap-info">
+                                            <span class="overlap-badge">🔄 ${overlapInfo[i].fromPrev} chars overlap</span>
+                                            <span>with previous lesson (great for reinforcement!)</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="path-stats">
+                                    <div class="path-stat">
+                                        <div class="value" style="color: var(--secondary);">+${overlapInfo[i].newThis}</div>
+                                        <div class="label">New Chars</div>
+                                    </div>
+                                    <div class="path-stat">
+                                        <div class="value" style="color: ${story.remaining > 0 ? 'var(--warning)' : 'var(--secondary)'};">${story.remaining}</div>
+                                        <div class="label">Remaining</div>
+                                    </div>
+                                </div>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="button-group" style="margin-top: 20px;">
+                        <button id="rebuildPathBtn" class="outline">🔄 Rebuild Path</button>
+                    </div>
+                `;
+            }
+
+            // ==================== STEP 4: CURRICULUM ====================
+            renderCurriculum(container) {
+                container.innerHTML = `
+                    <h2><span class="step-num">4</span> Build Your Curriculum</h2>
+                    <p class="step-description">
+                        Generate learning materials for each step in your path. This includes word lists, 
+                        practice activities, and character details.
+                    </p>
+
+                    <div class="button-group">
+                        <button id="generateCurriculumBtn" class="secondary">📚 Generate Curriculum</button>
+                        <button id="exportPdfBtn" class="outline">📄 Export as PDF</button>
+                    </div>
+
+                    <div id="curriculumContent">
+                        ${Object.keys(this.curriculum).length > 0 ? this.renderCurriculumDetails() : `
+                            <div class="empty-state">
+                                <h3>📋 Curriculum Builder</h3>
+                                <p>Generate your personalized curriculum based on the learning path.</p>
+                            </div>
+                        `}
+                    </div>
+                `;
+
+                document.getElementById('generateCurriculumBtn').addEventListener('click', () => {
+                    this.generateCurriculum();
+                    document.getElementById('curriculumContent').innerHTML = this.renderCurriculumDetails();
+                });
+
+                document.getElementById('exportPdfBtn')?.addEventListener('click', () => {
+                    alert('PDF export would compile all materials into a printable document.');
+                });
+            }
+
+            async generateCurriculum() {
+                this.curriculum = {};
+                
+                for (let i = 0; i < this.path.length; i++) {
+                    const step = this.path[i];
+                    const words = this.getWordsForChars(step.newChars);
+                    
+                    this.curriculum[i] = {
+                        title: step.title,
+                        newChars: step.newChars,
+                        words: words.slice(0, 15),
+                        sentences: this.generateSentences(step.newChars),
+                        strokeOrder: step.newChars
+                    };
+                }
+            }
+
+            getWordsForChars(chars) {
+                const words = [];
+                try {
+                    fetch('/data/dictionary.json')
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                            if (data && Array.isArray(data)) {
+                                chars.forEach(ch => {
+                                    data.filter(w => w.chars && w.chars.includes(ch)).slice(0, 5).forEach(w => {
+                                        if (!words.find(existing => existing.word === w.word)) {
+                                            words.push(w);
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                } catch (e) {}
+                return words;
+            }
+
+            generateSentences(chars) {
+                const templates = [
+                    `我学习${chars[0] || '中'}字。`,
+                    `这个${chars[0] || '字'}很重要。`,
+                    `${chars[0] || '学'}习让我进步。`,
+                    `今天我们${chars[0] || '学'}习。`
+                ];
+                return templates.slice(0, 4);
+            }
+
+            renderCurriculumDetails() {
+                return Object.entries(this.curriculum).map(([idx, lesson], i) => `
+                    <div class="curriculum-section">
+                        <h4>📖 Step ${parseInt(idx) + 1}: ${lesson.title}</h4>
+                        
+                        <h5 style="margin: 15px 0 10px 0; color: #333;">🎯 Characters to Learn (${lesson.newChars.length})</h5>
+                        <div class="char-grid">
+                            ${lesson.newChars.map(ch => `<span class="char-tile target">${ch}</span>`).join('')}
+                        </div>
+
+                        <h5 style="margin: 15px 0 10px 0; color: #333;">📝 Words Using These Characters</h5>
+                        <div class="word-list">
+                            ${lesson.words.length > 0 
+                                ? lesson.words.map(w => `
+                                    <div class="word-item">
+                                        <span class="word">${w.word || w.traditional || '—'}</span>
+                                        <span class="pinyin">${w.pinyin || ''}</span>
+                                        <span class="meaning">${w.definition || w.english || ''}</span>
+                                    </div>
+                                `).join('')
+                                : '<p style="color: #999;">Word data not available</p>'
+                            }
+                        </div>
+
+                        <h5 style="margin: 15px 0 10px 0; color: #333;">✏️ Practice Sentences</h5>
+                        <ul style="margin-left: 20px;">
+                            ${lesson.sentences.map(s => `<li style="margin: 8px 0;">${s}</li>`).join('')}
+                        </ul>
+
+                        <h5 style="margin: 15px 0 10px 0; color: #333;">🔢 Stroke Order Resources</h5>
+                        <p style="color: #666; font-size: 14px;">
+                            Search for stroke order at: 
+                            <a href="https://www.mdbg.net/chinese/dictionary?page=stroke-order&wdqb=${lesson.newChars.join('')}" 
+                               target="_blank" style="color: var(--primary);">
+                                MDBG Stroke Order
+                            </a>
+                        </p>
+                    </div>
+                `).join('');
+            }
+
+            // ==================== STEP 5: TEST ====================
+            renderTest(container) {
+                if (this.quizResults.total === 0) {
+                    this.startQuiz();
+                }
+
+                if (this.currentQuiz.index >= this.currentQuiz.questions.length) {
+                    this.showQuizResults(container);
+                    return;
+                }
+
+                const q = this.currentQuiz.questions[this.currentQuiz.index];
+                const answered = this.currentQuiz.answers[q.char];
+
+                container.innerHTML = `
+                    <h2><span class="step-num">5</span> Test Your Knowledge</h2>
+                    <p class="step-description">
+                        Let's verify you've learned the characters! Identify each character shown.
+                    </p>
+
+                    <div class="quiz-container">
+                        <div class="quiz-progress">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="color: #666;">Progress</span>
+                                <span style="color: #666;">${this.currentQuiz.index + 1} / ${this.currentQuiz.questions.length}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${(this.currentQuiz.index / this.currentQuiz.questions.length) * 100}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="quiz-card">
+                            <p style="color: #666; margin-bottom: 5px;">What character is this?</p>
+                            <div class="quiz-char">${q.char}</div>
+                            
+                            <div class="quiz-options">
+                                ${q.options.map((opt, i) => `
+                                    <div class="quiz-option ${answered === i ? 'selected' : ''}" 
+                                         data-index="${i}" data-correct="${opt.correct}">
+                                        ${opt.text}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="quiz-nav">
+                            <button id="skipBtn" class="outline">Skip</button>
+                            <button id="nextQuestionBtn" ${!answered && answered !== 0 ? 'disabled' : ''}>Next →</button>
+                        </div>
+                    </div>
+                `;
+
+                this.bindQuizEvents();
+            }
+
+            startQuiz() {
+                const targetChars = this.targetChars.slice(0, 20);
+                const shuffled = targetChars.sort(() => Math.random() - 0.5);
+                const sample = shuffled.slice(0, Math.min(10, shuffled.length));
+                
+                const distractors = ['的', '是', '了', '我', '在', '有', '和', '人', '这', '中', '大', '为', '上', '个', '们'];
+                
+                this.currentQuiz = {
+                    index: 0,
+                    questions: sample.map(ch => ({
+                        char: ch,
+                        options: this.generateOptions(ch, distractors)
+                    })),
+                    answers: {}
+                };
+            }
+
+            generateOptions(char, distractors) {
+                const options = [{ text: 'I know this', correct: true }];
+                const wrongDistractors = distractors.filter(d => d !== char).sort(() => Math.random() - 0.5);
+                
+                for (let i = 0; i < 3 && i < wrongDistractors.length; i++) {
+                    options.push({ text: wrongDistractors[i], correct: false });
+                }
+                
+                return options.sort(() => Math.random() - 0.5);
+            }
+
+            bindQuizEvents() {
+                document.querySelectorAll('.quiz-option').forEach(opt => {
+                    opt.addEventListener('click', () => {
+                        const idx = parseInt(opt.dataset.index);
+                        const correct = opt.dataset.correct === 'true';
+                        this.currentQuiz.answers[this.currentQuiz.questions[this.currentQuiz.index].char] = idx;
+                        
+                        document.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
+                        opt.classList.add('selected');
+                        
+                        if (correct) {
+                            opt.classList.add('correct');
+                        } else {
+                            opt.classList.add('incorrect');
+                            document.querySelectorAll('.quiz-option').forEach(o => {
+                                if (o.dataset.correct === 'true') o.classList.add('correct');
+                            });
+                        }
+                    });
+                });
+
+                document.getElementById('skipBtn').addEventListener('click', () => {
+                    this.currentQuiz.index++;
+                    this.renderStep();
+                });
+
+                document.getElementById('nextQuestionBtn').addEventListener('click', () => {
+                    const answered = this.currentQuiz.answers[this.currentQuiz.questions[this.currentQuiz.index]?.char);
+                    if (answered !== undefined) {
+                        this.currentQuiz.index++;
+                        this.renderStep();
+                    }
+                });
+            }
+
+            showQuizResults(container) {
+                let correct = 0;
+                const missed = [];
+                
+                this.currentQuiz.questions.forEach(q => {
+                    const answer = this.currentQuiz.answers[q.char];
+                    if (answer !== undefined) {
+                        const opt = q.options[answer];
+                        if (opt && opt.correct) correct++;
+                        else missed.push(q.char);
+                    } else {
+                        missed.push(q.char);
+                    }
+                });
+
+                this.quizResults = {
+                    correct,
+                    total: this.currentQuiz.questions.length,
+                    missed
+                };
+
+                localStorage.setItem(WIZARD_STORAGE.QUIZ_RESULTS, JSON.stringify(this.quizResults));
+                this.updateSummary();
+
+                const pct = Math.round((correct / this.currentQuiz.questions.length) * 100);
+                let message = '';
+                if (pct >= 80) message = 'Great job! You\'re ready to continue.';
+                else if (pct >= 60) message = 'Good progress! Review the missed characters.';
+                else message = 'Keep practicing! Review the curriculum and try again.';
+
+                container.innerHTML = `
+                    <h2><span class="step-num">5</span> Test Complete!</h2>
+                    
+                    <div class="completion-card" style="background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);">
+                        <div class="celebration">${pct >= 80 ? '🎉' : '📚'}</div>
+                        <h2>${correct} / ${this.currentQuiz.questions.length}</h2>
+                        <p>${pct}% correct • ${message}</p>
+                    </div>
+
+                    ${missed.length > 0 ? `
+                        <h3 style="margin: 25px 0 15px 0; color: #333;">Characters to Review</h3>
+                        <div class="char-grid">
+                            ${missed.map(ch => `<span class="char-tile unknown">${ch}</span>`).join('')}
+                        </div>
+                        <p style="color: #666; margin-top: 10px;">
+                            Consider reviewing these characters before proceeding.
+                        </p>
+                    ` : ''}
+
+                    <div class="button-group" style="margin-top: 25px;">
+                        <button id="retryQuizBtn" class="outline">🔄 Retry Quiz</button>
+                    </div>
+                `;
+
+                document.getElementById('retryQuizBtn').addEventListener('click', () => {
+                    this.quizResults = { correct: 0, total: 0, missed: [] };
+                    this.currentQuiz = { index: 0, questions: [], answers: {} };
+                    this.renderStep();
+                });
+
+                this.updateProgress();
+            }
+
+            // ==================== STEP 6: COMPLETE ====================
+            renderComplete(container) {
+                const totalLearned = this.targetChars.length;
+                const pctKnown = this.quizResults.total > 0 
+                    ? Math.round((this.quizResults.correct / this.quizResults.total) * 100) 
+                    : 100;
+
+                container.innerHTML = `
+                    <h2><span class="step-num">6</span> Apply Your Learning</h2>
+                    <p class="step-description">
+                        ${pctKnown >= 60 
+                            ? 'Great work! Add these characters to your known set and track your progress.'
+                            : 'Review the materials and add what you\'ve learned to your collection.'}
+                    </p>
+
+                    <div class="completion-card">
+                        <div class="celebration">🎊</div>
+                        <h2>Learning Session Complete!</h2>
+                        <p>You've completed this learning session.</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">+${totalLearned}</div>
+                            <div class="stat-label">New Characters</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${this.path.length}</div>
+                            <div class="stat-label">Stories Studied</div>
+                        </div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, var(--warning) 0%, #f57c00 100%);">
+                            <div class="stat-value">${pctKnown}%</div>
+                            <div class="stat-label">Quiz Score</div>
+                        </div>
+                    </div>
+
+                    <div class="curriculum-section" style="margin-top: 25px;">
+                        <h4>🎯 Characters You've Learned</h4>
+                        <div class="char-grid">
+                            ${this.targetChars.map(ch => `<span class="char-tile known">${ch}</span>`).join('')}
+                        </div>
+                    </div>
+
+                    <div class="button-group" style="margin-top: 25px;">
+                        <button id="addToKnownBtn" class="secondary">✨ Add to My Known Characters</button>
+                        <button id="exportSessionBtn" class="outline">📤 Export Session</button>
+                        <button id="startNewBtn">🔄 Start New Session</button>
+                    </div>
+
+                    <div id="addedStatus" class="file-status success hidden" style="margin-top: 20px;">
+                        ✅ ${totalLearned} characters added to your known set!
+                    </div>
+                `;
+
+                this.bindCompleteEvents();
+            }
+
+            bindCompleteEvents() {
+                document.getElementById('addToKnownBtn').addEventListener('click', () => {
+                    this.targetChars.forEach(ch => this.knownChars.add(ch));
+                    window.mandarinState.setCharacters(Array.from(this.knownChars));
+                    
+                    document.getElementById('addedStatus').classList.remove('hidden');
+                    document.getElementById('addToKnownBtn').disabled = true;
+                    document.getElementById('addToKnownBtn').textContent = '✓ Added!';
+                    
+                    this.updateSummary();
+                });
+
+                document.getElementById('exportSessionBtn').addEventListener('click', () => {
+                    const sessionData = {
+                        date: new Date().toISOString(),
+                        knownChars: Array.from(this.knownChars),
+                        targetText: this.targetText,
+                        learnedChars: this.targetChars,
+                        path: this.path,
+                        quizResults: this.quizResults
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `learning_session_${new Date().toISOString().slice(0,10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+
+                document.getElementById('startNewBtn').addEventListener('click', () => {
+                    if (confirm('Start a new learning session? Current progress will be saved.')) {
+                        this.resetWizard();
+                    }
+                });
+            }
+
+            resetWizard() {
+                this.targetText = '';
+                this.targetChars = [];
+                this.unknownChars = [];
+                this.path = [];
+                this.curriculum = {};
+                this.quizResults = { correct: 0, total: 0, missed: [] };
+                this.currentQuiz = { index: 0, questions: [], answers: {} };
+                
+                localStorage.removeItem(WIZARD_STORAGE.PATH);
+                localStorage.removeItem(WIZARD_STORAGE.CURRICULUM);
+                localStorage.removeItem(WIZARD_STORAGE.QUIZ_RESULTS);
+                
+                this.currentStep = 1;
+                this.updateSummary();
+                this.renderStep();
+            }
+        }
+
+        const wizard = new LearningWizard();
+    </script>
+</body>
+</html>
