@@ -27,7 +27,7 @@
 
         .header {
             text-align: center;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
         }
 
         .header h1 {
@@ -41,210 +41,232 @@
             color: #5a6e7c;
         }
 
-        .setup-banner {
-            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
+        /* Stacked boxes layout */
+        .stacked-layout {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
+            flex-direction: column;
+            gap: 1.5rem;
         }
 
-        .setup-banner p {
-            margin: 0;
-        }
-
-        .setup-btn {
+        .box {
             background: white;
-            color: #f57c00;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .setup-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .tools-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .card {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            text-align: center;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        .box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
         }
 
-        .card-header {
-            padding: 1.5rem;
-            text-align: center;
-            font-size: 3rem;
+        /* Setup box */
+        .box.setup {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
         }
 
-        .card-header.mandarin {
+        .box.setup h2 {
+            color: white;
+        }
+
+        .box.setup p {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Wizard box - featured, taller */
+        .box.wizard {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
-        .card-header.readability {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        .box.wizard h2 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 1rem;
         }
 
-        .card-header.traditional {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .card-header.study {
-            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-        }
-
-        .card-header.story {
-            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
-        }
-
-        .card-content {
-            padding: 1.5rem;
-        }
-
-        .card-content h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.75rem;
-            color: #2c3e50;
-        }
-
-        .card-content p {
-            color: #5a6e7c;
-            line-height: 1.5;
+        .box.wizard p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            max-width: 600px;
             margin-bottom: 1.5rem;
         }
 
+        .box.wizard .emoji {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Toolbox box */
+        .box.toolbox {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .box.toolbox h2 {
+            color: white;
+        }
+
+        .box.toolbox p {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Buttons */
         .btn {
             display: inline-block;
-            background-color: #4a5568;
-            color: white;
+            background-color: white;
+            color: #667eea;
             text-decoration: none;
-            padding: 0.75rem 1.5rem;
+            padding: 12px 30px;
             border-radius: 8px;
             font-weight: 600;
-            transition: background-color 0.3s;
+            font-size: 1rem;
+            transition: transform 0.2s ease;
         }
 
         .btn:hover {
-            background-color: #2d3748;
+            transform: scale(1.05);
         }
 
+        .btn.wizard-btn {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn.setup-btn {
+            background: white;
+            color: #f57c00;
+        }
+
+        .btn.toolbox-btn {
+            background: white;
+            color: #38a169;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 1rem;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+            padding: 0.5rem;
+        }
+
+        .modal-close:hover {
+            color: #2c3e50;
+        }
+
+        .tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .tool-item:hover {
+            background: #f0f0f0;
+        }
+
+        .tool-item .icon {
+            font-size: 2rem;
+            width: 50px;
+            text-align: center;
+        }
+
+        .tool-item .info {
+            flex: 1;
+        }
+
+        .tool-item h3 {
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .tool-item p {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .tool-item a {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .tool-item a:hover {
+            background: #5a67d8;
+        }
+
+        /* Footer */
         .footer {
             text-align: center;
             padding: 2rem 0;
             color: #718096;
-            border-top: 1px solid #e2e8f0;
             margin-top: 2rem;
-        }
-
-        /* Data Management Styles */
-        .data-section {
-            background: white;
-            border-radius: 20px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .data-section h2 {
-            margin-bottom: 1rem;
-            color: #2c3e50;
-            border-bottom: 2px solid #ff6b6b;
-            display: inline-block;
-            padding-bottom: 0.5rem;
-        }
-
-        .data-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .data-card {
-            background: #f9f9f9;
-            border-radius: 12px;
-            padding: 1.2rem;
-            border: 1px solid #e0e0e0;
-        }
-
-        .data-card h3 {
-            margin-bottom: 0.5rem;
-            color: #2c3e50;
-        }
-
-        .data-card p {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 1rem;
-        }
-
-        .data-card code {
-            background: #eee;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        button {
-            background-color: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #5a67d8;
-        }
-
-        button.secondary {
-            background-color: #48bb78;
-        }
-
-        button.secondary:hover {
-            background-color: #38a169;
-        }
-
-        button.warning {
-            background-color: #ff9800;
-        }
-
-        button.warning:hover {
-            background-color: #e68a00;
         }
 
         @media (max-width: 768px) {
@@ -254,272 +276,118 @@
             .header h1 {
                 font-size: 2rem;
             }
-            .tools-grid {
-                gap: 1.5rem;
+            .box.wizard {
+                padding: 2rem 1rem;
+                min-height: 200px;
             }
-            .setup-banner {
+            .box.wizard h2 {
+                font-size: 1.5rem;
+            }
+            .tool-item {
                 flex-direction: column;
                 text-align: center;
-            }
-            .data-grid {
-                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1>📚 Mandarin Learning Tools</h1>
-        <p>Your personal suite of tools to master Chinese characters and reading</p>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Mandarin Learning Tools</h1>
+            <p>Your personal suite of tools to master Chinese characters and reading</p>
+        </div>
+
+        <div class="stacked-layout">
+            <!-- Setup Box -->
+            <div class="box setup">
+                <h2>⚙️ Setup</h2>
+                <p>First time? Run setup to create all required files.</p>
+                <a href="/setup" class="btn setup-btn">🚀 Run Setup</a>
+            </div>
+
+            <!-- Learning Wizard Box (featured) -->
+            <div class="box wizard">
+                <div class="emoji">✨</div>
+                <h2>Learning Wizard</h2>
+                <p>Your guided path to Chinese reading mastery. Follow 6 steps: Assessment → Goal → Pathfinder → Curriculum → Test → Apply.</p>
+                <a href="/learning_wizard" class="btn wizard-btn">Start Learning →</a>
+            </div>
+
+            <!-- Toolbox Box -->
+            <div class="box toolbox" id="toolboxBox" style="cursor: pointer;">
+                <h2>🧰 Toolbox</h2>
+                <p>Additional tools for character finding, story management, and more.</p>
+                <span class="btn toolbox-btn">Open Toolbox →</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>All tools work offline and store your data locally in your browser.</p>
+            <p>Export your progress to share or back up.</p>
+        </div>
     </div>
 
-    <div class="setup-banner">
-        <p>⚙️ First time using these tools? Run setup to create all required files!</p>
-        <a href="/setup" class="setup-btn">🚀 Run Setup</a>
-    </div>
-
-    <!-- Data Management Section -->
-    <div class="data-section">
-        <h2>📁 Data Management</h2>
-        <div class="data-grid">
-            <div class="data-card">
-                <h3>📖 Known Characters</h3>
-                <p>Load or save your current character list. The canonical file is <code>data/known_chars.json</code>.</p>
-                <div class="button-group">
-                    <button id="saveKnownBtn">💾 Save to File (known_chars.json)</button>
-                    <button id="backupKnownBtn" class="secondary">📦 Backup (timestamped)</button>
-                    <input type="file" id="loadKnownInput" accept=".json" style="display: none;">
-                    <button id="loadKnownBtn">📂 Load and Merge</button>
-                    <button id="replaceKnownBtn" class="warning">🔄 Replace (overwrite)</button>
+    <!-- Toolbox Modal -->
+    <div class="modal" id="toolboxModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🧰 Toolbox</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="tool-list">
+                <div class="tool-item">
+                    <div class="icon">📜</div>
+                    <div class="info">
+                        <h3>Traditional Finder</h3>
+                        <p>Identify and convert traditional characters to simplified</p>
+                    </div>
+                    <a href="/traditional_finder">Open</a>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">📖</div>
+                    <div class="info">
+                        <h3>Story Suggester</h3>
+                        <p>Find stories matched to your character knowledge level</p>
+                    </div>
+                    <a href="/story_suggester">Open</a>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">📚</div>
+                    <div class="info">
+                        <h3>Story Library</h3>
+                        <p>Manage your story collection - view, add, edit, export</p>
+                    </div>
+                    <a href="/story_library">Open</a>
                 </div>
             </div>
-            <div class="data-card">
-                <h3>📚 Story Library</h3>
-                <p>Load or save your story database. The canonical file is <code>data/stories.json</code>.</p>
-                <div class="button-group">
-                    <button id="saveStoriesBtn">💾 Save Stories (stories.json)</button>
-                    <button id="backupStoriesBtn" class="secondary">📦 Backup (timestamped)</button>
-                    <input type="file" id="loadStoriesInput" accept=".json" style="display: none;">
-                    <button id="loadStoriesBtn">📂 Load and Replace</button>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Guided Wizard Section -->
-    <div class="tools-grid" style="margin-bottom: 2rem;">
-        <div class="card" style="grid-column: 1 / -1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
-            <div style="padding: 2rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
-                <div style="font-size: 4rem;">✨</div>
-                <div style="flex: 1; min-width: 250px;">
-                    <h2 style="color: white; margin-bottom: 0.5rem; font-size: 1.8rem;">Learning Wizard</h2>
-                    <p style="color: rgba(255,255,255,0.9); margin-bottom: 1rem; font-size: 1.1rem;">
-                        Your guided path to Chinese reading mastery. Follow 6 steps: Assessment → Goal → Pathfinder → Curriculum → Test → Apply.
-                    </p>
-                    <a href="/learning_wizard" class="btn" style="background: white; color: #667eea; padding: 12px 30px; font-size: 1rem;">
-                        Start Guided Learning →
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <script>
+        // Toolbox modal functionality
+        const modal = document.getElementById('toolboxModal');
+        const toolboxBox = document.getElementById('toolboxBox');
+        const modalClose = document.getElementById('modalClose');
 
-    <h3 style="margin: 1rem 0; color: #5a6e7c; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem;">
-        Manual Tools
-    </h3>
+        toolboxBox.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
 
-    <div class="tools-grid">
-        <!-- Tool 1: Mandarin Learner -->
-        <div class="card">
-            <div class="card-header mandarin">📖</div>
-            <div class="card-content">
-                <h2>Mandarin Learner</h2>
-                <p>Track characters you know and get suggestions for words you can learn because you already know all their characters. Build your vocabulary systematically.</p>
-                <a href="/mandarin_learner" class="btn">Open Tool →</a>
-            </div>
-        </div>
+        modalClose.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
 
-        <!-- Tool 2: Can I Read This? -->
-        <div class="card">
-            <div class="card-header readability">📊</div>
-            <div class="card-content">
-                <h2>Can I Read This?</h2>
-                <p>Paste any Chinese text, upload your character list, and see the percentage you already know. Click on unknown characters to mark them known and export an updated list.</p>
-                <a href="/can_i_read_this" class="btn">Open Tool →</a>
-            </div>
-        </div>
-
-        <!-- Tool 3: Study Guide Generator -->
-        <div class="card">
-            <div class="card-header study">📘</div>
-            <div class="card-content">
-                <h2>Study Guide Generator</h2>
-                <p>Turn unknown characters (exported from Can I Read This?) into a personalized study guide. Includes example sentences from your text and compound words using your known characters.</p>
-                <a href="/study_guide" class="btn">Open Tool →</a>
-            </div>
-        </div>
-
-        <!-- Tool 4: Story Suggester -->
-        <div class="card">
-            <div class="card-header story">📖</div>
-            <div class="card-content">
-                <h2>Story Suggester</h2>
-                <p>Find stories you're ready to read based on characters you know. Stories are ranked by difficulty, with both occurrence and unique character percentages. Long texts can be split into chunks.</p>
-                <a href="/story_suggester" class="btn">Open Tool →</a>
-            </div>
-        </div>
-
-        <!-- Tool 5: Story Library -->
-        <div class="card">
-            <div class="card-header" style="background: linear-gradient(135deg, #ffa500, #ff6b6b);">📚</div>
-            <div class="card-content">
-                <h2>Story Library</h2>
-                <p>Manage your story database – view, add, edit, delete, and export stories. Build your personal collection of reading materials.</p>
-                <a href="/story_library" class="btn">Open Tool →</a>
-            </div>
-        </div>
-
-        <!-- Tool 6: Traditional Character Finder -->
-        <div class="card">
-            <div class="card-header traditional">📜</div>
-            <div class="card-content">
-                <h2>Traditional Finder</h2>
-                <p>Identify traditional characters in any text. Load your own list or use the built-in list. Perfect for recognizing characters that differ from simplified Chinese.</p>
-                <a href="/traditional_finder" class="btn">Open Tool →</a>
-            </div>
-        </div>
-
-    </div>
-        </div>
-
-        <!-- Tool 10: Curriculum Unifier -->
-        <div class="card">
-            <div class="card-header" style="background: linear-gradient(135deg, #667eea, #764ba2);">🔗</div>
-            <div class="card-content">
-                <h2>Curriculum Unifier</h2>
-                <p>Unified tool combining all curriculum builders. Select source, algorithm, and mode. Build paths, generate pools, or find clusters.</p>
-                <a href="/curriculum_unifier" class="btn">Open Tool →</a>
-            </div>
-        </div>
-=======
->>>>>>> origin/main
-    </div>
-
-    <div class="footer">
-        <p>All tools work offline and store your data locally in your browser. Export your progress to share or back up.</p>
-        <p>Recommended workflow: <strong>Mandarin Learner</strong> → <strong>Can I Read This?</strong> → <strong>Study Guide Generator</strong> → <strong>Story Suggester</strong> → learn → repeat. Use <strong>Story Library</strong> to manage your story collection.</p>
-    </div>
-</div>
-
-<script>
-    // Data Management Scripts
-    function timestampedFilename(base) {
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0,19).replace(/:/g, '-');
-        return `${base}_${dateStr}.json`;
-    }
-
-    // Known characters
-    document.getElementById('saveKnownBtn').addEventListener('click', () => {
-        window.mandarinState.saveToFile();
-    });
-    document.getElementById('backupKnownBtn').addEventListener('click', () => {
-        const chars = window.mandarinState.getCharacters();
-        const data = {
-            version: "1.0",
-            date: new Date().toISOString(),
-            characters: chars,
-            count: chars.length
-        };
-        const jsonStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = timestampedFilename('known_chars');
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-    let knownLoadMode = 'merge';
-    document.getElementById('loadKnownBtn').addEventListener('click', () => {
-        knownLoadMode = 'merge';
-        document.getElementById('loadKnownInput').click();
-    });
-    document.getElementById('replaceKnownBtn').addEventListener('click', () => {
-        knownLoadMode = 'replace';
-        document.getElementById('loadKnownInput').click();
-    });
-    document.getElementById('loadKnownInput').addEventListener('change', (e) => {
-        if (e.target.files.length) {
-            const merge = (knownLoadMode === 'merge');
-            window.mandarinState.loadFromFile(e.target.files[0], merge);
-            e.target.value = '';
-        }
-    });
-
-    // Stories
-    let storyDatabase = [];
-    function loadStoriesFromFile(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                const newStories = Array.isArray(data) ? data : [];
-                storyDatabase = newStories;
-                alert(`Loaded ${storyDatabase.length} stories.`);
-            } catch (err) {
-                alert(`Failed to load stories: ${err.message}`);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
             }
-        };
-        reader.readAsText(file, 'UTF-8');
-    }
-    function saveStoriesToFile() {
-        if (!storyDatabase.length) {
-            alert("No stories to save.");
-            return;
-        }
-        const jsonStr = JSON.stringify(storyDatabase, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `stories_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-    function backupStories() {
-        if (!storyDatabase.length) {
-            alert("No stories to backup.");
-            return;
-        }
-        const jsonStr = JSON.stringify(storyDatabase, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = timestampedFilename('stories');
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-    document.getElementById('saveStoriesBtn').addEventListener('click', saveStoriesToFile);
-    document.getElementById('backupStoriesBtn').addEventListener('click', backupStories);
-    document.getElementById('loadStoriesBtn').addEventListener('click', () => {
-        document.getElementById('loadStoriesInput').click();
-    });
-    document.getElementById('loadStoriesInput').addEventListener('change', (e) => {
-        if (e.target.files.length) {
-            loadStoriesFromFile(e.target.files[0]);
-            e.target.value = '';
-        }
-    });
-    // Try to load existing stories.json from data/ to populate storyDatabase for the home page.
-    fetch('/data/stories.json').then(r => r.ok ? r.json() : null).then(data => {
-        if (data && Array.isArray(data)) {
-            storyDatabase = data;
-            console.log(`Loaded ${storyDatabase.length} stories from data/stories.json.`);
-        }
-    }).catch(() => {});
-</script>
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
