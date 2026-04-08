@@ -5,7 +5,8 @@ app_server.log
 
 # Data files (can be large/generated)
 data/*.json
-*.json
+# Exception: source/ index files are part of the app
+!source/**/*.json
 
 # OS files
 .DS_Store

@@ -95,7 +95,7 @@ def index():
 @app.route('/wiki_curriculum_builder')
 def wiki_curriculum_builder():
     """Wiki Curriculum Builder page."""
-    return render_template('wiki_curriculum_builder.html')
+    return render_template('Curriculum_archive/wiki_curriculum_builder.html')
 
 
 @app.route('/<page_name>')
@@ -105,6 +105,10 @@ def serve_page(page_name):
     
     if template_path.exists():
         return render_template(f'{page_name}.html')
+    
+    archive_path = Path(__file__).parent / 'templates' / 'Curriculum_archive' / f'{page_name}.html'
+    if archive_path.exists():
+        return render_template(f'Curriculum_archive/{page_name}.html')
     
     return f"Page not found: {page_name}", 404
 

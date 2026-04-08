@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Curriculum Builder - Learning Path Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y=".9em" font-size="90">📚</text></svg>">
+    <script src="/static/js/shared_state.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header h1 { margin: 0 0 5px 0; }
+        .header p { margin: 0; opacity: 0.9; }
+        .home-btn { background-color: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; transition: background-color 0.3s; }
+        .home-btn:hover { background-color: rgba(255,255,255,0.3); }
+        .section { background: white; margin-bottom: 25px; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section h2 { margin-top: 0; color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        textarea { width: 100%; max-width: 100%; min-height: 150px; padding: 12px; font-size: 16px; font-family: monospace; border: 2px solid #ddd; border-radius: 8px; resize: vertical; margin: 10px 0; }
+        textarea:focus { outline: none; border-color: #667eea; }
+        button { background-color: #667eea; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 5px; transition: background-color 0.3s; }
+        button:hover { background-color: #5a67d8; }
+        button.secondary { background-color: #48bb78; }
+        button.secondary:hover { background-color: #38a169; }
+        button.danger { background-color: #f56565; }
+        button.danger:hover { background-color: #e53e3e; }
+        button.success { background-color: #4CAF50; }
+        button.success:hover { background-color: #45a049; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
+        .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; }
+        .file-status { background-color: #e3f2fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2196F3; }
+        .file-status.success { background-color: #e8f5e9; border-left-color: #4CAF50; }
+        .file-status.error { background-color: #ffebee; border-left-color: #f44336; }
+        .file-status.warning { background-color: #fff3e0; border-left-color: #FF9800; }
+        .lesson-list { list-style: none; padding: 0; margin: 0; }
+        .lesson-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; transition: background-color 0.3s; }
+        .lesson-item:hover { background-color: #f0f0f0; }
+        .lesson-item.optimized { background-color: #e8f5e9; border-color: #4CAF50; }
+        .lesson-item.final { background: #e8f5e9; border-color: #4CAF50; }
+        .lesson-number { font-size: 18px; font-weight: bold; color: #667eea; min-width: 30px; }
+        .lesson-item.final .lesson-number { font-size: 24px; }
+        .lesson-title { flex: 1; font-size: 16px; font-weight: bold; }
+        .lesson-stats { font-size: 16px; color: #666; min-width: 80px; text-align: right; }
+        .lesson-stats .remainder { color: #f44336; }
+        .info-text { color: #666; font-style: italic; margin: 10px 0; }
+        .error-box { background-color: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 15px; margin: 15px 0; }
+        .error-box h3 { margin: 0 0 10px 0; color: #c62828; }
+        .char-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .char-tile { background-color: #e0e7ff; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-family: monospace; }
+        .step-section { background: #f0f4ff; border: 2px solid #667eea; border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .step-section h3 { margin: 0 0 10px 0; color: #667eea; }
+        .saved-story-badge { background: #4CAF50; color: white; padding: 5px 12px; border-radius: 15px; font-size: 14px; display: inline-block; margin-bottom: 10px; }
+        /* Setup section */
+        .setup-section { background: white; margin-bottom: 25px; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 2px solid #667eea; }
+        .setup-section h2 { margin-top: 0; color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .setup-status { font-size: 20px; }
+        .setup-status.success { color: #4CAF50; }
+        .setup-status.error { color: #f44336; }
+        .check-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .check-item:last-child { border-bottom: none; }
+        .check-icon { margin-right: 10px; }
+        .check-icon.success { color: #4CAF50; }
+        .check-icon.error { color: #f44336; }
+        .check-icon.warning { color: #FF9800; }
+        .check-icon.info { color: #2196F3; }
+        /* Progress bar */
+        .progress-section { margin: 15px 0; }
+        .progress-bar { width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease; }
+        .progress-text { font-size: 14px; color: #666; margin-top: 5px; }
+        /* Modal styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { background-color: white; margin: 50px auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto; }
+        .modal-content h2 { margin-top: 0; color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        .modal-content label { display: block; margin: 15px 0 5px 0; font-weight: bold; color: #333; }
+        .modal-content input[type="text"] { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .modal-content input[type="text"]:focus { outline: none; border-color: #667eea; }
+        .close-modal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-modal:hover { color: #000; }
+        .setup-step { margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+        .setup-step strong { color: #667eea; }
+        /* Story picker modal */
+        .story-picker-list { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px; }
+        .story-picker-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .story-picker-item:hover { background-color: #f5f5f5; }
+        .story-picker-item:last-child { border-bottom: none; }
+        .story-picker-title { font-weight: bold; flex: 1; }
+        .story-picker-stats { font-size: 12px; color: #666; white-space: nowrap; margin-left: 10px; }
+        .sort-buttons { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+        .sort-btn { padding: 5px 10px; font-size: 12px; background: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 3px; cursor: pointer; }
+        .sort-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        @media (max-width: 600px) { body { padding: 10px; } .header { flex-direction: column; text-align: center; } .lesson-item { flex-direction: column; align-items: flex-start; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📚 Curriculum Builder</h1>
+            <p>Generate a learning path from your target text using the story library</p>
+        </div>
+        <a href="/" class="home-btn">🏠 Home</a>
+    </div>
+
+    <div class="section">
+        <h2>🔧 Setup <span id="setupStatusIcon" class="setup-status">❌</span></h2>
+        <button id="setupBtn" class="secondary">🔧 Setup</button>
+    </div>
+
+        <div class="section">
+        <h2>📝 Step 1: Your Target Text</h2>
+        <p>Paste the Chinese text you want to learn to read.</p>
+        <textarea id="targetText" placeholder="Paste your target Chinese text here...&#10;&#10;Example:&#10;我想学习中文，今天天气很好。"></textarea>
+        <div id="savedStoryBadge" class="saved-story-badge" style="display: none;"></div>
+        <div class="button-group">
+            <button id="saveToLibraryBtn">💾 Save to Library</button>
+            <button id="pickFromLibraryBtn" class="secondary">📚 Pick from Library</button>
+            <button id="loadExampleBtn" class="secondary">📄 Load Example</button>
+            <button id="clearBtn" class="danger">🗑️ Clear</button>
+        </div>
+        <div id="targetStatus" class="file-status">
+            Run Setup first to prepare the story library.
+        </div>
+    </div>
+
+    <div id="step2Section" class="step-section" style="display: none;">
+        <h3>🎯 Step 2: Build Your Plan</h3>
+        <div class="checkbox-group">
+            <input type="checkbox" id="remainderPermitted">
+            <label for="remainderPermitted">Remainder permitted</label>
+            <span class="info-text">(OFF = all target characters must be covered by story chain)</span>
+        </div>
+        <button id="generateBtn" class="secondary">🎯 Build plan to read: <span id="targetTitleDisplay"></span></button>
+    </div>
+
+    <div id="progressSection" class="section" style="display: none;">
+        <h2>📖 Building Path...</h2>
+        <div id="progressStatus" class="info-text">Initializing...</div>
+        <div class="progress-section">
+            <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width: 0%;"></div></div>
+            <div id="progressText" class="progress-text">Steps: 0 | Best jumpsize: -</div>
+        </div>
+        <ul id="lessonList" class="lesson-list"></ul>
+        <div class="button-group">
+            <button id="stopBtn" class="danger">🛑 Stop & Export</button>
+        </div>
+    </div>
+
+    <div id="resultsSection" class="section" style="display: none;">
+        <h2>📖 Learning Path Complete!</h2>
+        <div id="pathSummary" class="info-text"></div>
+        <ul id="finalLessonList" class="lesson-list"></ul>
+        <div class="button-group">
+            <button id="exportBtn">💾 Export JSON</button>
+            <button id="optimizeBtn" class="secondary">🔄 Optimize Further</button>
+        </div>
+    </div>
+
+    <div id="errorSection" class="section" style="display: none;">
+        <div class="error-box">
+            <h3>❌ Cannot Build Learning Path</h3>
+            <p id="errorMessage"></p>
+            <div id="unreachableChars"></div>
+        </div>
+    </div>
+
+    <!-- Save to Library Modal -->
+    <div id="saveModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-modal="saveModal">&times;</span>
+            <h2>💾 Save Target to Library</h2>
+            <p class="info-text">Enter a title and source for your target text. This will be saved so you can track your progress.</p>
+            <label for="storyTitle">Title (required):</label>
+            <input type="text" id="storyTitle" placeholder="e.g., My Target Article">
+            <label for="storySource">Source (optional):</label>
+            <input type="text" id="storySource" placeholder="e.g., Textbook, Website, Article">
+            <div class="button-group" style="margin-top: 20px;">
+                <button id="confirmSaveBtn">💾 Save</button>
+                <button id="cancelSaveBtn" class="danger">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Modal -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-modal="setupModal">&times;</span>
+            <h2>🔧 Setup Instructions</h2>
+            <p>This will set up the files needed for the Curriculum Builder to work efficiently.</p>
+            
+            <div class="setup-step">
+                <strong>Step 1:</strong> Create a folder called <code>user_data</code> in your project root directory (same level as <code>data/</code> folder).
+            </div>
+            
+            <div class="setup-step">
+                <strong>Step 2:</strong> Click the download button below and save the file to the <code>user_data</code> folder.
+            </div>
+            
+            <div class="setup-step">
+                <strong>File location:</strong> <code>user_data/stories_data.json</code>
+            </div>
+            
+            <button id="downloadStoriesDataBtn" class="secondary">📥 Download stories_data.json</button>
+            
+            <div id="setupCheckResults" style="margin-top: 20px;"></div>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button id="closeSetupBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Picker Modal -->
+    <div id="storyPickerModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-modal" data-modal="storyPickerModal">&times;</span>
+            <h2>📚 Pick a Story from Library</h2>
+            <input type="text" id="storyPickerSearch" placeholder="Search by title or ID...">
+            <div class="sort-buttons">
+                <button class="sort-btn active" data-sort="newest">Newest First</button>
+                <button class="sort-btn" data-sort="alpha">A-Z</button>
+                <button class="sort-btn" data-sort="chars">Fewest Chars</button>
+                <button class="sort-btn" data-sort="jump">Smallest Jump</button>
+            </div>
+            <div id="storyPickerList" class="story-picker-list"></div>
+            <div class="button-group" style="margin-top: 15px;">
+                <button id="closeStoryPickerBtn" class="danger">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stories = [];
+        let savedStory = null;
+        let curriculum = null;
+        let setupComplete = false;
+        let stopRequested = false;
+        let frequencyTable = new Map();
+        let frequencyScoreTable = [];
+        let frequencyScoreTableSize = 0;
+        let totalStories = 0;
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function extractCharacters(text) {
+            const chineseRegex = /[\u4e00-\u9fff]/g;
+            const matches = text.match(chineseRegex);
+            if (!matches) return [];
+            return [...new Set(matches)];
+        }
+
+        function updateTargetStatus(message, isSuccess = false, isError = false, isWarning = false) {
+            const statusDiv = document.getElementById('targetStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = 'file-status';
+            if (isSuccess) statusDiv.classList.add('success');
+            if (isError) statusDiv.classList.add('error');
+            if (isWarning) statusDiv.classList.add('warning');
+        }
+
+        function updateSetupStatusIcon(success) {
+            const icon = document.getElementById('setupStatusIcon');
+            if (success) {
+                icon.textContent = '✅';
+                icon.className = 'setup-status success';
+            } else {
+                icon.textContent = '❌';
+                icon.className = 'setup-status error';
+            }
+        }
+
+        function buildFrequencyTable() {
+            frequencyTable.clear();
+            for (const story of stories) {
+                const chars = story.characters || [];
+                for (const char of chars) {
+                    frequencyTable.set(char, (frequencyTable.get(char) || 0) + 1);
+                }
+            }
+            totalStories = stories.length;
+            console.log(`Built frequency table with ${frequencyTable.size} unique characters`);
+        }
+
+        function buildFrequencyScoreTable(knownSet) {
+            const entries = [];
+            for (const [char, count] of frequencyTable) {
+                if (!knownSet.has(char)) {
+                    entries.push({ char: char, appearanceCount: count });
+                }
+            }
+            entries.sort((a, b) => a.appearanceCount - b.appearanceCount);
+            frequencyScoreTable = entries.map((entry, index) => ({
+                ...entry,
+                id: index + 1
+            }));
+            frequencyScoreTableSize = frequencyScoreTable.length;
+            console.log(`Built frequency score table with ${frequencyScoreTableSize} characters`);
+        }
+
+        async function runSetupCheck() {
+            const results = [];
+            
+            try {
+                const response = await fetch('user_data/stories_data.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        results.push({ icon: '✅', text: `user_data/stories_data.json - Found (${data.length} stories)`, type: 'success' });
+                    } else {
+                        results.push({ icon: '❌', text: 'user_data/stories_data.json - Invalid (empty or wrong format)', type: 'error' });
+                    }
+                } else {
+                    results.push({ icon: '❌', text: 'user_data/stories_data.json - Missing', type: 'error' });
+                }
+            } catch (e) {
+                results.push({ icon: '❌', text: 'user_data/stories_data.json - Missing or error loading', type: 'error' });
+            }
+            
+            try {
+                const response = await fetch('/data/stories.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = Array.isArray(data) ? data.length : 0;
+                    results.push({ icon: 'ℹ️', text: `data/stories.json - Found (${count} stories, source file)`, type: 'info' });
+                } else {
+                    results.push({ icon: '⚠️', text: 'data/stories.json - Not found', type: 'warning' });
+                }
+            } catch (e) {
+                results.push({ icon: '⚠️', text: 'data/stories.json - Not found', type: 'warning' });
+            }
+            
+            if (savedStory) {
+                results.push({ icon: 'ℹ️', text: `Target: "${savedStory.title}" (saved)`, type: 'info' });
+            } else {
+                results.push({ icon: 'ℹ️', text: 'Target: Not saved', type: 'info' });
+            }
+            
+            if (window.mandarinState) {
+                const count = window.mandarinState.getCount();
+                results.push({ icon: 'ℹ️', text: `Known characters: ${count}`, type: 'info' });
+            } else {
+                results.push({ icon: 'ℹ️', text: 'Known characters: 0 (shared state not loaded)', type: 'info' });
+            }
+            
+            const resultsDiv = document.getElementById('setupCheckResults');
+            resultsDiv.innerHTML = results.map(r => 
+                `<div class="check-item"><span class="check-icon ${r.type}">${r.icon}</span>${r.text}</div>`
+            ).join('');
+            
+            const storiesDataOk = results.some(r => r.type === 'success' && r.text.includes('stories_data.json'));
+            setupComplete = storiesDataOk;
+            updateSetupStatusIcon(setupComplete);
+            
+            if (storiesDataOk) {
+                resultsDiv.innerHTML += '<div class="check-item" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #4CAF50;"><span class="check-icon success">✅</span><strong>Setup complete - Curriculum Builder is ready!</strong></div>';
+            } else {
+                resultsDiv.innerHTML += '<div class="check-item" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #f44336;"><span class="check-icon error">❌</span><strong>Setup required - Download stories_data.json to user_data/ folder</strong></div>';
+            }
+            
+            return setupComplete;
+        }
+
+        function loadStories() {
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Timeout loading stories'));
+                }, 60000);
+
+                fetch('user_data/stories_data.json')
+                    .then(response => {
+                        clearTimeout(timeout);
+                        if (!response.ok) throw new Error('user_data/stories_data.json not found');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data || !Array.isArray(data)) throw new Error('Invalid stories_data.json format');
+                        stories = data;
+                        stories = stories.map(s => ({
+                            ...s,
+                            characters: typeof s.characters === 'string' ? s.characters.split('') : (s.characters || [])
+                        }));
+                        buildFrequencyTable();
+                        console.log(`Loaded ${stories.length} stories`);
+                        resolve(stories);
+                    })
+                    .catch(err => {
+                        clearTimeout(timeout);
+                        reject(err);
+                    });
+            });
+        }
+
+        function calculateScore(targets, nonTargets, targetCharsArray, remainingFreq) {
+            const jumpsize = targets + nonTargets;
+            if (jumpsize === 0) return -Infinity;
+            
+            // Component A: Jumpsize Reward
+            const scoreA = 10000 / Math.max(jumpsize, 1);
+            
+            // Component B: Non-Target Penalty (reduced)
+            const scoreB = nonTargets === 0 ? 50000 : -5000 * nonTargets;
+            
+            // Component C: Target Count Reward (less steep)
+            const scoreC = (5 - targets) * 1000;
+            
+            // Component D: Coverage Ratio (unchanged)
+            const scoreD = (targets / jumpsize) * 2000;
+            
+            // Component E: Target Count Bonus (unchanged)
+            const scoreE = 6000 - (targets * 1000);
+            
+            // Component F: NonTarget Penalty (unchanged)
+            const scoreF = 2000 - (nonTargets * 2000);
+            
+            // Component 4: Enhanced Frequency Bonus
+            let score4 = 0;
+            if (targetCharsArray && targetCharsArray.length > 0 && frequencyScoreTableSize > 0) {
+                for (const char of targetCharsArray) {
+                    const entry = frequencyScoreTable.find(e => e.char === char);
+                    if (entry) {
+                        score4 += ((frequencyScoreTableSize - entry.id + 1) / frequencyScoreTableSize) * (5000 / jumpsize);
+                    }
+                }
+            }
+            
+            // Component G: Dynamic Remaining Target Frequency Bonus (rank-based)
+            let scoreG = 0;
+            if (remainingFreq && targetCharsArray) {
+                for (const char of targetCharsArray) {
+                    scoreG += (remainingFreq[char] || 0);
+                }
+                scoreG *= 1000;
+            }
+            
+            const rawScore = scoreA + scoreB + scoreC + scoreD + scoreE + scoreF + score4 + scoreG;
+            const efficiency = targets / jumpsize;
+            return rawScore * efficiency;
+        }
+
+        function findStoryForStep(knownSet, remainingTargets, remainingFreq, minTargets = 1, maxJumpsize = 100) {
+            let bestStory = null;
+            let bestScore = -Infinity;
+            let bestJumpsize = Infinity;
+
+            for (const story of stories) {
+                const storyChars = new Set(story.characters || []);
+                const newChars = [...storyChars].filter(c => !knownSet.has(c));
+                const targets = newChars.filter(c => remainingTargets.has(c));
+                const nonTargets = newChars.length - targets.length;
+                const jumpsize = newChars.length;
+                
+                if (targets.length >= minTargets && jumpsize <= maxJumpsize) {
+                    const score = calculateScore(targets.length, nonTargets, targets, remainingFreq);
+                    if (score > bestScore || (score === bestScore && jumpsize < bestJumpsize)) {
+                        bestScore = score;
+                        bestStory = story;
+                        bestJumpsize = jumpsize;
+                    }
+                }
+            }
+
+            return bestStory ? { story: bestStory, jumpsize: bestJumpsize, score: bestScore } : null;
+        }
+
+        function renderLessonItem(lesson, index) {
+            const li = document.createElement('li');
+            li.className = 'lesson-item' + (lesson.step === '🎉' ? ' final' : '');
+            li.id = `lesson-${index}`;
+            
+            const stepNum = document.createElement('span');
+            stepNum.className = 'lesson-number';
+            stepNum.textContent = lesson.step + '.';
+            
+            const title = document.createElement('span');
+            title.className = 'lesson-title';
+            title.textContent = lesson.title || lesson.story?.title || 'Unknown';
+            
+            const stats = document.createElement('span');
+            stats.className = 'lesson-stats';
+            const targets = lesson.targetCharsCovered?.length || 0;
+            const nonTargets = lesson.nonTargetChars || 0;
+            stats.innerHTML = `${lesson.jumpsize} <span class="remainder">${lesson.remainder}</span> <span class="breakdown">(${targets}T, ${nonTargets}N)</span>`;
+            
+            li.appendChild(stepNum);
+            li.appendChild(title);
+            li.appendChild(stats);
+            
+            return li;
+        }
+
+        function updateLessonDisplay(lesson, index) {
+            let li = document.getElementById(`lesson-${index}`);
+            if (!li) {
+                li = renderLessonItem(lesson, index);
+                document.getElementById('lessonList').appendChild(li);
+            } else {
+                li.className = 'lesson-item optimized';
+                const targets = lesson.targetCharsCovered?.length || 0;
+                const nonTargets = lesson.nonTargetChars || 0;
+                li.querySelector('.lesson-stats').innerHTML = `${lesson.jumpsize} <span class="remainder">${lesson.remainder}</span> <span class="breakdown">(${targets}T, ${nonTargets}N)</span>`;
+            }
+        }
+
+        async function generateCurriculumAsync(targetText, knownSet, remainderPermitted) {
+            const targetChars = new Set(extractCharacters(targetText));
+            const remainingTargets = new Set([...targetChars].filter(c => !knownSet.has(c)));
+            const lessons = [];
+            let currentKnown = new Set(knownSet);
+            let step = 1;
+            const totalTargets = remainingTargets.size;
+            
+            let maxJumpsize = 5;  // Start with ideal limit
+            let limitLiftedCount = 0;
+
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('progressStatus').textContent = `Building path for ${totalTargets} target characters...`;
+
+            while (remainingTargets.size > 0 && !stopRequested) {
+                buildFrequencyScoreTable(currentKnown);
+                
+                const remainingFreq = {};
+                const remainingList = [...remainingTargets];
+                remainingList.sort((a, b) => (frequencyTable.get(b) || 0) - (frequencyTable.get(a) || 0));
+                let rank = 1;
+                for (const char of remainingList) {
+                    remainingFreq[char] = rank++;
+                }
+                
+                const result = findStoryForStep(currentKnown, remainingTargets, remainingFreq, 1, maxJumpsize);
+                
+                if (!result) {
+                    // Try to find any story without jumpsize limit
+                    const anyResult = findStoryForStep(currentKnown, remainingTargets, remainingFreq, 1, 1000);
+                    
+                    if (!anyResult) {
+                        const unreachable = [...remainingTargets];
+                        return { success: false, unreachable: unreachable, lessons: lessons };
+                    }
+                    
+                    // Limit was lifted - update status
+                    maxJumpsize++;
+                    limitLiftedCount++;
+                    const liftStatus = limitLiftedCount > 0 ? ` | Limit lifted: ${limitLiftedCount}x` : '';
+                    document.getElementById('progressStatus').innerHTML = 
+                        `<span style="color: #FF9800;">Could not find story with jumpsize ≤ ${maxJumpsize - 1}, lifting limit to ${maxJumpsize}${liftStatus}</span>`;
+                    
+                    // Try again with new limit
+                    await new Promise(r => setTimeout(r, 50));
+                    continue;
+                }
+
+                const storyChars = new Set(result.story.characters || []);
+                const newChars = [...storyChars].filter(c => !currentKnown.has(c));
+                const targets = [...remainingTargets].filter(c => storyChars.has(c));
+                const nonTargets = newChars.length - targets.length;
+
+                for (const c of newChars) currentKnown.add(c);
+                for (const c of targets) remainingTargets.delete(c);
+
+                const lesson = {
+                    step: step,
+                    story: result.story,
+                    jumpsize: newChars.length,
+                    remainder: remainingTargets.size,
+                    newChars: newChars,
+                    targetCharsCovered: targets,
+                    nonTargetChars: nonTargets
+                };
+                lessons.push(lesson);
+
+                maxJumpsize = 5;  // Reset limit after each step
+
+                // Update display
+                updateLessonDisplay(lesson, step - 1);
+                
+                const progress = ((totalTargets - remainingTargets.size) / totalTargets) * 100;
+                const biggestJump = Math.max(...lessons.map(l => l.jumpsize), 0);
+                const liftStatus = limitLiftedCount > 0 ? ` | Limit lifted: ${limitLiftedCount}x` : '';
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressText').textContent = 
+                    `Steps: ${step} | Max jumpsize: ${biggestJump}${liftStatus} | Remaining: ${remainingTargets.size}`;
+                
+                // Yield to UI
+                await new Promise(r => setTimeout(r, 10));
+                
+                step++;
+                if (step > 1000) {
+                    return { success: false, error: 'Maximum steps exceeded', lessons: lessons };
+                }
+            }
+
+            if (remainderPermitted || remainingTargets.size === 0) {
+                lessons.push({
+                    step: '🎉',
+                    title: savedStory ? savedStory.title : 'Target Text',
+                    content: targetText,
+                    jumpsize: 0,
+                    remainder: remainingTargets.size,
+                    targetCharsCovered: [],
+                    nonTargetChars: 0
+                });
+            }
+
+            return { success: true, lessons: lessons, limitLiftedCount: limitLiftedCount };
+        }
+
+        async function optimizePath(lessons, knownSet, targetChars) {
+            let improved = true;
+            let iterations = 0;
+            const maxIterations = 1000;
+            
+            // Recalculate remainder for all lessons
+            function recalculateRemainders() {
+                const targetSet = new Set(targetChars);
+                for (let i = 0; i < lessons.length; i++) {
+                    if (i > 0) {
+                        for (const c of lessons[i].targetCharsCovered) {
+                            targetSet.delete(c);
+                        }
+                    }
+                    lessons[i].remainder = targetSet.size;
+                }
+            }
+            
+            while (improved && !stopRequested && iterations < maxIterations) {
+                improved = false;
+                iterations++;
+                
+                // Find biggest jumpsize (excluding final step)
+                let biggestIndex = -1;
+                let biggestJumpsize = 0;
+                
+                for (let i = 0; i < lessons.length - 1; i++) {
+                    if (lessons[i].jumpsize > biggestJumpsize) {
+                        biggestJumpsize = lessons[i].jumpsize;
+                        biggestIndex = i;
+                    }
+                }
+                
+                if (biggestIndex === -1) break;
+                
+                const lesson = lessons[biggestIndex];
+                const beforeKnown = new Set(knownSet);
+                for (let i = 0; i < biggestIndex; i++) {
+                    for (const c of lessons[i].newChars) beforeKnown.add(c);
+                }
+                
+                // Find alternative story
+                const remainingTargets = new Set(targetChars);
+                for (let i = 0; i < biggestIndex; i++) {
+                    for (const c of lessons[i].targetCharsCovered) remainingTargets.delete(c);
+                }
+                
+                buildFrequencyScoreTable(beforeKnown);
+                
+                const remainingFreqOpt = {};
+                const remainingListOpt = [...remainingTargets];
+                remainingListOpt.sort((a, b) => (frequencyTable.get(b) || 0) - (frequencyTable.get(a) || 0));
+                let rankOpt = 1;
+                for (const char of remainingListOpt) {
+                    remainingFreqOpt[char] = rankOpt++;
+                }
+                
+                const result = findStoryForStep(beforeKnown, remainingTargets, remainingFreqOpt, 1);
+                
+                if (result && result.jumpsize < lesson.jumpsize) {
+                    // Recalculate new chars and targets
+                    const storyChars = new Set(result.story.characters || []);
+                    const newChars = [...storyChars].filter(c => !beforeKnown.has(c));
+                    const targets = [...remainingTargets].filter(c => storyChars.has(c));
+                    const nonTargets = newChars.length - targets.length;
+                    
+                    // Update lesson
+                    lessons[biggestIndex] = {
+                        ...lesson,
+                        story: result.story,
+                        jumpsize: newChars.length,
+                        newChars: newChars,
+                        targetCharsCovered: targets,
+                        nonTargetChars: nonTargets
+                    };
+                    
+                    // Recalculate all remainders after this change
+                    recalculateRemainders();
+                    
+                    // Update display
+                    updateLessonDisplay(lessons[biggestIndex], biggestIndex);
+                    
+                    // Update progress text
+                    const biggest = Math.max(...lessons.slice(0, -1).map(l => l.jumpsize));
+                    document.getElementById('progressText').textContent = 
+                        `Optimizing (${iterations}) | Best jumpsize: ${biggest}`;
+                    
+                    improved = true;
+                    await new Promise(r => setTimeout(r, 5));
+                }
+            }
+            
+            return { iterations, improved };
+        }
+
+        function showResults(result) {
+            document.getElementById('progressSection').style.display = 'none';
+            
+            if (!result.success) {
+                document.getElementById('errorSection').style.display = 'block';
+                document.getElementById('errorMessage').textContent = 
+                    `Cannot reach ${result.unreachable.length} character(s) from the story library.`;
+                const unreachableDiv = document.getElementById('unreachableChars');
+                unreachableDiv.innerHTML = '<strong>Unreachable characters:</strong> ' + 
+                    result.unreachable.map(c => `<span class="char-tile">${c}</span>`).join(' ');
+                return;
+            }
+
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            const totalSteps = result.lessons.filter(l => l.jumpsize > 0).length;
+            const totalNewChars = result.lessons.reduce((sum, l) => sum + (l.jumpsize || 0), 0);
+            const targetUnknowns = result.lessons.reduce((sum, l) => sum + (l.targetCharsCovered?.length || 0), 0);
+            const biggestJumpsize = Math.max(...result.lessons.slice(0, -1).map(l => l.jumpsize || 0));
+            const limitLiftedCount = result.limitLiftedCount || 0;
+            const liftStatus = limitLiftedCount > 0 ? ` | Limit lifted: ${limitLiftedCount}x` : '';
+
+            document.getElementById('pathSummary').textContent = 
+                `${totalSteps} lessons | ${totalNewChars} total new characters | ${targetUnknowns} target unknowns | Max jumpsize: ${biggestJumpsize}${liftStatus}`;
+
+            const lessonList = document.getElementById('finalLessonList');
+            lessonList.innerHTML = '';
+            for (let i = 0; i < result.lessons.length; i++) {
+                const lesson = result.lessons[i];
+                const li = document.createElement('li');
+                li.className = 'lesson-item' + (lesson.step === '🎉' ? ' final' : '');
+                
+                const stepNum = document.createElement('span');
+                stepNum.className = 'lesson-number';
+                stepNum.textContent = lesson.step + '.';
+                
+                const title = document.createElement('span');
+                title.className = 'lesson-title';
+                title.textContent = lesson.title || lesson.story?.title || 'Unknown';
+                
+                const stats = document.createElement('span');
+                stats.className = 'lesson-stats';
+                stats.innerHTML = `${lesson.jumpsize} <span class="remainder">${lesson.remainder}</span>`;
+                
+                li.appendChild(stepNum);
+                li.appendChild(title);
+                li.appendChild(stats);
+                lessonList.appendChild(li);
+            }
+
+            curriculum = {
+                target: document.getElementById('targetText').value,
+                targetTitle: savedStory ? savedStory.title : 'Unknown',
+                targetUnknowns: targetUnknowns,
+                remainderPermitted: document.getElementById('remainderPermitted').checked,
+                lessons: result.lessons
+            };
+        }
+
+        async function generatePath() {
+            const targetText = document.getElementById('targetText').value.trim();
+            if (!targetText) {
+                updateTargetStatus('Please enter a target text.', false, true);
+                return;
+            }
+
+            if (!setupComplete) {
+                updateTargetStatus('Please run Setup first to download stories_data.json to user_data/', false, true);
+                return;
+            }
+
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+            const remainderPermitted = document.getElementById('remainderPermitted').checked;
+            
+            stopRequested = false;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('lessonList').innerHTML = '';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('optimizeBtn').style.display = 'inline-block';
+
+            updateTargetStatus('Loading stories and building path...', false, false, true);
+
+            try {
+                await loadStories();
+                
+                if (stories.length === 0) {
+                    updateTargetStatus('No stories found in library.', false, true);
+                    return;
+                }
+
+                const targetChars = new Set(extractCharacters(targetText));
+                updateTargetStatus('Building path...', false, false, true);
+
+                // Phase 1: Build initial path
+                const initialResult = await generateCurriculumAsync(targetText, knownSet, remainderPermitted);
+                
+                if (stopRequested) {
+                    showResults({ success: true, lessons: initialResult.lessons });
+                    updateTargetStatus('Path building stopped. Export when ready.', true);
+                    return;
+                }
+
+                if (!initialResult.success) {
+                    showResults(initialResult);
+                    return;
+                }
+
+                updateTargetStatus('Initial path complete! Optimizing...', false, false, true);
+
+                // Phase 2: Optimize
+                const optimizeResult = await optimizePath(initialResult.lessons, knownSet, targetChars);
+                
+                if (stopRequested) {
+                    showResults({ success: true, lessons: initialResult.lessons });
+                    updateTargetStatus('Optimization stopped. Export when ready.', true);
+                    return;
+                }
+
+                showResults({ success: true, lessons: initialResult.lessons });
+                updateTargetStatus(`Path complete! ${optimizeResult.iterations} optimizations made.`, true);
+
+            } catch (err) {
+                updateTargetStatus(`Error: ${err.message}`, false, true);
+            }
+        }
+
+        async function optimizeFurther() {
+            if (!curriculum || !curriculum.lessons) return;
+            
+            stopRequested = false;
+            document.getElementById('optimizeBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('progressStatus').textContent = 'Optimizing further...';
+            document.getElementById('progressFill').style.width = '100%';
+            
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+            const targetChars = new Set(extractCharacters(document.getElementById('targetText').value));
+            
+            const optimizeResult = await optimizePath(curriculum.lessons, knownSet, targetChars);
+            
+            document.getElementById('optimizeBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('progressSection').style.display = 'none';
+            
+            showResults({ success: true, lessons: curriculum.lessons });
+            updateTargetStatus(`Optimization complete! ${optimizeResult.iterations} more optimizations.`, true);
+        }
+
+        function stopBuilding() {
+            stopRequested = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('optimizeBtn').style.display = 'none';
+            updateTargetStatus('Stopping...', false, false, true);
+        }
+
+        function loadExample() {
+            const example = '我想学习中文，今天天气很好，我们去公园散步，看见了很多人在跑步。';
+            document.getElementById('targetText').value = example;
+            document.getElementById('storyTitle').value = '我的目标文章';
+            document.getElementById('storySource').value = 'Example';
+            updateTargetStatus('Example loaded. Fill in the title and click "Save to Library".', true);
+        }
+
+        function clearAll() {
+            document.getElementById('targetText').value = '';
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('step2Section').style.display = 'none';
+            document.getElementById('savedStoryBadge').style.display = 'none';
+            document.getElementById('remainderPermitted').checked = false;
+            savedStory = null;
+            curriculum = null;
+            stopRequested = true;
+            updateTargetStatus('Run Setup first to prepare the story library.');
+        }
+
+        function openSaveModal() {
+            const targetText = document.getElementById('targetText').value.trim();
+            if (!targetText) {
+                updateTargetStatus('Please enter a target text first.', false, true);
+                return;
+            }
+            document.getElementById('saveModal').style.display = 'block';
+            document.getElementById('storyTitle').focus();
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').style.display = 'none';
+        }
+
+        function openSetupModal() {
+            document.getElementById('setupModal').style.display = 'block';
+            runSetupCheck();
+        }
+
+        function closeSetupModal() {
+            document.getElementById('setupModal').style.display = 'none';
+            if (setupComplete) updateSetupStatusIcon(true);
+        }
+
+        let currentSort = 'newest';
+        let libraryStories = [];
+
+        function openStoryPicker() {
+            if (libraryStories.length === 0) {
+                document.getElementById('storyPickerList').innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Loading stories...</div>';
+                loadStories().then(() => {
+                    libraryStories = stories.map(s => ({
+                        ...s,
+                        jumpSize: (s.characters || []).filter(c => !(window.mandarinState ? window.mandarinState.has(c) : false)).length
+                    }));
+                    renderStoryPicker();
+                });
+            }
+            currentSort = 'newest';
+            updateSortButtons();
+            document.getElementById('storyPickerSearch').value = '';
+            document.getElementById('storyPickerModal').style.display = 'block';
+            renderStoryPicker();
+        }
+
+        function closeStoryPicker() {
+            document.getElementById('storyPickerModal').style.display = 'none';
+        }
+
+        function renderStoryPicker() {
+            const search = document.getElementById('storyPickerSearch').value.toLowerCase();
+            const knownSet = window.mandarinState ? new Set(window.mandarinState.getCharacters()) : new Set();
+            
+            let filtered = libraryStories.filter(s => {
+                const matchId = s.id.toString().includes(search);
+                const matchTitle = (s.title || '').toLowerCase().includes(search);
+                return matchId || matchTitle;
+            });
+
+            // Sort
+            if (currentSort === 'newest') {
+                filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+            } else if (currentSort === 'alpha') {
+                filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            } else if (currentSort === 'chars') {
+                filtered.sort((a, b) => (a.characters?.length || 0) - (b.characters?.length || 0));
+            } else if (currentSort === 'jump') {
+                filtered.sort((a, b) => (a.jumpSize || 0) - (b.jumpSize || 0));
+            }
+
+            const list = document.getElementById('storyPickerList');
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No stories found</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(s => `
+                <div class="story-picker-item" data-id="${s.id}">
+                    <span class="story-picker-title">${escapeHtml(s.title || 'Untitled')}</span>
+                    <span class="story-picker-stats">${s.characters?.length || 0} chars | jump: ${s.jumpSize || 0}</span>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            list.querySelectorAll('.story-picker-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = parseInt(item.dataset.id);
+                    const story = libraryStories.find(s => s.id === id);
+                    if (story) {
+                        selectStoryFromLibrary(story);
+                    }
+                });
+            });
+        }
+
+        function updateSortButtons() {
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === currentSort);
+            });
+        }
+
+        function selectStoryFromLibrary(story) {
+            // Get full story content from stories.json
+            fetch('/data/stories.json')
+                .then(response => response.json())
+                .then(allStories => {
+                    const fullStory = allStories.find(s => s.id === story.id);
+                    const content = fullStory ? fullStory.content : '';
+                    
+                    document.getElementById('targetText').value = content;
+                    document.getElementById('storyTitle').value = story.title || 'Untitled';
+                    document.getElementById('storySource').value = story.source || '';
+                    
+                    closeStoryPicker();
+                    updateTargetStatus(`Selected: "${story.title}". Click "Save to Library" then "Build plan".`, true);
+                })
+                .catch(() => {
+                    // Fallback: just use what we have
+                    document.getElementById('targetText').value = story.title;
+                    document.getElementById('storyTitle').value = story.title || 'Untitled';
+                    closeStoryPicker();
+                    updateTargetStatus(`Selected: "${story.title}". Note: Could not load full content.`, true);
+                });
+        }
+
+        function confirmSave() {
+            const title = document.getElementById('storyTitle').value.trim();
+            const source = document.getElementById('storySource').value.trim();
+            const content = document.getElementById('targetText').value.trim();
+
+            if (!title) {
+                alert('Please enter a title for your target text.');
+                return;
+            }
+
+            savedStory = {
+                id: Date.now(),
+                title: title,
+                source: source || 'User Target',
+                content: content,
+                characters: extractCharacters(content)
+            };
+
+            document.getElementById('savedStoryBadge').textContent = `✓ Saved: ${title}`;
+            document.getElementById('savedStoryBadge').style.display = 'inline-block';
+            document.getElementById('targetTitleDisplay').textContent = title;
+            document.getElementById('step2Section').style.display = 'block';
+            
+            closeSaveModal();
+            updateTargetStatus(`Target saved as "${title}". Click "Build plan" to generate your learning path.`, true);
+        }
+
+        function downloadStoriesData() {
+            fetch('/data/stories_data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error('File not found');
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'stories_data.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                })
+                .catch(err => {
+                    alert('Error: Could not download stories_data.json.\n\nMake sure it exists in the data/ folder.');
+                });
+        }
+
+        function exportJSON() {
+            if (!curriculum) return;
+            const jsonStr = JSON.stringify(curriculum, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const title = curriculum.targetTitle || 'unknown';
+            const safeTitle = title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 50);
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+            a.download = `curriculum_${safeTitle}_${timestamp}.json`;
+            a.href = url;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Event listeners
+        document.getElementById('setupBtn').addEventListener('click', openSetupModal);
+        document.getElementById('saveToLibraryBtn').addEventListener('click', openSaveModal);
+        document.getElementById('pickFromLibraryBtn').addEventListener('click', openStoryPicker);
+        document.getElementById('generateBtn').addEventListener('click', generatePath);
+        document.getElementById('loadExampleBtn').addEventListener('click', loadExample);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+        document.getElementById('exportBtn').addEventListener('click', exportJSON);
+        document.getElementById('stopBtn').addEventListener('click', stopBuilding);
+        document.getElementById('optimizeBtn').addEventListener('click', optimizeFurther);
+        document.getElementById('downloadStoriesDataBtn').addEventListener('click', downloadStoriesData);
+
+        // Story picker event listeners
+        document.getElementById('storyPickerSearch').addEventListener('input', renderStoryPicker);
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSort = btn.dataset.sort;
+                updateSortButtons();
+                renderStoryPicker();
+            });
+        });
+        document.getElementById('closeStoryPickerBtn').addEventListener('click', closeStoryPicker);
+
+        // Modal event listeners
+        document.getElementById('confirmSaveBtn').addEventListener('click', confirmSave);
+        document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveModal);
+        document.getElementById('closeSetupBtn').addEventListener('click', closeSetupModal);
+        
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.getAttribute('data-modal');
+                if (modalId === 'saveModal') closeSaveModal();
+                if (modalId === 'setupModal') closeSetupModal();
+                if (modalId === 'storyPickerModal') closeStoryPicker();
+            });
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target.id === 'saveModal') closeSaveModal();
+            if (e.target.id === 'storyPickerModal') closeStoryPicker();
+            if (e.target.id === 'setupModal') closeSetupModal();
+        });
+
+        document.getElementById('storyTitle').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('storySource').focus();
+        });
+        document.getElementById('storySource').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') confirmSave();
+        });
+
+        runSetupCheck();
+    </script>
+</body>
+</html>
