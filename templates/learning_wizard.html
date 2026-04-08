@@ -621,29 +621,85 @@
 
         .hidden { display: none !important; }
 
-        /* NEW: Lesson Card Styles */
+        /* Curriculum Collapsible Lessons */
         .lesson-card {
             background: white;
             border-radius: 15px;
-            padding: 25px;
-            margin: 25px 0;
+            margin: 20px 0;
             border: 2px solid #eee;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
         }
 
         .lesson-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--primary);
+            padding: 20px 25px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+            transition: background 0.2s;
+        }
+
+        .lesson-header:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+        }
+
+        .lesson-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .lesson-header h4 {
             margin: 0;
             color: var(--primary);
             font-size: 1.2rem;
+        }
+
+        .lesson-expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+            color: #666;
+        }
+
+        .lesson-card.expanded .lesson-expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .lesson-card.expanded .lesson-content {
+            display: block;
+        }
+
+        .lesson-content {
+            display: none;
+            padding: 25px;
+            border-top: 1px solid #eee;
+        }
+
+        .lesson-stats-bar {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: #f0f7ff;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .lesson-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lesson-stat-label {
+            color: #666;
+        }
+
+        .lesson-stat-value {
+            font-weight: bold;
+            color: var(--primary);
         }
 
         .target-badge {
@@ -655,33 +711,108 @@
             font-weight: 600;
         }
 
-        .overlap-banner {
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            border-radius: 10px;
-            padding: 12px 18px;
-            margin: 15px 0;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-left: 4px solid var(--primary);
-        }
-
-        .overlap-icon {
-            font-size: 1.5rem;
-        }
-
-        .study-section, .target-section, .words-section, .stroke-section, .read-section {
+        .study-section, .words-section, .stroke-section, .read-section {
             margin: 20px 0;
-            padding: 15px;
+            padding: 20px;
             background: #f9f9f9;
-            border-radius: 10px;
+            border-radius: 12px;
         }
 
-        .study-section h5, .target-section h5, .words-section h5, .stroke-section h5, .read-section h5 {
-            margin: 0 0 12px 0;
+        .study-section h5, .words-section h5, .stroke-section h5, .read-section h5 {
+            margin: 0 0 15px 0;
             color: #333;
             font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
+
+        .char-section {
+            margin: 25px 0;
+        }
+
+        .char-detail {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid #eee;
+        }
+
+        .char-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .char-large {
+            font-size: 4rem;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border-radius: 12px;
+        }
+
+        .char-info {
+            flex: 1;
+        }
+
+        .char-info h6 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .stroke-order-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: var(--secondary);
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .stroke-order-link:hover {
+            background: var(--secondary-dark);
+        }
+
+        .words-for-char {
+            margin-top: 15px;
+        }
+
+        .words-for-char h6 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .word-list-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .word-pill {
+            display: inline-flex;
+            flex-direction: column;
+            padding: 8px 14px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            min-width: 80px;
+        }
+
+        .word-pill .word { font-weight: bold; font-size: 16px; color: #333; }
+        .word-pill .pinyin { font-size: 11px; color: #666; }
+        .word-pill .meaning { font-size: 11px; color: #888; }
 
         .chunk-container {
             display: flex;
@@ -1892,13 +2023,18 @@ Example:
                 container.innerHTML = `
                     <h2><span class="step-num">4</span> Build Your Curriculum</h2>
                     <p class="step-description">
-                        Generate self-study lessons for each story in your path. Each lesson includes character chunks,
-                        words from that specific story, target highlighting, and stroke order practice.
+                        Generate self-study lessons for each story in your path. Each lesson includes stroke order practice,
+                        5 words per character, and word lists extracted from the story text.
                     </p>
+
+                    <div class="info-box" style="background: #e3f2fd; border-color: #2196F3;">
+                        <h4>📌 How Lessons Work</h4>
+                        <p>Lessons are ordered to build on each other. Characters you've learned in previous lessons won't be repeated.
+                        Use browser print (Ctrl+P) to export any lesson as PDF.</p>
+                    </div>
 
                     <div class="button-group">
                         <button id="generateCurriculumBtn" class="secondary">📚 Generate Curriculum</button>
-                        <button id="exportPdfBtn" class="outline">📄 Export as PDF</button>
                     </div>
 
                     <div id="curriculumContent">
@@ -1920,11 +2056,21 @@ Example:
                     
                     document.getElementById('curriculumContent').innerHTML = this.renderCurriculumDetails();
                     btn.textContent = '✅ Generated!';
+                    this.bindCollapsibleLessons();
                     this.updateProgress();
                 });
 
-                document.getElementById('exportPdfBtn')?.addEventListener('click', () => {
-                    alert('PDF export would compile all materials into a printable document.');
+                if (hasCurriculum) {
+                    setTimeout(() => this.bindCollapsibleLessons(), 100);
+                }
+            }
+
+            bindCollapsibleLessons() {
+                document.querySelectorAll('.lesson-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const card = header.closest('.lesson-card');
+                        card.classList.toggle('expanded');
+                    });
                 });
             }
 
@@ -1936,53 +2082,61 @@ Example:
                 return [];
             }
 
-            generateStudyChunks(chars, chunkSize = 5) {
-                const chunks = [];
-                for (let i = 0; i < chars.length; i += chunkSize) {
-                    chunks.push(chars.slice(i, i + chunkSize));
-                }
-                return chunks;
-            }
-
-            calculateOverlap(prevStory, currStory) {
-                const prevChars = new Set(prevStory.newChars || []);
-                const overlap = (currStory.newChars || []).filter(c => prevChars.has(c));
-                return {
-                    count: overlap.length,
-                    chars: overlap,
-                    reinforcement: overlap.filter(c => !this.targetChars.includes(c)),
-                    targetOverlap: overlap.filter(c => this.targetChars.includes(c))
-                };
-            }
-
-            async extractWordsFromStory(content, chars) {
-                if (!content || chars.length === 0) return [];
-                
+            async loadDictionary() {
                 try {
                     const response = await fetch('/data/dictionary.json');
-                    if (!response.ok) return [];
-                    const dict = await response.json();
-                    
-                    const charSet = new Set(chars);
-                    const words = [];
-                    
-                    for (const entry of dict) {
-                        if (!entry.word || !entry.chars) continue;
-                        
-                        const wordChars = new Set(entry.chars);
-                        const usesOnlyNewChars = [...wordChars].every(c => charSet.has(c));
-                        const appearsInContent = content.includes(entry.word);
-                        
-                        if (usesOnlyNewChars && appearsInContent) {
-                            words.push(entry);
+                    if (response.ok) return await response.json();
+                } catch (e) {}
+                return [];
+            }
+
+            extractWordsFromText(text) {
+                const words = [];
+                let i = 0;
+                while (i < text.length) {
+                    let matched = false;
+                    for (let len = 4; len >= 2; len--) {
+                        if (i + len <= text.length) {
+                            const word = text.slice(i, i + len);
+                            if (/[\u4e00-\u9fff]/.test(word)) {
+                                const chars = word.split('');
+                                const allChinese = chars.every(c => /[\u4e00-\u9fff]/.test(c));
+                                if (allChinese && !words.some(w => w.word === word)) {
+                                    words.push(word);
+                                    matched = true;
+                                    break;
+                                }
+                            }
                         }
                     }
-                    
-                    return words.slice(0, 25);
-                } catch (e) {
-                    console.log('Error loading dictionary:', e);
-                    return [];
+                    i++;
                 }
+                return words;
+            }
+
+            async findWordsForChar(char, knownChars, limit = 5) {
+                const dict = await this.loadDictionary();
+                const knownSet = new Set(knownChars);
+                const words = [];
+                
+                for (const entry of dict) {
+                    if (!entry.word || !entry.chars) continue;
+                    if (!entry.word.includes(char)) continue;
+                    
+                    const wordChars = entry.chars.split('');
+                    const allKnown = wordChars.every(c => knownSet.has(c) || c === char);
+                    
+                    if (allKnown) {
+                        words.push({
+                            word: entry.word,
+                            pinyin: entry.pinyin || '',
+                            definition: entry.definition || entry.english || ''
+                        });
+                        if (words.length >= limit) break;
+                    }
+                }
+                
+                return words;
             }
 
             async generateCurriculumForPath() {
@@ -1990,58 +2144,64 @@ Example:
                 const fullStories = await this.loadFullStories();
                 const targetSet = new Set(this.targetChars);
                 
+                let cumulativeKnown = new Set(this.knownChars);
+                
                 for (let i = 0; i < this.path.length; i++) {
                     const storyItem = this.path[i];
                     const fullStory = fullStories.find(s => s.id === storyItem.id) || {};
                     
-                    const chunks = this.generateStudyChunks(storyItem.newChars, 5);
-                    const words = await this.extractWordsFromStory(
-                        fullStory.content || storyItem.content || '', 
-                        storyItem.newChars
-                    );
+                    const storyChars = new Set(storyItem.chars || []);
+                    const newCharsThisLesson = [...storyChars].filter(c => !cumulativeKnown.has(c));
+                    const targetCharsThisLesson = newCharsThisLesson.filter(c => targetSet.has(c));
                     
-                    const targetHighlights = storyItem.newChars.filter(c => targetSet.has(c));
-                    const nonTargetChars = storyItem.newChars.filter(c => !targetSet.has(c));
+                    const content = fullStory.content || storyItem.content || '';
+                    const wordsInStory = this.extractWordsFromText(content);
                     
-                    const overlap = i > 0 ? 
-                        this.calculateOverlap(this.path[i-1], storyItem) : null;
+                    const charWordMap = {};
+                    for (const char of newCharsThisLesson) {
+                        const words = await this.findWordsForChar(char, cumulativeKnown, 5);
+                        charWordMap[char] = words;
+                    }
                     
                     this.curriculum.push({
                         index: i,
                         storyId: storyItem.id,
-                        title: storyItem.title,
-                        content: fullStory.content || storyItem.content || '',
-                        chunks: chunks,
-                        newChars: storyItem.newChars,
-                        targetHighlights: targetHighlights,
-                        nonTargetChars: nonTargetChars,
-                        words: words,
-                        overlap: overlap,
+                        title: storyItem.title || 'Story ' + (i + 1),
+                        content: content,
+                        newChars: newCharsThisLesson,
+                        targetChars: targetCharsThisLesson,
+                        knownBefore: [...cumulativeKnown],
+                        charWordMap: charWordMap,
+                        wordsInStory: wordsInStory.slice(0, 30),
                         isTarget: false
                     });
+                    
+                    newCharsThisLesson.forEach(c => cumulativeKnown.add(c));
                 }
                 
                 const coveredTargets = new Set();
                 this.curriculum.forEach(l => {
-                    l.targetHighlights.forEach(c => coveredTargets.add(c));
+                    l.targetChars.forEach(c => coveredTargets.add(c));
                 });
                 const remainingTargets = this.targetChars.filter(c => !coveredTargets.has(c));
                 
                 if (remainingTargets.length > 0) {
-                    const chunks = this.generateStudyChunks(remainingTargets, 5);
-                    const words = await this.extractWordsFromStory(this.targetText, remainingTargets);
+                    const charWordMap = {};
+                    for (const char of remainingTargets) {
+                        const words = await this.findWordsForChar(char, cumulativeKnown, 5);
+                        charWordMap[char] = words;
+                    }
                     
                     this.curriculum.push({
                         index: this.curriculum.length,
                         storyId: 'target',
                         title: 'Your Target Text',
                         content: this.targetText,
-                        chunks: chunks,
                         newChars: remainingTargets,
-                        targetHighlights: remainingTargets,
-                        nonTargetChars: [],
-                        words: words,
-                        overlap: null,
+                        targetChars: remainingTargets,
+                        knownBefore: [...cumulativeKnown],
+                        charWordMap: charWordMap,
+                        wordsInStory: this.extractWordsFromText(this.targetText).slice(0, 30),
                         isTarget: true
                     });
                 }
@@ -2051,90 +2211,85 @@ Example:
 
             renderCurriculumDetails() {
                 return this.curriculum.map((lesson, idx) => `
-                    <div class="lesson-card" data-index="${idx}">
+                    <div class="lesson-card expanded" data-index="${idx}">
                         <div class="lesson-header">
-                            <h4>📖 Lesson ${idx + 1}: ${lesson.title}</h4>
-                            ${lesson.isTarget ? '<span class="target-badge">🎯 Target Text</span>' : ''}
+                            <div class="lesson-header-left">
+                                <span class="lesson-expand-icon">▼</span>
+                                <h4>📖 Lesson ${idx + 1}: ${lesson.title}</h4>
+                                ${lesson.isTarget ? '<span class="target-badge">🎯 Target Text</span>' : ''}
+                            </div>
+                            <div class="lesson-stats-bar" style="background: transparent; padding: 0; margin: 0;">
+                                <div class="lesson-stat">
+                                    <span class="lesson-stat-label">New chars:</span>
+                                    <span class="lesson-stat-value">${lesson.newChars.length}</span>
+                                </div>
+                                <div class="lesson-stat">
+                                    <span class="lesson-stat-label">Known before:</span>
+                                    <span class="lesson-stat-value">${lesson.knownBefore.length}</span>
+                                </div>
+                            </div>
                         </div>
                         
-                        ${lesson.overlap ? `
-                            <div class="overlap-banner">
-                                <span class="overlap-icon">🔄</span>
-                                <span><strong>${lesson.overlap.count} characters</strong> overlap with previous lesson 
-                                (${lesson.overlap.reinforcement.length} for reinforcement)</span>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="study-section">
-                            <h5>📚 Study: Character Chunks</h5>
-                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-                                Break these into small groups. Practice each chunk before moving to the next.
-                            </p>
-                            ${lesson.chunks.map((chunk, cIdx) => `
-                                <div class="chunk-container">
-                                    <span class="chunk-label">Chunk ${cIdx + 1}:</span>
-                                    <div class="chunk-chars">
-                                        ${chunk.map(ch => `
-                                            <span class="char-chip ${lesson.targetHighlights.includes(ch) ? 'target' : ''}">
-                                                ${ch}
-                                                ${lesson.targetHighlights.includes(ch) ? '<span class="target-star">★</span>' : ''}
-                                            </span>
-                                        `).join('')}
+                        <div class="lesson-content">
+                            ${lesson.newChars.length > 0 ? lesson.newChars.map(ch => `
+                                <div class="char-detail">
+                                    <div class="char-detail-header">
+                                        <div class="char-large">${ch}</div>
+                                        <div class="char-info">
+                                            <h6>Character ${ch}</h6>
+                                            <a href="https://www.mdbg.net/chinese/dictionary?page=stroke-order&wdqb=${ch}" 
+                                               target="_blank" class="stroke-order-link">
+                                                🔢 Stroke Order
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="words-for-char">
+                                        <h6>5 Words (using ${ch} with known characters):</h6>
+                                        <div class="word-list-inline">
+                                            ${(lesson.charWordMap[ch] || []).map(w => `
+                                                <div class="word-pill">
+                                                    <span class="word">${w.word}</span>
+                                                    ${w.pinyin ? `<span class="pinyin">${w.pinyin}</span>` : ''}
+                                                    ${w.definition ? `<span class="meaning">${w.definition.substring(0, 30)}${w.definition.length > 30 ? '...' : ''}</span>` : ''}
+                                                </div>
+                                            `).join('')}
+                                            ${(lesson.charWordMap[ch] || []).length === 0 ? '<span style="color: #999;">No words found</span>' : ''}
+                                        </div>
                                     </div>
                                 </div>
-                            `).join('')}
-                        </div>
-                        
-                        <div class="target-section">
-                            <h5>🎯 Characters from Your Target (${lesson.targetHighlights.length})</h5>
-                            <div class="target-chars">
-                                ${lesson.targetHighlights.length > 0 ? 
-                                    lesson.targetHighlights.map(ch => `
-                                        <span class="char-chip target" title="This character is from your target text">${ch} ★</span>
-                                    `).join('')
-                                    : '<span style="color: #999;">None in this story</span>'
-                                }
+                            `).join('') : '<p style="color: #999;">No new characters in this lesson.</p>'}
+                            
+                            <div class="words-section">
+                                <h5>📝 Words from This Text (${lesson.wordsInStory ? lesson.wordsInStory.length : 0})</h5>
+                                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                                    Words extracted from the story text.
+                                </p>
+                                <div class="word-list-inline">
+                                    ${(lesson.wordsInStory && lesson.wordsInStory.length > 0) ? lesson.wordsInStory.map(w => `
+                                        <div class="word-pill">
+                                            <span class="word">${w}</span>
+                                        </div>
+                                    `).join('') : '<span style="color: #999;">No words extracted</span>'}
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="words-section">
-                            <h5>📝 Words from This Text (${lesson.words.length})</h5>
-                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-                                These words appear in the story and use only characters you're learning.
-                            </p>
-                            <div class="word-grid">
-                                ${lesson.words.length > 0 ? lesson.words.map(w => `
-                                    <div class="word-chip">
-                                        <span class="word-text">${w.word}</span>
-                                        ${w.pinyin ? `<span class="word-pinyin">${w.pinyin}</span>` : ''}
-                                        ${w.definition ? `<span class="word-def">${w.definition}</span>` : ''}
-                                    </div>
-                                `).join('') : '<span style="color: #999;">No matching words found</span>'}
-                            </div>
-                        </div>
-                        
-                        <div class="stroke-section">
-                            <h5>🔢 Stroke Order Practice</h5>
-                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-                                Click any character to practice its stroke order.
-                            </p>
-                            <div class="stroke-links">
-                                ${lesson.newChars.map(ch => `
-                                    <a href="https://www.mdbg.net/chinese/dictionary?page=stroke-order&wdqb=${ch}" 
-                                       target="_blank" class="stroke-btn">${ch}</a>
-                                `).join('')}
-                            </div>
-                        </div>
-                        
-                        ${lesson.content ? `
+                            
                             <div class="read-section">
                                 <h5>📖 Read: ${lesson.title}</h5>
-                                <div class="story-preview">${lesson.content.substring(0, 200)}${lesson.content.length > 200 ? '...' : ''}</div>
+                                <div class="story-preview" style="background: white; padding: 20px; border-radius: 10px; line-height: 2; font-size: 16px;">
+                                    ${lesson.content.substring(0, 300)}${lesson.content.length > 300 ? '...' : ''}
+                                </div>
+                                ${lesson.content.length > 300 ? `
+                                    <p style="color: #666; margin-top: 10px; font-size: 14px;">
+                                        (Story continues... ${lesson.content.length} characters total)
+                                    </p>
+                                ` : ''}
                             </div>
-                        ` : ''}
-                        
-                        <div class="lesson-actions">
-                            <span class="lesson-complete">✅ Study this lesson, then read the story</span>
+                            
+                            <div class="lesson-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                                <p style="color: #666; font-size: 14px;">
+                                    ✅ Study this lesson, then read the story. After completing, proceed to Step 5 to test your knowledge.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 `).join('');
