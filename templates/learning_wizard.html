@@ -1228,7 +1228,6 @@ Example:
                         <div id="pathSection" style="display: none; margin-top: 20px;">
                             <h3 style="margin: 20px 0 15px 0; color: #333;">📚 Your Learning Path</h3>
                             <div id="optimizedPathStats"></div>
-                            <button id="greedyFillBtn" class="outline" style="margin-top: 10px;">➕ Fill Remaining with Greedy</button>
                         </div>
                         
                         <div id="pathResults">
@@ -1263,8 +1262,6 @@ Example:
                 const optimizePathBtn = document.getElementById('optimizePathBtn');
                 if (optimizePathBtn) optimizePathBtn.addEventListener('click', () => this.optimizePathExhaustive());
 
-                const greedyFillBtn = document.getElementById('greedyFillBtn');
-                if (greedyFillBtn) greedyFillBtn.addEventListener('click', () => this.greedyFill());
             }
 
             generatePool() {
@@ -1436,13 +1433,11 @@ Example:
                     }
 
                     self.optimizedPath = bestPath;
-                    self.remainingTargets = new Set([...targetSet].filter(c => !bestPath.coveredTargets.has(c)));
 
                     let html = '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
                         '<h4>⚡ Best Path</h4>' +
                         '<div>Avg Jumpsize: <strong>' + bestPath.avgJumpsize.toFixed(2) + '</strong></div>' +
-                        '<div>Coverage: <strong>' + (bestPath.coveredTargets.size / totalTargets * 100).toFixed(1) + '%</strong></div>' +
-                        '<div>Remaining: <strong>' + self.remainingTargets.size + '</strong></div></div>';
+                        '<div>Coverage: <strong>' + (bestPath.coveredTargets.size / totalTargets * 100).toFixed(1) + '%</strong></div></div>';
 
                     const knownSoFar = new Set(self.knownChars);
                     html += '<ul class="path-list">';
@@ -1454,57 +1449,21 @@ Example:
                     }
                     html += '</ul>';
 
-                    if (self.remainingTargets.size > 0) {
-                        html += '<p>Click "Fill Remaining" to add more stories.</p>';
-                    }
-
                     document.getElementById('pathSection').style.display = 'block';
                     document.getElementById('optimizedPathStats').innerHTML = html;
-                    document.getElementById('greedyFillBtn').style.display = self.remainingTargets.size > 0 ? 'inline-block' : 'none';
+
+                    self.path = bestPath.perm.map(s => ({
+                        id: s.story.id,
+                        title: s.story.title,
+                        source: s.story.source,
+                        chars: s.story.characters,
+                        newChars: s.unknownChars,
+                        newTargets: s.targetChars
+                    }));
+
+                    self.updateSummary();
+                    self.updateProgress();
                 }, 10);
-            }
-
-            greedyFill() {
-                const targetSet = new Set(this.remainingTargets);
-                const remaining = new Set(this.remainingTargets);
-                const greedyPath = [];
-                const usedStories = new Set(this.selectedCluster ? this.selectedCluster.stories.map(s => s.story.id) : []);
-                const remainingPool = this.pool.filter(s => !usedStories.has(s.story.id));
-
-                while (remaining.size > 0) {
-                    let best = null;
-                    let bestScore = Infinity;
-
-                    for (const candidate of remainingPool) {
-                        const newTargets = candidate.targetChars.filter(c => remaining.has(c));
-                        if (newTargets.length === 0) continue;
-                        const score = candidate.jumpsize / newTargets.length;
-                        if (score < bestScore) {
-                            bestScore = score;
-                            best = candidate;
-                        }
-                    }
-
-                    if (!best) break;
-                    greedyPath.push(best);
-                    best.targetChars.forEach(c => remaining.delete(c));
-                    remainingPool.splice(remainingPool.indexOf(best), 1);
-                }
-
-                this.path = [
-                    ...(this.optimizedPath ? this.optimizedPath.perm.map(s => ({
-                        id: s.story.id, title: s.story.title, source: s.story.source,
-                        chars: s.story.characters, newChars: s.unknownChars, newTargets: s.targetChars
-                    })) : []),
-                    ...greedyPath.map(s => ({
-                        id: s.story.id, title: s.story.title, source: s.story.source,
-                        chars: s.story.characters, newChars: s.unknownChars, newTargets: s.targetChars
-                    }))
-                ];
-
-                document.getElementById('pathResults').innerHTML = this.renderPathList();
-                this.updateSummary();
-                this.updateProgress();
             }
 
             getCombinations(arr, size) {
