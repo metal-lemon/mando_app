@@ -53,6 +53,8 @@ http://localhost:5000/
 │   ├── build_wiki_index.py    # Build Wikipedia index from dump
 │   └── hello_mcp_server.py    # MCP server (optional)
 ├── serve.py                   # Optional: HTTP server with log capture
+├── docs/
+│   └── json_schemas.md        # JSON file structure reference & samples
 └── AGENTS.md                  # This file
 ```
 
