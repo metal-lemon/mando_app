@@ -537,6 +537,80 @@
             margin-top: 20px;
         }
 
+        .quiz-char-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 25px auto;
+            max-width: 500px;
+        }
+
+        .quiz-char-option {
+            font-size: 2.5rem;
+            padding: 20px;
+            background: #f5f5f5;
+            border: 3px solid #ddd;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .quiz-char-option:hover {
+            border-color: var(--primary);
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .quiz-char-option.selected {
+            background: #e0e7ff;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .quiz-char-option.correct-answer {
+            background: #c8e6c9;
+            border-color: var(--secondary);
+            color: #2e7d32;
+        }
+
+        .quiz-char-option.wrong-answer {
+            background: #ffcdd2;
+            border-color: var(--danger);
+            color: #c62828;
+        }
+
+        .quiz-hint {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .quiz-feedback {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .quiz-feedback.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .quiz-feedback.partial {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        .quiz-feedback.incorrect {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
         .completion-card {
             background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
             color: white;
@@ -2296,9 +2370,11 @@ Example:
             }
 
             // ==================== STEP 5: TEST ====================
-            renderTest(container) {
-                if (this.quizResults.total === 0) {
-                    this.startQuiz();
+            async renderTest(container) {
+                if (!container) return;
+                
+                if (this.quizResults.total === 0 && this.currentQuiz.questions.length === 0) {
+                    await this.startQuiz();
                 }
 
                 if (this.currentQuiz.index >= this.currentQuiz.questions.length) {
@@ -2307,13 +2383,12 @@ Example:
                 }
 
                 const q = this.currentQuiz.questions[this.currentQuiz.index];
-                const answered = this.currentQuiz.perCharResult[q.char];
-                const distractorChars = ['的', '是', '了', '我', '在', '有', '和', '人', '这', '中', '大', '为', '上', '个', '们'];
+                const userSelection = q.userSelection || [];
 
                 container.innerHTML = `
                     <h2><span class="step-num">5</span> Test Your Knowledge</h2>
                     <p class="step-description">
-                        Testing characters from your learning path in order. Know your character!
+                        Click on ALL characters you recognize. These characters come from your learning path.
                     </p>
                     
                     <div class="quiz-path-info">
@@ -2321,7 +2396,7 @@ Example:
                             <div class="path-progress-fill" style="width: ${(this.currentQuiz.index / this.currentQuiz.questions.length) * 100}%"></div>
                         </div>
                         <p class="path-story-label">
-                            ${q.storyTitle ? `Story: <strong>${q.storyTitle}</strong>` : 'General Review'}
+                            ${q.storyTitle ? `From: <strong>${q.storyTitle}</strong>` : 'General Review'}
                             ${q.isTarget ? ' <span class="target-tag">★ Target</span>' : ''}
                         </p>
                     </div>
@@ -2329,7 +2404,7 @@ Example:
                     <div class="quiz-container">
                         <div class="quiz-progress">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span style="color: #666;">Progress</span>
+                                <span style="color: #666;">Question</span>
                                 <span style="color: #666;">${this.currentQuiz.index + 1} / ${this.currentQuiz.questions.length}</span>
                             </div>
                             <div class="progress-bar">
@@ -2338,26 +2413,29 @@ Example:
                         </div>
 
                         <div class="quiz-card">
-                            <p style="color: #666; margin-bottom: 5px;">Do you know this character?</p>
-                            <div class="quiz-char">${q.char}</div>
+                            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">
+                                Click the characters you <strong>know</strong> from your learning path.
+                                Don't click the ones you don't recognize!
+                            </p>
                             
-                            <div class="quiz-options">
-                                <div class="quiz-option ${answered === true ? 'selected correct' : ''}" data-answer="true">
-                                    ✓ I Know This
-                                </div>
-                                <div class="quiz-option ${answered === false ? 'selected incorrect' : ''}" data-answer="false">
-                                    ✗ I Don't Know
-                                </div>
+                            <div class="quiz-char-grid">
+                                ${q.options.map((char, idx) => `
+                                    <div class="quiz-char-option ${userSelection.includes(char) ? 'selected' : ''}" 
+                                         data-char="${char}" data-idx="${idx}">
+                                        ${char}
+                                    </div>
+                                `).join('')}
                             </div>
                             
-                            <p style="color: #999; font-size: 12px; margin-top: 15px;">
-                                Choose: Do you recognize this character?
-                            </p>
+                            <div class="quiz-hint">
+                                <span>Selected: <strong id="selectedCount">${userSelection.length}</strong> of ${q.targets.length}</span>
+                            </div>
                         </div>
 
                         <div class="quiz-nav">
                             <button id="skipBtn" class="outline">Skip</button>
-                            <button id="nextQuestionBtn" ${answered === undefined ? 'disabled' : ''}>Next →</button>
+                            <button id="submitBtn" class="secondary">Submit Answer</button>
+                            <button id="nextQuestionBtn" disabled>Next →</button>
                         </div>
                     </div>
                 `;
@@ -2365,8 +2443,17 @@ Example:
                 this.bindQuizEvents();
             }
 
-            startQuiz() {
-                const questions = [];
+            shuffle(array) {
+                const arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            async startQuiz() {
+                const allNewChars = [];
                 const charSet = new Set();
                 
                 const orderedStories = this.optimizedPath?.perm || this.path;
@@ -2376,7 +2463,7 @@ Example:
                     for (const char of unknownChars) {
                         if (!charSet.has(char)) {
                             charSet.add(char);
-                            questions.push({
+                            allNewChars.push({
                                 char: char,
                                 storyIndex: orderedStories.indexOf(storyItem),
                                 storyTitle: storyItem.story?.title || storyItem.title || 'Story',
@@ -2386,7 +2473,56 @@ Example:
                     }
                 }
                 
-                const sample = questions.slice(0, Math.min(15, questions.length));
+                let hskChars = [];
+                try {
+                    const response = await fetch('/data/hsk_characters.json');
+                    if (response.ok) {
+                        const data = await response.json();
+                        hskChars = data.all || [];
+                    }
+                } catch (e) {
+                    console.log('Could not load HSK characters:', e);
+                    hskChars = ['的', '是', '了', '我', '在', '有', '和', '人', '这', '中', '大', '为', '上', '个', '们', '来', '时', '年', '国', '会', '出', '也', '子', '得', '她', '地', '前', '道', '业', '生', '把', '外', '政', '行', '所', '家', '后', '儿', '经', '进', '面', '关', '点', '定', '天', '分', '还', '下', '用', '发', '心', '只', '么', '起', '都', '好', '小', '部', '其', '些', '当', '样', '现', '应', '最', '重', '间', '女', '真', '被', '文', '但', '身', '公', '义', '从', '像'];
+                }
+                
+                const excluded = new Set([...charSet, ...this.knownChars]);
+                let availableDistractors = hskChars.filter(c => !excluded.has(c));
+                
+                if (availableDistractors.length < 15) {
+                    availableDistractors = [...availableDistractors, ...hskChars.filter(c => !charSet.has(c))];
+                    availableDistractors = [...new Set(availableDistractors)];
+                }
+                
+                const pairs = [];
+                for (let i = 0; i < allNewChars.length; i += 2) {
+                    if (i + 1 < allNewChars.length) {
+                        pairs.push([allNewChars[i], allNewChars[i + 1]]);
+                    } else {
+                        pairs.push([allNewChars[i]]);
+                    }
+                }
+                
+                const questions = pairs.map((pair, idx) => {
+                    const targets = pair.map(p => p.char);
+                    const numDistractors = 5 - targets.length;
+                    const shuffledDistractors = this.shuffle(availableDistractors);
+                    const distractors = shuffledDistractors.slice(0, numDistractors);
+                    
+                    const allOptions = this.shuffle([...targets, ...distractors]);
+                    
+                    return {
+                        id: idx,
+                        targets: targets,
+                        distractors: distractors,
+                        options: allOptions,
+                        userSelection: [],
+                        storyTitle: pair[0].storyTitle,
+                        isTarget: pair.some(p => p.isTarget)
+                    };
+                });
+                
+                const maxQuestions = Math.min(15, questions.length);
+                const sample = questions.slice(0, maxQuestions);
                 
                 this.currentQuiz = {
                     index: 0,
@@ -2397,31 +2533,79 @@ Example:
             }
 
             bindQuizEvents() {
-                document.querySelectorAll('.quiz-option').forEach(opt => {
+                document.querySelectorAll('.quiz-char-option').forEach(opt => {
                     opt.addEventListener('click', () => {
-                        const answer = opt.dataset.answer === 'true';
-                        const char = this.currentQuiz.questions[this.currentQuiz.index].char;
+                        const char = opt.dataset.char;
+                        const q = this.currentQuiz.questions[this.currentQuiz.index];
                         
-                        this.currentQuiz.perCharResult[char] = answer;
-                        this.currentQuiz.answers[char] = answer;
+                        if (!q.userSelection) q.userSelection = [];
                         
-                        document.querySelectorAll('.quiz-option').forEach(o => {
-                            o.classList.remove('selected', 'correct', 'incorrect');
-                        });
-                        opt.classList.add('selected');
-                        opt.classList.add(answer ? 'correct' : 'incorrect');
-                        
-                        if (!answer) {
-                            document.querySelectorAll('.quiz-option').forEach(o => {
-                                if (o.dataset.answer === 'true') o.classList.add('correct');
-                            });
+                        const idx = q.userSelection.indexOf(char);
+                        if (idx > -1) {
+                            q.userSelection.splice(idx, 1);
+                            opt.classList.remove('selected');
+                        } else {
+                            q.userSelection.push(char);
+                            opt.classList.add('selected');
                         }
+                        
+                        document.getElementById('selectedCount').textContent = q.userSelection.length;
                     });
                 });
 
                 document.getElementById('skipBtn').addEventListener('click', () => {
+                    const q = this.currentQuiz.questions[this.currentQuiz.index];
+                    q.userSelection = [];
                     this.currentQuiz.index++;
                     this.renderStep();
+                });
+
+                document.getElementById('submitBtn').addEventListener('click', () => {
+                    const q = this.currentQuiz.questions[this.currentQuiz.index];
+                    const selected = q.userSelection || [];
+                    const targets = q.targets;
+                    
+                    const correctSelection = targets.every(t => selected.includes(t));
+                    const noWrongSelection = selected.every(s => targets.includes(s));
+                    const isFullyCorrect = correctSelection && noWrongSelection;
+                    
+                    q.isCorrect = isFullyCorrect;
+                    q.partialCorrect = correctSelection && !noWrongSelection;
+                    
+                    document.querySelectorAll('.quiz-char-option').forEach(opt => {
+                        const char = opt.dataset.char;
+                        opt.classList.remove('selected');
+                        if (targets.includes(char)) {
+                            opt.classList.add('correct-answer');
+                        } else if (selected.includes(char)) {
+                            opt.classList.add('wrong-answer');
+                        }
+                    });
+                    
+                    document.getElementById('submitBtn').disabled = true;
+                    document.getElementById('nextQuestionBtn').disabled = false;
+                    
+                    if (q.isCorrect) {
+                        const feedback = document.createElement('div');
+                        feedback.className = 'quiz-feedback success';
+                        feedback.textContent = '✓ Perfect! You selected exactly the right characters!';
+                        document.querySelector('.quiz-card').appendChild(feedback);
+                    } else if (q.partialCorrect) {
+                        const feedback = document.createElement('div');
+                        feedback.className = 'quiz-feedback partial';
+                        feedback.textContent = `⚠ Good start! You knew ${selected.filter(s => targets.includes(s)).length} of ${targets.length} characters.`;
+                        document.querySelector('.quiz-card').appendChild(feedback);
+                    } else {
+                        const feedback = document.createElement('div');
+                        feedback.className = 'quiz-feedback incorrect';
+                        const known = selected.filter(s => targets.includes(s)).length;
+                        const wrong = selected.filter(s => !targets.includes(s)).length;
+                        let msg = '';
+                        if (known > 0) msg += `You knew ${known} character(s). `;
+                        if (wrong > 0) msg += `But ${wrong} was not from your learning path.`;
+                        feedback.textContent = msg || '✗ Those characters are not from your learning path.';
+                        document.querySelector('.quiz-card').appendChild(feedback);
+                    }
                 });
 
                 document.getElementById('nextQuestionBtn').addEventListener('click', () => {
@@ -2433,30 +2617,42 @@ Example:
             }
 
             showQuizResults(container) {
-                let correct = 0;
-                const missed = [];
-                const correctChars = [];
+                let fullyCorrect = 0;
+                let partialCorrect = 0;
+                const missedChars = new Set();
+                const correctChars = new Set();
                 
                 for (const q of this.currentQuiz.questions) {
-                    if (this.currentQuiz.perCharResult[q.char]) {
-                        correct++;
-                        correctChars.push(q.char);
+                    if (q.isCorrect) {
+                        fullyCorrect++;
+                        q.targets.forEach(t => correctChars.add(t));
+                    } else if (q.partialCorrect) {
+                        partialCorrect++;
+                        q.targets.forEach(t => {
+                            if (q.userSelection.includes(t)) {
+                                correctChars.add(t);
+                            } else {
+                                missedChars.add(t);
+                            }
+                        });
                     } else {
-                        missed.push(q.char);
+                        q.targets.forEach(t => missedChars.add(t));
                     }
                 }
 
                 this.quizResults = {
-                    correct,
+                    correct: fullyCorrect,
+                    partial: partialCorrect,
                     total: this.currentQuiz.questions.length,
-                    missed,
-                    correctChars
+                    missed: Array.from(missedChars),
+                    correctChars: Array.from(correctChars)
                 };
 
                 localStorage.setItem(WIZARD_STORAGE.QUIZ_RESULTS, JSON.stringify(this.quizResults));
                 this.updateSummary();
 
-                const pct = Math.round((correct / this.currentQuiz.questions.length) * 100);
+                const totalCorrect = fullyCorrect + partialCorrect;
+                const pct = Math.round((totalCorrect / this.currentQuiz.questions.length) * 100);
                 let message = '';
                 if (pct >= 80) message = 'Great job! You\'re ready to continue.';
                 else if (pct >= 60) message = 'Good progress! Review the missed characters.';
@@ -2467,25 +2663,25 @@ Example:
                     
                     <div class="completion-card" style="background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);">
                         <div class="celebration">${pct >= 80 ? '🎉' : '📚'}</div>
-                        <h2>${correct} / ${this.currentQuiz.questions.length}</h2>
+                        <h2>${totalCorrect} / ${this.currentQuiz.questions.length}</h2>
                         <p>${pct}% correct • ${message}</p>
                     </div>
 
                     <div class="quiz-summary-stats">
                         <div class="stat-card" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);">
-                            <div class="stat-value">${correctChars.length}</div>
-                            <div class="stat-label">Know</div>
+                            <div class="stat-value">${correctChars.size}</div>
+                            <div class="stat-label">Chars Known</div>
                         </div>
                         <div class="stat-card" style="background: linear-gradient(135deg, var(--warning) 0%, #f57c00 100%);">
-                            <div class="stat-value">${missed.length}</div>
+                            <div class="stat-value">${missedChars.size}</div>
                             <div class="stat-label">Need Practice</div>
                         </div>
                     </div>
 
-                    ${missed.length > 0 ? `
+                    ${missedChars.size > 0 ? `
                         <h3 style="margin: 25px 0 15px 0; color: #333;">Characters to Review</h3>
                         <div class="char-grid">
-                            ${missed.map(ch => `<span class="char-tile unknown">${ch}</span>`).join('')}
+                            ${Array.from(missedChars).map(ch => `<span class="char-tile unknown">${ch}</span>`).join('')}
                         </div>
                         <p style="color: #666; margin-top: 10px;">
                             These characters will NOT be added to your known set. Review them and try again!
@@ -2494,24 +2690,31 @@ Example:
 
                     <div class="button-group" style="margin-top: 25px;">
                         <button id="retryQuizBtn" class="outline">🔄 Retry Quiz</button>
-                        <button id="practiceMissedBtn" class="secondary">✏️ Practice Missed</button>
+                        <button id="practiceMissedBtn" class="secondary" ${missedChars.size === 0 ? 'disabled' : ''}>✏️ Practice Missed</button>
                     </div>
                 `;
 
                 document.getElementById('retryQuizBtn').addEventListener('click', () => {
-                    this.quizResults = { correct: 0, total: 0, missed: [], correctChars: [] };
+                    this.quizResults = { correct: 0, partial: 0, total: 0, missed: [], correctChars: [] };
                     this.currentQuiz = { index: 0, questions: [], answers: {}, perCharResult: {} };
                     this.renderStep();
                 });
 
-                document.getElementById('practiceMissedBtn').addEventListener('click', () => {
-                    if (missed.length > 0) {
-                        this.currentQuiz.questions = missed.map(c => ({
-                            char: c,
-                            storyIndex: -1,
-                            storyTitle: 'Review',
-                            isTarget: this.targetChars.includes(c)
-                        }));
+                document.getElementById('practiceMissedBtn').addEventListener('click', async () => {
+                    const missedArr = Array.from(missedChars);
+                    if (missedArr.length > 0) {
+                        this.currentQuiz.questions = missedArr.map((c, idx) => {
+                            const isTarget = this.targetChars.includes(c);
+                            return {
+                                id: idx,
+                                targets: [c],
+                                distractors: [],
+                                options: [c],
+                                userSelection: [],
+                                storyTitle: 'Review',
+                                isTarget: isTarget
+                            };
+                        });
                         this.currentQuiz.index = 0;
                         this.currentQuiz.answers = {};
                         this.currentQuiz.perCharResult = {};
@@ -2635,16 +2838,19 @@ Example:
                 document.getElementById('retryMissedBtn')?.addEventListener('click', () => {
                     const missed = this.quizResults.missed || [];
                     if (missed.length > 0) {
-                        this.currentQuiz.questions = missed.map(c => ({
-                            char: c,
-                            storyIndex: -1,
+                        this.currentQuiz.questions = missed.map((c, idx) => ({
+                            id: idx,
+                            targets: [c],
+                            distractors: [],
+                            options: [c],
+                            userSelection: [],
                             storyTitle: 'Review',
                             isTarget: this.targetChars.includes(c)
                         }));
                         this.currentQuiz.index = 0;
                         this.currentQuiz.answers = {};
                         this.currentQuiz.perCharResult = {};
-                        this.quizResults = { correct: 0, total: 0, missed: [], correctChars: [] };
+                        this.quizResults = { correct: 0, partial: 0, total: 0, missed: [], correctChars: [] };
                         this.currentStep = 5;
                         this.renderStep();
                     }
