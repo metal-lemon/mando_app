@@ -19,17 +19,18 @@ python app.py
 ├── serve.py                   # Alternative HTTP server with logging
 │
 ├── templates/                 # HTML pages (served by Flask)
-│   ├── index.html            # Main hub and navigation
+│   ├── index.html            # Main hub (3 stacked boxes + toolbox modal)
 │   ├── setup.html           # First-time setup wizard
-│   ├── mandarin_learner.html # Track known characters, find words
-│   ├── can_i_read_this.html  # Analyze text readability
-│   ├── study_guide.html      # Generate study materials
-│   ├── story_suggester.html  # Find stories at your level
-│   ├── story_library.html    # Manage story collection
-│   ├── traditional_finder.html # Convert traditional→simplified
 │   ├── learning_wizard.html  # Guided 6-step learning workflow
-│   ├── pathfinder.html       # Build learning paths (greedy algorithm)
-│   └── curriculum_unifier.html # Unified curriculum builder
+│   ├── traditional_finder.html # Convert traditional→simplified (toolbox)
+│   ├── story_suggester.html  # Find stories at your level (toolbox)
+│   ├── story_library.html    # Manage story collection (toolbox)
+│   └── archived/             # Redundant tools (superseded by Learning Wizard)
+│       ├── mandarin_learner.html
+│       ├── can_i_read_this.html
+│       ├── study_guide.html
+│       ├── pathfinder.html
+│       └── curriculum_unifier.html
 │
 ├── static/
 │   └── js/
@@ -60,68 +61,53 @@ python app.py
 ## Tools Guide
 
 ### index.html - Main Hub
-Central navigation page. Links to all tools, data management, workflow recommendations.
+Simplified page with 3 stacked horizontal boxes:
+1. **Setup** (thin box) - First-time setup
+2. **Learning Wizard** (tall box) - Featured, 6-step guided workflow
+3. **Toolbox** (thin box) - Opens modal with additional tools
 
 ### setup.html - First-Time Setup
 Initialize required files (shared_state.js, trad_simp_map.json) for new users.
 
-### mandarin_learner.html - Character Tracking
-- Add/remove characters manually or extract from text
-- Find words you can learn with known characters
-- Dictionary lookup (pinyin, definition)
-- Export/import character lists
-
-### can_i_read_this.html - Readability Analyzer
-- Paste any Chinese text
-- Shows % of characters you know (by occurrence and unique)
-- Highlights unknown characters
-- One-click learn characters
-- Convert traditional→simplified
-- Save text to story library
-
-### study_guide.html - Study Materials
-- Generate flashcards from unknown characters
-- Shows pinyin, meaning, compound words, example sentences
-- Click characters to mark as known
-- Print-friendly output
-
-### story_suggester.html - Story Finder
-- Finds stories matched to your level
-- Sorts by readability percentage
-- Shows learning gap (unknown chars per story)
-- Click to view full story
-
-### story_library.html - Story Manager
-- CRUD operations on stories
-- Import/export story database
-- Character extraction
-- Accepts incoming stories from "Can I Read This"
-
-### traditional_finder.html - Character Navigator
-- Find traditional characters in text
-- One-click conversion to simplified
-- Add simplified version to known list
-
-### learning_wizard.html - Guided Workflow
+### learning_wizard.html - Guided Workflow (Featured)
 Six-step learning experience:
 1. **Assessment** - Build known character set
 2. **Set Goal** - Define target text
 3. **Find Paths** - Build learning path through stories
 4. **Curriculum** - Generate study lessons with words and stroke order
-5. **Test** - Quiz with paired format (2 targets + 3 distractors)
+5. **Test** - Quiz with paired format (2 targets + 3 HSK distractors)
 6. **Complete** - Add passed characters to known set
 
-### pathfinder.html - Path Builder
-- Greedy algorithm to find best stories for learning target text
-- Real-time progress display
-- Export paths as JSON
+### Toolbox Modal Tools (accessed from index.html)
 
-### curriculum_unifier.html - Unified Builder
-- Combines all curriculum building features
-- Multiple algorithms (Full/Greedy)
-- Multiple modes (Build Path, Generate Pool, Find Clusters)
-- API search support (Wikipedia)
-- Frequency-based scoring
+#### traditional_finder.html - Character Navigator
+- Find traditional characters in text
+- One-click conversion to simplified
+- Add simplified version to known list
+
+#### story_suggester.html - Story Finder
+- Finds stories matched to your level
+- Sorts by readability percentage
+- Shows learning gap (unknown chars per story)
+- Click to view full story
+
+#### story_library.html - Story Manager
+- CRUD operations on stories
+- Import/export story database
+- Character extraction
+- Accepts incoming stories
+
+### Archived Tools (in `templates/archived/`)
+
+The following tools are archived but still functional. They are superseded by the Learning Wizard.
+
+| Tool | Superseded By |
+|------|--------------|
+| `mandarin_learner.html` | Wizard Step 1 |
+| `can_i_read_this.html` | Wizard Step 2 |
+| `study_guide.html` | Wizard Step 4 |
+| `pathfinder.html` | Wizard Step 3 |
+| `curriculum_unifier.html` | Wizard Steps 3-4 |
 
 ---
 
@@ -257,6 +243,82 @@ const extractChars = (text) => [...new Set(text.match(/[\u4e00-\u9fff]/g))];
 - **Mobile PWA** - Touch-friendly responsive design
 - **Content sources** - News articles, graded readers, user submissions
 - **Better dictionary** - Stroke order, audio pronunciation
+
+---
+
+## Planned: Simplify Index Page and Archive Redundant Pages
+
+### Goal
+Simplify the main index page to show only 3 items, and move redundant tools to an archive folder.
+
+### New Index Page Layout
+```
+┌─────────────────────────────────────────────┐
+│           Mandarin Learning Tools              │
+├─────────────────────────────────────────────┤
+│                   Setup                      │
+├─────────────────────────────────────────────┤
+│                                             │
+│              Learning Wizard                  │
+│           (taller, featured)                │
+│                                             │
+├─────────────────────────────────────────────┤
+│                  Toolbox                      │
+└─────────────────────────────────────────────┘
+```
+
+### Toolbox Modal Contents
+- Traditional Finder
+- Story Suggester
+- Story Library
+
+### Files to Archive (move to `templates/archived/`)
+| File | Reason |
+|------|--------|
+| `mandarin_learner.html` | Character tracking is in wizard step 1 |
+| `can_i_read_this.html` | Text analysis is in wizard step 2 |
+| `study_guide.html` | Study generation is in wizard |
+| `pathfinder.html` | Path building is in wizard step 3 |
+| `curriculum_unifier.html` | Curriculum building is in wizard step 4 |
+
+### Files to Keep (Active)
+- `index.html` - Simplified main page (3 stacked boxes)
+- `learning_wizard.html` - Full guided workflow (featured)
+- `setup.html` - First-time setup
+- `traditional_finder.html` - In toolbox modal
+- `story_suggester.html` - In toolbox modal
+- `story_library.html` - In toolbox modal
+
+### Implementation Steps (Completed)
+1. ✅ Fix git merge conflict in index.html (lines 394-407)
+2. ✅ Create `templates/archived/` folder
+3. ✅ Move redundant tools to `templates/archived/`:
+   - `mandarin_learner.html`
+   - `can_i_read_this.html`
+   - `study_guide.html`
+   - `pathfinder.html`
+   - `curriculum_unifier.html`
+4. ✅ Rewrite `index.html` with 3 stacked horizontal boxes
+5. ✅ Add Toolbox modal with links to: Traditional Finder, Story Suggester, Story Library
+6. ✅ Update app.py routes (remove broken wiki_curriculum_builder route, update archive path)
+7. ✅ Update this DOCUMENTATION.md to reflect new structure
+
+### Current Project Structure
+```
+├── templates/
+│   ├── index.html            # Simplified (3 boxes + toolbox modal) ✅
+│   ├── setup.html           # First-time setup
+│   ├── learning_wizard.html  # Featured (6-step guided workflow)
+│   ├── traditional_finder.html # Toolbox
+│   ├── story_suggester.html  # Toolbox
+│   ├── story_library.html   # Toolbox
+│   └── archived/            # Redundant tools (still functional)
+│       ├── mandarin_learner.html
+│       ├── can_i_read_this.html
+│       ├── study_guide.html
+│       ├── pathfinder.html
+│       └── curriculum_unifier.html
+```
 
 ---
 
