@@ -76,10 +76,17 @@ Initialize required files (shared_state.js, trad_simp_map.json) for new users.
 Six-step learning experience:
 1. **Assessment** - Build known character set
 2. **Set Goal** - Define target text
-3. **Find Paths** - Build learning path through stories
+3. **Find Paths** - Build learning path through stories (with source selection)
 4. **Curriculum** - Generate study lessons with words and stroke order
 5. **Test** - Quiz with paired format (2 targets + 3 HSK distractors)
 6. **Complete** - Add passed characters to known set
+
+#### Source Selection
+The Learning Wizard supports multiple content sources. In Step 3 (Find Paths), users can select which source to use:
+- **stories** (default): Chinese stories corpus
+- **wiki**: Chinese Wikipedia articles (if available)
+
+The source dropdown shows available sources with record counts. Sources without content are disabled. Selecting a new source loads its data and resets the path/cluster selection.
 
 ### Toolbox Modal Tools (accessed from index.html)
 
