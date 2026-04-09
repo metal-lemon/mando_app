@@ -63,11 +63,31 @@ http://localhost:5000/
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/sources` | GET | List available content sources |
+| `/api/sources` | GET | List available content sources (auto-discovered from source/) |
 | `/api/search` | POST | Search index for characters (specify source in body) |
 | `/api/content/<source>/<id>` | GET | Fetch full content record |
 | `/api/content/<source>/<id>/text` | GET | Fetch plain text content |
 | `/api/batch_content` | POST | Fetch multiple records |
+
+### Source Discovery
+
+The Flask API auto-discovers sources from the `source/` directory. Each source must have:
+- `<source>_corpus_config.json` (preferred) or `<source>_data.json` (legacy)
+- `<source>.json` (content file, optional but needed for full functionality)
+
+Response from `/api/sources` includes:
+```json
+{
+  "id": "stories",
+  "name": "Stories",
+  "description": "Chinese stories corpus",
+  "totalRecords": 2679,
+  "uniqueChars": 4652,
+  "hasContent": true,
+  "hasIndex": true,
+  "hasFreq": true
+}
+```
 
 ### Source Companion Files
 

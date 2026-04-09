@@ -1260,10 +1260,27 @@
                 this.curriculum = [];
                 this.quizResults = { correct: 0, total: 0, missed: [], correctChars: [] };
                 this.currentQuiz = { index: 0, questions: [], answers: {}, perCharResult: {} };
+                
+                this.selectedSource = 'stories';
+                this.availableSources = [];
 
                 this.loadStories();
+                this.loadSources();
                 this.loadPersistedData();
                 this.init();
+            }
+
+            async loadSources() {
+                try {
+                    const response = await fetch('/api/sources');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.availableSources = data.sources || [];
+                    }
+                } catch (e) {
+                    console.log('Could not load sources:', e);
+                    this.availableSources = [];
+                }
             }
 
             loadPersistedData() {
@@ -1287,15 +1304,21 @@
 
             async loadStories() {
                 try {
-                    const response = await fetch('/data/stories.json');
+                    const sourcePath = `/source/${this.selectedSource}/${this.selectedSource}.json`;
+                    const response = await fetch(sourcePath);
                     if (response.ok) {
                         const data = await response.json();
                         this.stories = Array.isArray(data) ? data : [];
                     }
                 } catch (e) {
-                    console.log('Could not load stories:', e);
+                    console.log('Could not load stories from source:', e);
                     this.stories = [];
                 }
+            }
+
+            async loadStoriesForSource(sourceId) {
+                this.selectedSource = sourceId;
+                await this.loadStories();
             }
 
             init() {
@@ -1735,11 +1758,26 @@ Example:
             renderPathfinder(container) {
                 const hasStories = this.stories.length > 0;
                 
+                // Build source options
+                const sourceOptions = this.availableSources.map(source => {
+                    const disabled = !source.hasContent ? ' disabled' : '';
+                    const label = !source.hasContent ? ` (No content)` : '';
+                    return `<option value="${source.id}"${disabled}>${source.name} (${source.totalRecords} records)${label}</option>`;
+                }).join('');
+                
                 container.innerHTML = `
                     <h2><span class="step-num">3</span> Find Your Learning Path</h2>
                     <p class="step-description">
                         Select cluster size, find optimal story clusters, then build the most efficient path.
                     </p>
+
+                    <div class="source-selector" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">📚 Content Source:</label>
+                        <select id="sourceSelect" style="padding: 8px 12px; font-size: 14px; border-radius: 5px; border: 1px solid #ddd; min-width: 250px;">
+                            ${sourceOptions}
+                        </select>
+                        <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;">Select which content source to use for learning paths.</p>
+                    </div>
 
                     ${!hasStories ? `
                         <div class="info-box">
@@ -1798,6 +1836,22 @@ Example:
             }
 
             bindPathfinderEvents() {
+                // Source selector
+                const sourceSelect = document.getElementById('sourceSelect');
+                if (sourceSelect) {
+                    sourceSelect.value = this.selectedSource;
+                    sourceSelect.addEventListener('change', async (e) => {
+                        const newSource = e.target.value;
+                        await this.loadStoriesForSource(newSource);
+                        // Reset path data when source changes
+                        this.pool = [];
+                        this.clusters = [];
+                        this.selectedCluster = null;
+                        this.path = [];
+                        this.renderStep();
+                    });
+                }
+
                 const generatePoolBtn = document.getElementById('generatePoolBtn');
                 if (generatePoolBtn) generatePoolBtn.addEventListener('click', () => this.generatePool());
 
@@ -2150,7 +2204,8 @@ Example:
 
             async loadFullStories() {
                 try {
-                    const response = await fetch('/data/stories.json');
+                    const sourcePath = `/source/${this.selectedSource}/${this.selectedSource}.json`;
+                    const response = await fetch(sourcePath);
                     if (response.ok) return await response.json();
                 } catch (e) {}
                 return [];
