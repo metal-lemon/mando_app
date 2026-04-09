@@ -1251,7 +1251,7 @@
                 this.targetText = window.mandarinState.getTargetText() || '';
                 this.targetChars = [];
                 this.unknownChars = [];
-                this.stories = [];
+                this.candidates = [];
                 this.pool = [];
                 this.clusters = [];
                 this.selectedCluster = null;
@@ -1264,7 +1264,7 @@
                 this.selectedSource = 'stories';
                 this.availableSources = [];
 
-                this.loadStories();
+                this.loadSourceCandidates();
                 this.loadSources();
                 this.loadPersistedData();
                 this.init();
@@ -1302,23 +1302,30 @@
                 }
             }
 
-            async loadStories() {
+            async loadSourceCandidates() {
                 try {
-                    const sourcePath = `/source/${this.selectedSource}/${this.selectedSource}.json`;
-                    const response = await fetch(sourcePath);
+                    const response = await fetch('/api/search', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            source: this.selectedSource,
+                            chars: this.targetChars,
+                            limit: 2000
+                        })
+                    });
                     if (response.ok) {
                         const data = await response.json();
-                        this.stories = Array.isArray(data) ? data : [];
+                        this.candidates = data.candidates || [];
                     }
                 } catch (e) {
-                    console.log('Could not load stories from source:', e);
-                    this.stories = [];
+                    console.log('Could not load candidates:', e);
+                    this.candidates = [];
                 }
             }
 
-            async loadStoriesForSource(sourceId) {
+            async loadSourceCandidatesFor(sourceId) {
                 this.selectedSource = sourceId;
-                await this.loadStories();
+                await this.loadSourceCandidates();
             }
 
             init() {
@@ -1756,12 +1763,12 @@ Example:
 
             // ==================== STEP 3: PATHFINDER (NEW ALGORITHM) ====================
             renderPathfinder(container) {
-                const hasStories = this.stories.length > 0;
+                const hasCandidates = this.candidates && this.candidates.length > 0;
                 
                 // Build source options
                 const sourceOptions = this.availableSources.map(source => {
-                    const disabled = !source.hasContent ? ' disabled' : '';
-                    const label = !source.hasContent ? ` (No content)` : '';
+                    const disabled = !source.hasIndex ? ' disabled' : '';
+                    const label = !source.hasIndex ? ` (No index)` : '';
                     return `<option value="${source.id}"${disabled}>${source.name} (${source.totalRecords} records)${label}</option>`;
                 }).join('');
                 
@@ -1779,15 +1786,15 @@ Example:
                         <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;">Select which content source to use for learning paths.</p>
                     </div>
 
-                    ${!hasStories ? `
+                    ${!hasCandidates ? `
                         <div class="info-box">
-                            <h4>📚 No Stories Available</h4>
-                            <p>The story library is empty. You can continue without a predefined path.</p>
+                            <h4>📚 No Candidates Available</h4>
+                            <p>No content found for your target characters. You can continue without a predefined path.</p>
                         </div>
                     ` : `
                         <div class="info-box" style="background: #e3f2fd; border-color: #2196F3;">
-                            <h4>📊 Pool Generation</h4>
-                            <p>Limit = known (${this.knownChars.size}) + 2 × target (${this.targetChars.length}) = ${this.knownChars.size + 2 * this.targetChars.length}</p>
+                            <h4>📊 Candidate Pool</h4>
+                            <p>Found <strong>${this.candidates.length}</strong> candidates from API search. Click "Generate Pool" to filter by character limit.</p>
                         </div>
                         
                         <div class="button-group" style="margin: 15px 0;">
@@ -1842,7 +1849,7 @@ Example:
                     sourceSelect.value = this.selectedSource;
                     sourceSelect.addEventListener('change', async (e) => {
                         const newSource = e.target.value;
-                        await this.loadStoriesForSource(newSource);
+                        await this.loadSourceCandidatesFor(newSource);
                         // Reset path data when source changes
                         this.pool = [];
                         this.clusters = [];
@@ -1878,8 +1885,8 @@ Example:
 
                 this.pool = [];
 
-                for (const story of this.stories) {
-                    const chars = story.characters || [];
+                for (const candidate of this.candidates) {
+                    const chars = candidate.chars || [];
                     const uniqueChars = [...new Set(chars)];
 
                     if (uniqueChars.length > limit) continue;
@@ -1892,7 +1899,9 @@ Example:
                     if (nontargetChars.length > targetChars.length) continue;
 
                     this.pool.push({
-                        story: story,
+                        id: candidate.id,
+                        title: candidate.title,
+                        matched_chars: candidate.matched_chars,
                         uniqueChars: uniqueChars,
                         knownChars: knownChars,
                         unknownChars: unknownChars,
@@ -1969,7 +1978,7 @@ Example:
                         html += '<div class="cluster-option" data-index="' + i + '" style="background: white; border: 2px solid #ddd; border-radius: 12px; padding: 15px; margin: 10px 0; cursor: pointer;">' +
                             '<div style="display: flex; justify-content: space-between;"><div><strong>Option ' + (i + 1) + '</strong></div>' +
                             '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div></div>' +
-                            '<div style="font-size: 12px; color: #666;">' + c.stories.map(s => s.story.title || 'Untitled').join(' → ') + '</div></div>';
+                            '<div style="font-size: 12px; color: #666;">' + c.stories.map(s => s.title || 'Untitled').join(' → ') + '</div></div>';
                     }
 
                     document.getElementById('clusterResults').innerHTML = html;
@@ -1994,8 +2003,8 @@ Example:
                     '<h4>📊 Statistics</h4>' +
                     '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div>' +
                     '<div>Avg Jumpsize: <strong>' + c.avgJumpsize.toFixed(1) + '</strong></div></div>' +
-                    '<h4>📚 Stories</h4>' + c.stories.map((s, i) => 
-                        '<div style="padding: 8px; border-bottom: 1px solid #eee;">' + (i+1) + '. ' + (s.story.title || 'Untitled') + '</div>'
+                    '<h4>📚 Candidates</h4>' + c.stories.map((s, i) => 
+                        '<div style="padding: 8px; border-bottom: 1px solid #eee;">' + (i+1) + '. ' + (s.title || 'Untitled') + '</div>'
                     ).join('');
             }
 
@@ -2052,7 +2061,7 @@ Example:
                         const story = bestPath.perm[i];
                         const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
                         newChars.forEach(c => knownSoFar.add(c));
-                        html += '<li class="path-item"><div class="path-number">' + (i+1) + '</div><div class="path-info"><h4>' + (story.story.title || 'Untitled') + '</h4><p>Jumpsize: ' + bestPath.jumpsizes[i] + '</p></div></li>';
+                        html += '<li class="path-item"><div class="path-number">' + (i+1) + '</div><div class="path-info"><h4>' + (story.title || 'Untitled') + '</h4><p>Jumpsize: ' + bestPath.jumpsizes[i] + '</p></div></li>';
                     }
                     html += '</ul>';
 
@@ -2060,11 +2069,11 @@ Example:
                     document.getElementById('optimizedPathStats').innerHTML = html;
 
                     self.path = bestPath.perm.map(s => ({
-                        id: s.story.id,
-                        title: s.story.title,
-                        source: s.story.source,
-                        content: s.story.content,
-                        chars: s.story.characters,
+                        id: s.id,
+                        title: s.title,
+                        source: self.selectedSource,
+                        matched_chars: s.matched_chars,
+                        chars: s.uniqueChars,
                         newChars: s.unknownChars,
                         targetChars: s.targetChars
                     }));
@@ -2099,11 +2108,19 @@ Example:
                     return '<p style="color: #999;">No optimal path found. Some characters may be unreachable.</p>';
                 }
 
-                const overlapInfo = this.path.map((story, i) => {
-                    if (i === 0) return { fromPrev: 0, newThis: story.newChars.length };
-                    const prevChars = new Set(this.path[i-1].newChars);
-                    const overlap = story.newChars.filter(ch => prevChars.has(ch)).length;
-                    return { fromPrev: overlap, newThis: story.newChars.length };
+                const targetSet = new Set(this.targetChars);
+                let cumulativeKnown = new Set(this.knownChars);
+                
+                const pathInfo = this.path.map((story, i) => {
+                    const newChars = story.newChars || [];
+                    const fromPrev = i > 0 ? newChars.filter(c => cumulativeKnown.has(c)).length : 0;
+                    const newThis = newChars.length;
+                    
+                    newChars.forEach(c => cumulativeKnown.add(c));
+                    
+                    const remaining = [...targetSet].filter(c => !cumulativeKnown.has(c)).length;
+                    
+                    return { fromPrev, newThis, remaining };
                 });
 
                 return `
@@ -2118,20 +2135,20 @@ Example:
                                 <div class="path-info">
                                     <h4>${story.title}</h4>
                                     <p>${story.source || 'Unknown source'} • ${story.chars.length} total characters</p>
-                                    ${overlapInfo[i].fromPrev > 0 ? `
+                                    ${pathInfo[i].fromPrev > 0 ? `
                                         <div class="overlap-info">
-                                            <span class="overlap-badge">🔄 ${overlapInfo[i].fromPrev} chars overlap</span>
+                                            <span class="overlap-badge">🔄 ${pathInfo[i].fromPrev} chars overlap</span>
                                             <span>with previous lesson (great for reinforcement!)</span>
                                         </div>
                                     ` : ''}
                                 </div>
                                 <div class="path-stats">
                                     <div class="path-stat">
-                                        <div class="value" style="color: var(--secondary);">+${overlapInfo[i].newThis}</div>
+                                        <div class="value" style="color: var(--secondary);">+${pathInfo[i].newThis}</div>
                                         <div class="label">New Chars</div>
                                     </div>
                                     <div class="path-stat">
-                                        <div class="value" style="color: ${story.remaining > 0 ? 'var(--warning)' : 'var(--secondary)'};">${story.remaining}</div>
+                                        <div class="value" style="color: ${pathInfo[i].remaining > 0 ? 'var(--warning)' : 'var(--secondary)'};">${pathInfo[i].remaining}</div>
                                         <div class="label">Remaining</div>
                                     </div>
                                 </div>
@@ -2202,13 +2219,22 @@ Example:
                 });
             }
 
-            async loadFullStories() {
-                try {
-                    const sourcePath = `/source/${this.selectedSource}/${this.selectedSource}.json`;
-                    const response = await fetch(sourcePath);
-                    if (response.ok) return await response.json();
-                } catch (e) {}
-                return [];
+            async loadFullContent() {
+                const results = [];
+                for (const item of this.path) {
+                    if (item.id) {
+                        try {
+                            const response = await fetch(`/api/content/${this.selectedSource}/${item.id}`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                results.push(data);
+                            }
+                        } catch (e) {
+                            console.log('Could not load content for', item.id, e);
+                        }
+                    }
+                }
+                return results;
             }
 
             async loadDictionary() {
@@ -2270,20 +2296,20 @@ Example:
 
             async generateCurriculumForPath() {
                 this.curriculum = [];
-                const fullStories = await this.loadFullStories();
+                const fullContent = await this.loadFullContent();
                 const targetSet = new Set(this.targetChars);
                 
                 let cumulativeKnown = new Set(this.knownChars);
                 
                 for (let i = 0; i < this.path.length; i++) {
-                    const storyItem = this.path[i];
-                    const fullStory = fullStories.find(s => s.id === storyItem.id) || {};
+                    const pathItem = this.path[i];
+                    const fullStory = fullContent.find(c => c.id === pathItem.id) || {};
                     
-                    const storyChars = new Set(storyItem.chars || []);
+                    const storyChars = new Set(pathItem.chars || []);
                     const newCharsThisLesson = [...storyChars].filter(c => !cumulativeKnown.has(c));
                     const targetCharsThisLesson = newCharsThisLesson.filter(c => targetSet.has(c));
                     
-                    const content = fullStory.content || storyItem.content || '';
+                    const content = fullStory.text || fullStory.content || '';
                     const wordsInStory = this.extractWordsFromText(content);
                     
                     const charWordMap = {};
@@ -2294,8 +2320,8 @@ Example:
                     
                     this.curriculum.push({
                         index: i,
-                        storyId: storyItem.id,
-                        title: storyItem.title || 'Story ' + (i + 1),
+                        storyId: pathItem.id,
+                        title: pathItem.title || 'Story ' + (i + 1),
                         content: content,
                         newChars: newCharsThisLesson,
                         targetChars: targetCharsThisLesson,
@@ -2514,14 +2540,14 @@ Example:
                 const orderedStories = this.optimizedPath?.perm || this.path;
                 
                 for (const storyItem of orderedStories) {
-                    const unknownChars = storyItem.unknownChars || storyItem.newChars || [];
+                    const unknownChars = storyItem.newChars || [];
                     for (const char of unknownChars) {
                         if (!charSet.has(char)) {
                             charSet.add(char);
                             allNewChars.push({
                                 char: char,
                                 storyIndex: orderedStories.indexOf(storyItem),
-                                storyTitle: storyItem.story?.title || storyItem.title || 'Story',
+                                storyTitle: storyItem.title || 'Story',
                                 isTarget: this.targetChars.includes(char)
                             });
                         }
