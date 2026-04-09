@@ -1,3 +1,5 @@
+Last updated: 2026-04-09
+
 # Mandarin Learner - Words by Known Characters
 
 **Source:** `templates/archived/mandarin_learner.html`

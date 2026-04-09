@@ -1,3 +1,5 @@
+Last updated: 2026-04-09
+
 # Pathfinder - Learning Path Builder
 
 **Source:** `templates/archived/pathfinder.html`

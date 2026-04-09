@@ -1,3 +1,5 @@
+Last updated: 2026-04-09
+
 # Study Guide Generator
 
 **Source:** `templates/archived/study_guide.html`
