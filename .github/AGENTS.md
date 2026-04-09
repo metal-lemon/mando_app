@@ -36,25 +36,28 @@ http://localhost:8000/index.html
 │       └── shared_state.js     # Central state management
 ├── data/
 │   ├── dictionary.json         # CC-CEDICT word database
-│   ├── stories.json           # Story library
 │   ├── trad_simp_map.json     # Traditional→simplified mapping
-│   └── stories_data.json      # Story character data
-├── source/                     # Content sources (Flask)
-│   ├── wiki/
+│   └── hsk_characters.json   # HSK vocabulary for quizzes
+├── source/                     # Content sources (Flask API)
+│   ├── stories/               # Stories corpus
+│   │   ├── stories.json       # Full content
+│   │   ├── stories_data.json  # Inverted index
+│   │   ├── stories_freq.json  # Character frequency
+│   │   ├── stories_corpus_config.json  # Metadata
+│   │   └── stories.sample.json # Sample for testing
+│   ├── wiki/                  # Wikipedia corpus
+│   │   ├── wiki.json          # Full content
 │   │   ├── wiki_data.json     # Inverted index
-│   │   └── wiki_content/     # Extracted article content
-│   └── classics/
+│   │   ├── wiki_freq.json     # Character frequency
+│   │   ├── wiki_corpus_config.json  # Metadata
+│   │   └── wiki.sample.json   # Sample for testing
+│   └── <future>/              # New sources follow same pattern
+├── scripts/
+│   ├── build_wiki_index.py    # Build Wikipedia index from dump
+│   └── hello_mcp_server.py    # MCP server (optional)
 ├── docs/
 │   ├── json_schemas.md        # JSON file structure reference
 │   └── archived/              # Documentation for superseded tools
-│       ├── study_guide.md
-│       ├── pathfinder.md
-│       ├── mandarin_learner.md
-│       ├── curriculum_unifier.md
-│       └── can_i_read_this.md
-├── scripts/
-│   └── build_wiki_index.py    # Build Wikipedia index from dump
-├── serve.py                   # Optional: HTTP server with log capture
 └── AGENTS.md                  # This file
 ```
 

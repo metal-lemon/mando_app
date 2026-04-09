@@ -24,7 +24,11 @@ DATA_DIR = BASE_DIR / 'data'
 
 
 def discover_sources():
-    """Auto-discover available sources from the source/ directory structure."""
+    """Auto-discover available sources from the source/ directory structure.
+    
+    Uses corpus_config.json for metadata if available, otherwise falls back
+    to _data.json for legacy sources.
+    """
     sources = []
     
     if not SOURCE_DIR.exists():
@@ -34,44 +38,74 @@ def discover_sources():
         if not source_path.is_dir():
             continue
         
-        data_file = source_path / f'{source_path.name}_data.json'
+        source_id = source_path.name
         
-        if data_file.exists():
+        # First check for corpus_config.json (new unified format)
+        config_file = source_path / f'{source_id}_corpus_config.json'
+        
+        if config_file.exists():
             try:
-                with open(data_file, 'r', encoding='utf-8') as f:
-                    metadata = json.load(f)
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                # Check if main content file exists
+                content_file = source_path / f'{source_id}.json'
+                has_content = content_file.exists()
                 
                 sources.append({
-                    'id': source_path.name,
-                    'name': metadata.get('name', source_path.name.title()),
-                    'description': metadata.get('description', ''),
-                    'totalPages': metadata.get('totalPages', 0),
-                    'pagesWithChars': metadata.get('pagesWithChars', 0),
-                    'uniqueChars': metadata.get('uniqueChars', 0),
-                    'buildDate': metadata.get('buildDate', ''),
+                    'id': source_id,
+                    'name': config.get('name', source_id.title()),
+                    'description': config.get('description', ''),
+                    'totalRecords': config.get('totalRecords', 0),
+                    'uniqueChars': config.get('totalUniqueCharacters', 0),
+                    'buildDate': config.get('buildDate', ''),
+                    'hasContent': has_content,
+                    'hasIndex': (source_path / f'{source_id}_data.json').exists(),
+                    'hasFreq': (source_path / f'{source_id}_freq.json').exists()
                 })
             except (json.JSONDecodeError, IOError):
-                sources.append({
-                    'id': source_path.name,
-                    'name': source_path.name.title(),
-                    'description': '',
-                    'totalPages': 0,
-                    'pagesWithChars': 0,
-                    'uniqueChars': 0,
-                    'buildDate': '',
-                })
+                sources.append(_fallback_source(source_id))
         else:
-            sources.append({
-                'id': source_path.name,
-                'name': source_path.name.title(),
-                'description': 'No index file found',
-                'totalPages': 0,
-                'pagesWithChars': 0,
-                'uniqueChars': 0,
-                'buildDate': '',
-            })
+            # Fall back to legacy _data.json format
+            data_file = source_path / f'{source_id}_data.json'
+            
+            if data_file.exists():
+                try:
+                    with open(data_file, 'r', encoding='utf-8') as f:
+                        metadata = json.load(f)
+                    
+                    sources.append({
+                        'id': source_id,
+                        'name': metadata.get('name', source_id.title()),
+                        'description': metadata.get('description', ''),
+                        'totalRecords': metadata.get('totalPages', 0),
+                        'uniqueChars': metadata.get('uniqueChars', 0),
+                        'buildDate': metadata.get('buildDate', ''),
+                        'hasContent': (source_path / f'{source_id}.json').exists(),
+                        'hasIndex': True,
+                        'hasFreq': (source_path / f'{source_id}_freq.json').exists()
+                    })
+                except (json.JSONDecodeError, IOError):
+                    sources.append(_fallback_source(source_id))
+            else:
+                sources.append(_fallback_source(source_id))
     
     return sources
+
+
+def _fallback_source(source_id):
+    """Create fallback source entry when no config is found."""
+    return {
+        'id': source_id,
+        'name': source_id.title(),
+        'description': 'No configuration found',
+        'totalRecords': 0,
+        'uniqueChars': 0,
+        'buildDate': '',
+        'hasContent': False,
+        'hasIndex': False,
+        'hasFreq': False
+    }
 
 
 def load_source_index(source_id):
@@ -186,49 +220,67 @@ def api_search():
     })
 
 
-@app.route('/api/content/<source_id>/<page_id>')
-def api_content(source_id, page_id):
+@app.route('/api/content/<source_id>/<record_id>')
+def api_content(source_id, record_id):
     """
-    Fetch content for a specific page.
+    Fetch content for a specific record.
     
-    Returns the extracted article content as JSON.
+    Returns the content from <source>.json file.
     """
-    content_dir = SOURCE_DIR / source_id / f'{source_id}_content'
-    
-    if not content_dir.exists():
-        return jsonify({'error': 'Content directory not found'}), 404
-    
-    content_file = content_dir / f'{page_id}.json'
+    source_path = SOURCE_DIR / source_id
+    content_file = source_path / f'{source_id}.json'
     
     if not content_file.exists():
-        return jsonify({'error': f'Content not found: {page_id}'}), 404
-    
-    return send_from_directory(content_dir, f'{page_id}.json', mimetype='application/json')
-
-
-@app.route('/api/content/<source_id>/<page_id>/text')
-def api_content_text(source_id, page_id):
-    """
-    Fetch plain text content for a specific page.
-    
-    Returns just the text content, useful for reading.
-    """
-    content_dir = SOURCE_DIR / source_id / f'{source_id}_content'
-    content_file = content_dir / f'{page_id}.json'
-    
-    if not content_file.exists():
-        return jsonify({'error': f'Content not found: {page_id}'}), 404
+        return jsonify({'error': f'Content file not found for source: {source_id}'}), 404
     
     try:
         with open(content_file, 'r', encoding='utf-8') as f:
-            content = json.load(f)
+            content_data = json.load(f)
         
-        return jsonify({
-            'id': page_id,
-            'title': content.get('title', ''),
-            'text': content.get('text', ''),
-            'chars': content.get('chars', [])
-        })
+        # Find the specific record by ID
+        if isinstance(content_data, list):
+            for record in content_data:
+                if str(record.get('id')) == str(record_id):
+                    return jsonify(record)
+            return jsonify({'error': f'Record not found: {record_id}'}), 404
+        else:
+            return jsonify({'error': 'Invalid content format'}), 500
+            
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/content/<source_id>/<record_id>/text')
+def api_content_text(source_id, record_id):
+    """
+    Fetch plain text content for a specific record.
+    
+    Returns just the text content, useful for reading.
+    """
+    source_path = SOURCE_DIR / source_id
+    content_file = source_path / f'{source_id}.json'
+    
+    if not content_file.exists():
+        return jsonify({'error': f'Content file not found for source: {source_id}'}), 404
+    
+    try:
+        with open(content_file, 'r', encoding='utf-8') as f:
+            content_data = json.load(f)
+        
+        # Find the specific record by ID
+        if isinstance(content_data, list):
+            for record in content_data:
+                if str(record.get('id')) == str(record_id):
+                    return jsonify({
+                        'id': record_id,
+                        'title': record.get('title', ''),
+                        'text': record.get('content', record.get('text', '')),
+                        'chars': record.get('characters', record.get('chars', []))
+                    })
+            return jsonify({'error': f'Record not found: {record_id}'}), 404
+        else:
+            return jsonify({'error': 'Invalid content format'}), 500
+            
     except (json.JSONDecodeError, IOError) as e:
         return jsonify({'error': str(e)}), 500
 
@@ -236,14 +288,14 @@ def api_content_text(source_id, page_id):
 @app.route('/api/batch_content', methods=['POST'])
 def api_batch_content():
     """
-    Fetch content for multiple pages at once.
+    Fetch content for multiple records at once.
     
     Request body (JSON):
         source: str - Source ID
-        page_ids: list - List of page IDs to fetch
+        record_ids: list - List of record IDs to fetch
     
     Returns:
-        JSON array of page content objects
+        JSON array of content objects
     """
     data = request.get_json()
     
@@ -251,34 +303,38 @@ def api_batch_content():
         return jsonify({'error': 'No data provided'}), 400
     
     source_id = data.get('source')
-    page_ids = data.get('page_ids', [])
+    record_ids = data.get('record_ids', [])
     
-    if not source_id or not page_ids:
-        return jsonify({'error': 'Source and page_ids are required'}), 400
+    if not source_id or not record_ids:
+        return jsonify({'error': 'Source and record_ids are required'}), 400
     
-    content_dir = SOURCE_DIR / source_id / f'{source_id}_content'
+    source_path = SOURCE_DIR / source_id
+    content_file = source_path / f'{source_id}.json'
     
-    if not content_dir.exists():
-        return jsonify({'error': 'Content directory not found'}), 404
+    if not content_file.exists():
+        return jsonify({'error': f'Content file not found for source: {source_id}'}), 404
     
-    results = []
-    
-    for page_id in page_ids[:50]:
-        content_file = content_dir / f'{page_id}.json'
+    try:
+        with open(content_file, 'r', encoding='utf-8') as f:
+            content_data = json.load(f)
         
-        if content_file.exists():
-            try:
-                with open(content_file, 'r', encoding='utf-8') as f:
-                    results.append(json.load(f))
-            except (json.JSONDecodeError, IOError):
-                results.append({'id': page_id, 'error': 'Failed to load'})
-    
-    return jsonify({
-        'source': source_id,
-        'requested': len(page_ids),
-        'returned': len(results),
-        'pages': results
-    })
+        results = []
+        
+        if isinstance(content_data, list):
+            record_id_set = set(str(rid) for rid in record_ids[:50])
+            for record in content_data:
+                if str(record.get('id')) in record_id_set:
+                    results.append(record)
+        
+        return jsonify({
+            'source': source_id,
+            'requested': len(record_ids),
+            'returned': len(results),
+            'records': results
+        })
+        
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/static/<path:filename>')
@@ -302,7 +358,8 @@ if __name__ == '__main__':
     sources = discover_sources()
     if sources:
         for src in sources:
-            print(f"  - {src['id']}: {src['name']} ({src['pagesWithChars']} pages with chars)")
+            content_status = "✓" if src.get('hasContent') else "✗"
+            print(f"  - {src['id']}: {src['name']} ({src['totalRecords']} records, {src['uniqueChars']} chars) [{content_status}]")
     else:
         print("  (none found - add data to source/ directory)")
     print()

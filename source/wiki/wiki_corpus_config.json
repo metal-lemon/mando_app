@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "name": "Wikipedia",
+  "description": "Chinese Wikipedia articles for learning",
+  "source": "wikipedia_zh",
+  "totalRecords": 4,
+  "totalUniqueCharacters": 93,
+  "averageCharactersPerRecord": 38.0,
+  "buildDate": "2026-04-08T00:00:00.000Z",
+  "fileFormats": [
+    "json",
+    "json_gz"
+  ],
+  "companionFiles": [
+    "wiki.json",
+    "wiki_data.json",
+    "wiki_freq.json",
+    "wiki_corpus_config.json",
+    "wiki.sample.json",
+    "wiki_inverted_index.bin (optional)"
+  ]
+}

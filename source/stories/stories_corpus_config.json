@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "name": "Stories",
+  "description": "Chinese stories corpus for language learning",
+  "source": "gushi365",
+  "totalRecords": 2679,
+  "totalUniqueCharacters": 4652,
+  "averageCharactersPerStory": 234.41,
+  "buildDate": "2026-04-08T00:00:00.000Z",
+  "fileFormats": [
+    "json",
+    "json_gz"
+  ],
+  "companionFiles": [
+    "stories.json",
+    "stories_data.json",
+    "stories_freq.json",
+    "stories_corpus_config.json",
+    "stories.sample.json",
+    "stories_inverted_index.bin (optional)"
+  ]
+}
