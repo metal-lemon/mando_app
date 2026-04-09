@@ -22,21 +22,40 @@ http://localhost:8000/index.html
 ## File Structure
 
 ```
-├── index.html              # Home page with navigation
-├── setup.html              # One-click file setup
-├── mandarin_learner.html   # Track known characters
-├── can_i_read_this.html    # Text readability analyzer
-├── study_guide.html        # Generate study materials
-├── story_suggester.html    # Find stories by difficulty
-├── story_library.html      # Manage story database
-├── traditional_finder.html # Identify/convert traditional chars
-├── shared_state.js         # Central state management
+├── app.py                      # Flask application with API routes
+├── requirements.txt            # Python dependencies
+├── templates/                  # HTML pages (served by Flask)
+│   ├── index.html             # Main hub (3 stacked boxes + toolbox)
+│   ├── setup.html             # First-time setup wizard
+│   ├── learning_wizard.html    # Guided 6-step learning workflow
+│   ├── traditional_finder.html # Convert trad→simp (toolbox)
+│   ├── story_suggester.html   # Find stories by level (toolbox)
+│   └── story_library.html     # Manage stories (toolbox)
+├── static/
+│   └── js/
+│       └── shared_state.js     # Central state management
 ├── data/
-│   ├── dictionary.json     # CC-CEDICT word database
-│   ├── stories.json        # Story library
-│   └── trad_simp_map.json  # Traditional→simplified mapping
-├── serve.py                # Optional: HTTP server with log capture
-└── AGENTS.md               # This file
+│   ├── dictionary.json         # CC-CEDICT word database
+│   ├── stories.json           # Story library
+│   ├── trad_simp_map.json     # Traditional→simplified mapping
+│   └── stories_data.json      # Story character data
+├── source/                     # Content sources (Flask)
+│   ├── wiki/
+│   │   ├── wiki_data.json     # Inverted index
+│   │   └── wiki_content/     # Extracted article content
+│   └── classics/
+├── docs/
+│   ├── json_schemas.md        # JSON file structure reference
+│   └── archived/              # Documentation for superseded tools
+│       ├── study_guide.md
+│       ├── pathfinder.md
+│       ├── mandarin_learner.md
+│       ├── curriculum_unifier.md
+│       └── can_i_read_this.md
+├── scripts/
+│   └── build_wiki_index.py    # Build Wikipedia index from dump
+├── serve.py                   # Optional: HTTP server with log capture
+└── AGENTS.md                  # This file
 ```
 
 ## Testing
@@ -262,10 +281,10 @@ try {
 ## Common Tasks
 
 ### Add a new page
-1. Copy structure from existing page (e.g., `study_guide.html`)
+1. Copy structure from existing page (e.g., `story_library.html`)
 2. Include `<script src="shared_state.js"></script>`
-3. Add link in `index.html` tools-grid section
-4. Update README.txt file structure
+3. Add link in `index.html` toolbox modal
+4. Add route in `app.py` if needed
 
 ### Add a new button style
 Add to existing button styles in the page's `<style>` block:

@@ -23,17 +23,12 @@ http://localhost:5000/
 ├── app.py                      # Flask application with API routes
 ├── requirements.txt            # Python dependencies
 ├── templates/                  # HTML pages (served by Flask)
-│   ├── index.html
-│   ├── setup.html
-│   ├── mandarin_learner.html
-│   ├── can_i_read_this.html
-│   ├── study_guide.html
-│   ├── story_suggester.html
-│   ├── story_library.html
-│   ├── traditional_finder.html
-│   ├── curriculum_builder.html
-│   ├── lite_builder.html
-│   └── wiki_curriculum_builder.html
+│   ├── index.html             # Main hub (3 stacked boxes + toolbox)
+│   ├── setup.html             # First-time setup wizard
+│   ├── learning_wizard.html    # Guided 6-step learning workflow
+│   ├── traditional_finder.html # Convert trad→simp (toolbox)
+│   ├── story_suggester.html   # Find stories by level (toolbox)
+│   └── story_library.html     # Manage stories (toolbox)
 ├── static/
 │   └── js/
 │       └── shared_state.js     # Central state management
@@ -52,9 +47,14 @@ http://localhost:5000/
 ├── scripts/
 │   ├── build_wiki_index.py    # Build Wikipedia index from dump
 │   └── hello_mcp_server.py    # MCP server (optional)
-├── serve.py                   # Optional: HTTP server with log capture
 ├── docs/
-│   └── json_schemas.md        # JSON file structure reference & samples
+│   ├── json_schemas.md        # JSON file structure reference
+│   └── archived/              # Documentation for superseded tools
+│       ├── study_guide.md
+│       ├── pathfinder.md
+│       ├── mandarin_learner.md
+│       ├── curriculum_unifier.md
+│       └── can_i_read_this.md
 └── AGENTS.md                  # This file
 ```
 
@@ -372,10 +372,10 @@ try {
 ## Common Tasks
 
 ### Add a new page
-1. Copy structure from existing page (e.g., `study_guide.html`)
+1. Copy structure from existing page (e.g., `story_library.html`)
 2. Place in `templates/` directory
 3. Include `<script src="/static/js/shared_state.js"></script>`
-4. Add link in `templates/index.html` tools-grid section
+4. Add link in `templates/index.html` toolbox modal
 5. Add route in `app.py` if custom handling needed
 
 ### Add a new content source
