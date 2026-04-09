@@ -5,11 +5,12 @@ Corpus Intake Tool for Mandarin Learning Tools
 Ingests text collections and creates all required companion files for the Flask API.
 Automatically creates the folder structure and generates:
 
-- <name>.json           - Full content records with characters
-- <name>_data.json      - Inverted index (character -> record IDs)
-- <name>_freq.json      - Character frequency counts
+- <name>.json              - Full content records with characters
+- <name>_data.json         - Per-record data (text_length, characters)
+- <name>_inv_index.json    - Inverted index (character -> record IDs)
+- <name>_freq.json         - Character frequency counts
 - <name>_corpus_config.json - Metadata (name, description, stats)
-- <name>.sample.json   - Small test subset
+- <name>.sample.json       - Small test subset (2 entries)
 
 Usage:
     python ingest_corpus.py -i <input> -n <name> [-o <output_dir>] [-d <description>]
@@ -40,7 +41,7 @@ from glob import glob as glob_glob
 
 CHINESE_REGEX = re.compile(r'[\u4e00-\u9fff]')
 
-DEFAULT_SAMPLE_SIZE = 50
+DEFAULT_SAMPLE_SIZE = 2
 DEFAULT_SOURCE_DIR = "source"
 
 
@@ -217,6 +218,26 @@ def build_index_and_freq(records):
     return char_index, dict(char_freq)
 
 
+def build_record_data(records, char_freq):
+    """Build record data (text_length and characters ordered by frequency)."""
+    char_freq_sorted = sorted(char_freq.keys(), key=lambda c: char_freq[c], reverse=True)
+    
+    record_data = {}
+    for record in records:
+        record_id = str(record['id'])
+        content = record.get('content', '')
+        chars = record.get('characters', [])
+        
+        ordered_chars = sorted(chars, key=lambda c: char_freq_sorted.index(c) if c in char_freq_sorted else float('inf'))
+        
+        record_data[record_id] = {
+            "text_length": len(content),
+            "characters": ordered_chars
+        }
+    
+    return record_data
+
+
 def create_corpus_config(name, description, total_records, unique_chars):
     """Create corpus config metadata."""
     return {
@@ -327,8 +348,7 @@ Examples:
             "id": next_id,
             "title": normalized['title'],
             "source": normalized['source'],
-            "content": content,
-            "characters": chars
+            "content": content
         })
         next_id += 1
 
@@ -343,6 +363,9 @@ Examples:
     print("Building index...")
     char_index, char_freq = build_index_and_freq(records)
 
+    print("Building record data...")
+    record_data = build_record_data(records, char_freq)
+
     source_dir = os.path.join(output_dir, name)
     print(f"Creating output directory: {source_dir}/")
 
@@ -352,8 +375,12 @@ Examples:
     print(f"  Saved: {content_file}")
 
     data_file = os.path.join(source_dir, f"{name}_data.json")
-    save_json({"index": char_index}, data_file, minify=True)
+    save_json(record_data, data_file, minify=True)
     print(f"  Saved: {data_file}")
+
+    inv_index_file = os.path.join(source_dir, f"{name}_inv_index.json")
+    save_json({"index": char_index}, inv_index_file, minify=True)
+    print(f"  Saved: {inv_index_file}")
 
     freq_file = os.path.join(source_dir, f"{name}_freq.json")
     save_json(char_freq, freq_file, minify=True)

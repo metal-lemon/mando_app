@@ -35,11 +35,12 @@ scripts/ingest_corpus.py
 
 | File | Description |
 |------|-------------|
-| `<name>.json` | Full content records with `id`, `title`, `source`, `content`, `characters` |
-| `<name>_data.json` | Inverted index: `{ "index": { "字": ["1", "2"], ... } }` |
+| `<name>.json` | Full content records with `id`, `title`, `source`, `content` |
+| `<name>_data.json` | Per-record data: `{ "1": { "text_length": 15, "characters": ["你", "好"] }, ... }` |
+| `<name>_inv_index.json` | Inverted index: `{ "index": { "字": ["1", "2"], ... } }` |
 | `<name>_freq.json` | Character frequency: `{ "字": 5, "符": 3, ... }` |
 | `<name>_corpus_config.json` | Metadata: `{ "name", "description", "totalRecords", "uniqueChars", "buildDate" }` |
-| `<name>.sample.json` | First 50 records with `sample: true` |
+| `<name>.sample.json` | First 2 records with `sample: true` |
 
 ---
 
@@ -78,7 +79,7 @@ $ python scripts/ingest_corpus.py -i long_text.txt -n corpus --delimiter "---"
 | `-o`, `--output` | | `source` | Output directory |
 | `-d`, `--description` | | `<name> corpus` | Source description |
 | `--delimiter` | | auto | Text delimiter (`---`, `===`, `empty`, `title`) |
-| `--sample-size` | | 50 | Number of records in sample file |
+| `--sample-size` | | 2 | Number of records in sample file |
 
 ---
 
@@ -110,6 +111,7 @@ source/
 └── <name>/
     ├── <name>.json
     ├── <name>_data.json
+    ├── <name>_inv_index.json
     ├── <name>_freq.json
     ├── <name>_corpus_config.json
     └── <name>.sample.json
@@ -136,8 +138,7 @@ Output records always include:
   "id": 1,
   "title": "Story Title",
   "source": "Author or Source",
-  "content": "Chinese text content...",
-  "characters": ["字", "符", "列", "表"]
+  "content": "Chinese text content..."
 }
 ```
 
@@ -166,10 +167,12 @@ Normalizing records...
   Extracting characters...
   Found 523 unique Chinese characters
 Building index...
+Building record data...
 Creating output directory: ./source/stories/
 Saving files...
   Saved: ./source/stories/stories.json
   Saved: ./source/stories/stories_data.json
+  Saved: ./source/stories/stories_inv_index.json
   Saved: ./source/stories/stories_freq.json
   Saved: ./source/stories/stories_corpus_config.json
   Saved: ./source/stories/stories.sample.json
