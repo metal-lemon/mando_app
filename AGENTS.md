@@ -52,6 +52,7 @@ http://localhost:5000/
 │   └── <future>/              # New sources follow same pattern
 ├── scripts/
 │   ├── build_wiki_index.py    # Build Wikipedia index from dump
+│   ├── ingest_corpus.py      # Corpus intake tool (hidden)
 │   └── hello_mcp_server.py    # MCP server (optional)
 ├── docs/
 │   ├── json_schemas.md        # JSON file structure reference
@@ -104,6 +105,23 @@ Every content source in `source/<name>/` follows the same companion file pattern
 
 ### Adding a New Source
 
+**Option 1: Use ingest_corpus.py (recommended)**
+The corpus intake tool automatically creates all required files from text input:
+```bash
+# From JSON array
+python scripts/ingest_corpus.py -i input.json -n my_corpus -d "My corpus"
+
+# From directory of text files
+python scripts/ingest_corpus.py -i ./texts/ -n my_corpus
+
+# From glob pattern
+python scripts/ingest_corpus.py -i "*.txt" -n corpus -o source/
+
+# From delimited text file
+python scripts/ingest_corpus.py -i long_text.txt -n corpus --delimiter "---"
+```
+
+**Option 2: Manual process**
 1. Create `source/<name>/` directory
 2. Generate `<name>.json` with content records
 3. Generate `<name>_data.json` with inverted index (script required)
@@ -425,10 +443,9 @@ try {
 5. Add route in `app.py` if custom handling needed
 
 ### Add a new content source
-1. Process source data with `scripts/build_wiki_index.py`
-2. Output index to `source/<name>/<name>_data.json`
-3. Output content to `source/<name>/<name>_content/`
-4. Source will auto-appear in wiki_curriculum_builder dropdown
+1. Process source data with `scripts/ingest_corpus.py` (recommended) or `scripts/build_wiki_index.py` (for Wikipedia)
+2. Output goes to `source/<name>/` with all companion files
+3. Source will auto-appear in wiki_curriculum_builder dropdown
 
 ### Add a new button style
 Add to existing button styles in the page's `<style>` block:
@@ -512,3 +529,13 @@ For processing ZIM files, install one of:
 - **Stage 2**: Jaccard clustering of candidates by character overlap
 - **Stage 3**: Path optimization to minimize jumpsize
 - **Stage 4**: Wikipedia article preview within the tool
+
+## Future Development Ideas
+
+### Corpus Ingestion Enhancements
+
+- **Improved text file parsing**: Auto-detect story boundaries with smarter heuristics (title patterns, numbered sections, paragraph density analysis)
+- **Format auto-detection**: Automatically detect input format without requiring CLI flags
+- **Incremental updates**: Support adding new records to existing corpus without full rebuild
+- **Batch processing**: Process multiple input files into separate sources in one run
+- **Validation mode**: Check existing corpus files for required fields and data integrity
