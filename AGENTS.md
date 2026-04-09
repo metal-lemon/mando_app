@@ -34,27 +34,28 @@ http://localhost:5000/
 │       └── shared_state.js     # Central state management
 ├── data/
 │   ├── dictionary.json         # CC-CEDICT word database
-│   ├── stories.json           # Story library
 │   ├── trad_simp_map.json     # Traditional→simplified mapping
-│   └── stories_data.json      # Story character data
-├── source/                     # Large content sources (Flask)
-│   ├── wiki/
+│   └── hsk_characters.json   # HSK vocabulary for quizzes
+├── source/                     # Content sources (Flask API)
+│   ├── stories/               # Stories corpus
+│   │   ├── stories.json       # Full content
+│   │   ├── stories_data.json  # Inverted index
+│   │   ├── stories_freq.json  # Character frequency
+│   │   ├── stories_corpus_config.json  # Metadata
+│   │   └── stories.sample.json # Sample for testing
+│   ├── wiki/                  # Wikipedia corpus
+│   │   ├── wiki.json          # Full content
 │   │   ├── wiki_data.json     # Inverted index
-│   │   └── wiki_content/     # Extracted article content
-│   └── classics/
-│       ├── classics_data.json
-│       └── classics_content/
+│   │   ├── wiki_freq.json     # Character frequency
+│   │   ├── wiki_corpus_config.json  # Metadata
+│   │   └── wiki.sample.json   # Sample for testing
+│   └── <future>/              # New sources follow same pattern
 ├── scripts/
 │   ├── build_wiki_index.py    # Build Wikipedia index from dump
 │   └── hello_mcp_server.py    # MCP server (optional)
 ├── docs/
 │   ├── json_schemas.md        # JSON file structure reference
 │   └── archived/              # Documentation for superseded tools
-│       ├── study_guide.md
-│       ├── pathfinder.md
-│       ├── mandarin_learner.md
-│       ├── curriculum_unifier.md
-│       └── can_i_read_this.md
 └── AGENTS.md                  # This file
 ```
 
@@ -63,8 +64,33 @@ http://localhost:5000/
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/sources` | GET | List available content sources |
-| `/api/search` | POST | Search index for characters |
-| `/api/content/<source>/<id>/text` | GET | Fetch article content |
+| `/api/search` | POST | Search index for characters (specify source in body) |
+| `/api/content/<source>/<id>` | GET | Fetch full content record |
+| `/api/content/<source>/<id>/text` | GET | Fetch plain text content |
+| `/api/batch_content` | POST | Fetch multiple records |
+
+### Source Companion Files
+
+Every content source in `source/<name>/` follows the same companion file pattern:
+
+| File | Description | Required |
+|------|-------------|----------|
+| `<name>.json` | Full content records (array of objects with id, title, source, content, characters) | Yes |
+| `<name>_data.json` | Inverted index: mapping from character to list of record IDs | Yes |
+| `<name>_freq.json` | Character frequency: how many records contain each character | Yes |
+| `<name>_corpus_config.json` | Metadata: name, description, totalRecords, uniqueChars, buildDate | Yes |
+| `<name>.sample.json` | Small subset for testing (same format as main file with sample: true) | Yes |
+| `<name>_inverted_index.bin` | Binary optimized index (optional, for large corpora) | No |
+
+### Adding a New Source
+
+1. Create `source/<name>/` directory
+2. Generate `<name>.json` with content records
+3. Generate `<name>_data.json` with inverted index (script required)
+4. Generate `<name>_freq.json` with character frequency
+5. Generate `<name>_corpus_config.json` with metadata
+6. Generate `<name>.sample.json` with small subset
+7. Source auto-discovered by Flask API - no code changes needed
 
 ### Search Request Example
 ```json

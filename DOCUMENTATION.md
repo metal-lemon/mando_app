@@ -31,19 +31,28 @@ python app.py
 │       └── shared_state.js   # Central state management
 │
 ├── data/
-│   ├── dictionary.json        # CC-CEDICT word database
-│   ├── stories.json          # Story library
-│   ├── stories_data.json     # Story character sets (optimized)
-│   ├── hsk_characters.json   # HSK vocabulary lists (1504 chars)
+│   ├── dictionary.json         # CC-CEDICT word database
+│   ├── stories.json           # (legacy - moved to source/stories/)
+│   ├── stories_data.json      # (legacy - moved to source/stories/)
+│   ├── hsk_characters.json   # HSK vocabulary lists (2663 chars)
 │   ├── trad_simp_map.json    # Traditional→Simplified mapping
 │   ├── path_formula_bin.py   # Scoring formula configurations
 │   └── path_formula_readme.md # Formula documentation
 │
-├── source/                     # Content sources (served by Flask API)
-│   ├── wiki/
-│   │   ├── wiki_data.json   # Wikipedia inverted index
-│   │   └── wiki_content/    # Extracted article content
-│   └── classics/             # (future: Chinese classics)
+├── source/                     # Content sources (Flask API)
+│   ├── stories/               # Stories corpus
+│   │   ├── stories.json       # Full content
+│   │   ├── stories_data.json  # Inverted index
+│   │   ├── stories_freq.json  # Character frequency
+│   │   ├── stories_corpus_config.json  # Metadata
+│   │   └── stories.sample.json # Sample for testing
+│   ├── wiki/                  # Wikipedia corpus
+│   │   ├── wiki.json          # Full content
+│   │   ├── wiki_data.json     # Inverted index
+│   │   ├── wiki_freq.json     # Character frequency
+│   │   ├── wiki_corpus_config.json  # Metadata
+│   │   └── wiki.sample.json   # Sample for testing
+│   └── <future>/              # New sources follow same pattern
 │
 └── scripts/
     ├── build_wiki_index.py   # Build Wikipedia index from dump
