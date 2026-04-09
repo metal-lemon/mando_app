@@ -1,21 +1,42 @@
+Last updated: 2026-04-09
+
 # Can I Read This? - Text Readability Analyzer
 
 **Source:** `templates/archived/can_i_read_this.html`
 
-## Purpose
+## Table of Contents
+
+1. [Purpose](#1-purpose)
+2. [Dependencies](#2-dependencies)
+3. [Key Functions](#3-key-functions)
+4. [Two Metrics](#4-two-metrics)
+5. [Data Flow](#5-data-flow)
+6. [Features](#6-features)
+7. [UI Patterns](#7-ui-patterns)
+8. [Thresholds](#8-thresholds)
+9. [Reuse Ideas](#9-reuse-ideas)
+
+---
+
+## 1. Purpose
 
 Analyze any Chinese text to determine what percentage of characters the user knows. Provides detailed readability statistics, shows which characters need to be learned, and allows adding characters directly to the known set.
 
 Also supports traditional→simplified character conversion.
 
-## Dependencies
+---
+
+## 2. Dependencies
 
 - **shared_state.js** - Singleton for known characters
 - **data/trad_simp_map.json** - Traditional→simplified mapping
 
-## Key Functions
+---
+
+## 3. Key Functions
 
 ### Readability Analysis
+
 ```javascript
 function analyzeTextWithSet(text, state) {
     const chineseRegex = /[\u4e00-\u9fff]/g;
@@ -39,6 +60,7 @@ function analyzeTextWithSet(text, state) {
 ```
 
 ### Traditional Character Detection
+
 ```javascript
 // Separate traditional from non-traditional unknowns
 const tradUnknown = unknownUnique.filter(ch => tradMap.has(ch));
@@ -46,6 +68,7 @@ const nonTradUnknown = unknownUnique.filter(ch => !tradMap.has(ch));
 ```
 
 ### Traditional → Simplified Conversion
+
 ```javascript
 function convertToSimplified() {
     let converted = text;
@@ -62,28 +85,31 @@ function convertToSimplified() {
 ```
 
 ### Readability Advice
+
 ```javascript
 function getReadabilityAdvice(percentage) {
-    if (percentage >= 98) return { 
+    if (percentage >= 98) return {
         text: "🎉 Excellent! You can read this text comfortably...",
         class: "advice-excellent"
     };
-    if (percentage >= 95) return { 
+    if (percentage >= 95) return {
         text: "👍 Good! You'll understand the main ideas well...",
         class: "advice-good"
     };
-    if (percentage >= 90) return { 
+    if (percentage >= 90) return {
         text: "📚 Challenging but doable...",
         class: "advice-challenging"
     };
-    return { 
+    return {
         text: "⚠️ Difficult - consider a different text...",
         class: "advice-difficult"
     };
 }
 ```
 
-## Two Metrics
+---
+
+## 4. Two Metrics
 
 | Metric | Formula | Use Case |
 |--------|---------|----------|
@@ -92,7 +118,9 @@ function getReadabilityAdvice(percentage) {
 
 **Note:** Occurrence% is typically higher because common characters repeat more.
 
-## Data Flow
+---
+
+## 5. Data Flow
 
 1. User loads/merges character file OR loads example
 2. User pastes text to analyze
@@ -103,7 +131,9 @@ function getReadabilityAdvice(percentage) {
    - Generate advice based on unique%
    - Render results with clickable unknown characters
 
-## Features
+---
+
+## 6. Features
 
 1. **Load & merge**: Upload JSON to add to known set
 2. **Analyze text**: Real-time readability calculation
@@ -112,7 +142,9 @@ function getReadabilityAdvice(percentage) {
 5. **Save to stories**: Send text to story library
 6. **Export unknown**: Download unknown chars as JSON
 
-## UI Patterns
+---
+
+## 7. UI Patterns
 
 - **Stats grid**: Three stat cards (occurrence%, unique%, learning gap)
 - **Progress bar**: Visual fill showing known percentage
@@ -120,7 +152,9 @@ function getReadabilityAdvice(percentage) {
 - **Advice box**: Color-coded guidance based on difficulty
 - **Traditional indicator**: Shows count of trad chars found
 
-## Thresholds
+---
+
+## 8. Thresholds
 
 | Range | Class | Advice |
 |-------|-------|--------|
@@ -129,7 +163,9 @@ function getReadabilityAdvice(percentage) {
 | 90-94% | challenging | Preview chars first |
 | <90% | difficult | Consider easier text |
 
-## Reuse Ideas
+---
+
+## 9. Reuse Ideas
 
 - The two-metric analysis (occurrence vs unique) provides nuanced readability
 - Traditional→simplified map could power any conversion feature

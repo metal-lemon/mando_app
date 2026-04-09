@@ -1,3 +1,5 @@
+Last updated: 2026-04-09
+
 # Curriculum Unifier - Multi-Source Learning Path Builder
 
 **Source:** `templates/archived/curriculum_unifier.html`

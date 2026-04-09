@@ -55,8 +55,11 @@ http://localhost:5000/
 │   ├── ingest_corpus.py      # Corpus intake tool (hidden)
 │   └── hello_mcp_server.py    # MCP server (optional)
 ├── docs/
-│   ├── json_schemas.md        # JSON file structure reference
-│   └── archived/              # Documentation for superseded tools
+│   ├── style_guide.md       # Documentation style guide
+│   ├── ingest_corpus.md     # Corpus intake tool
+│   ├── json_schemas.md      # JSON file structure reference
+│   ├── path_formula_readme.md # Path formula documentation
+│   └── archived/           # Documentation for superseded tools
 └── AGENTS.md                  # This file
 ```
 
@@ -152,6 +155,42 @@ POST /api/search
     ]
 }
 ```
+
+## Documentation Style Guide
+
+All documentation follows the rules in `docs/style_guide.md`. When updating docs, apply these 10 rules:
+
+| # | Rule | Apply As |
+|---|------|----------|
+| 1 | Last updated | Add `Last updated: YYYY-MM-DD` at top |
+| 2 | Headings | Use `##` top-level, `###` subsections |
+| 3 | Code blocks | All code in ```bash/```json/```javascript fences |
+| 4 | File paths | Enclose in backticks: `data/stories.json` |
+| 5 | Lists | `-` unordered, `1.` ordered, 2-space indent |
+| 6 | Tables | GitHub-flavored: `\|---\|---\|` |
+| 7 | Commands | Prefix with `$` or `>` |
+| 8 | API endpoints | `GET /path` or `POST /path` in bold |
+| 9 | Preserve info | Never delete facts; move/consolidate only |
+| 10 | Keep TOC | Refresh after heading changes |
+
+### Documentation Files
+
+| File | Description |
+|------|-------------|
+| `DOCUMENTATION.md` | Main project documentation |
+| `docs/style_guide.md` | Style guide reference |
+| `docs/ingest_corpus.md` | Corpus intake tool docs |
+| `docs/json_schemas.md` | JSON file structure reference |
+| `docs/path_formula_readme.md` | Path formula documentation |
+| `docs/archived/*.md` | Documentation for superseded tools |
+
+### Adding New Documentation
+
+1. Create new `.md` file in appropriate location
+2. Add `Last updated: YYYY-MM-DD` at top
+3. Include Table of Contents
+4. Follow all 10 style rules
+5. Update `AGENTS.md` if adding new workflow docs
 
 ## Testing
 

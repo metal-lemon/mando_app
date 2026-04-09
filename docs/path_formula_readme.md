@@ -1,8 +1,21 @@
+Last updated: 2026-04-09
+
 # Path Formula Configuration
 
 This file stores different scoring formula configurations for the Curriculum Builder's path optimization algorithm.
 
-## Formula Sets
+## Table of Contents
+
+1. [Formula Sets](#1-formula-sets)
+2. [How to Swap Formulas](#2-how-to-swap-formulas)
+3. [Test Results Summary](#3-test-results-summary)
+4. [Detailed Path Comparison](#4-detailed-path-comparison)
+5. [Conclusion](#5-conclusion)
+6. [Files](#6-files)
+
+---
+
+## 1. Formula Sets
 
 | Set | Name | Description |
 |-----|------|-------------|
@@ -10,15 +23,17 @@ This file stores different scoring formula configurations for the Curriculum Bui
 | 2 | Frequency Scoring | Added frequency bonus - moderate slowness |
 | 3 | Small Jumps + Zero Non-Targets | Aggressive slowness - aims for jumpsize < 5 |
 
-## How to Swap Formulas
+---
+
+## 2. How to Swap Formulas
 
 Edit `curriculum_builder.html` and replace the `calculateScore()` function with the desired formula set from `path_formula_bin.py`.
 
 ---
 
-## Test Results Summary
+## 3. Test Results Summary
 
-**Target Text**: 小老鼠打电话 (71 unknown characters)
+**Target Text:** 小老鼠打电话 (71 unknown characters)
 
 | Version | Date | Formula Set | Lessons | Total Jumpsize | Avg Jumpsize |
 |---------|------|-------------|---------|----------------|--------------|
@@ -30,7 +45,7 @@ Edit `curriculum_builder.html` and replace the `calculateScore()` function with 
 
 ---
 
-## Detailed Path Comparison (Latest Versions)
+## 4. Detailed Path Comparison (Latest Versions)
 
 | Step | Story | jumpsize | targets | nonTargets | remainder |
 |------|-------|----------|---------|------------|------------|
@@ -39,7 +54,7 @@ Edit `curriculum_builder.html` and replace the `calculateScore()` function with 
 | 3 | 数学课上，苏 | 21 | 3 | 18 | 63 |
 | 4 | 一天，小猪来 | 21 | 3 | 18 | 60 |
 | 5 | 熊宝宝、熊妈 | 21 | 7 | 14 | 53 |
-| 6 | “咕嚕咕嚕… | 20 | 4 | 16 | 49 |
+| 6 | "咕嚕咕嚕… | 20 | 4 | 16 | 49 |
 | 7 | 小熊猫第一天 | 18 | 2 | 16 | 47 |
 | 8 | 城里来了个大 | 18 | 3 | 15 | 44 |
 | 9 | 小狗巴儿捧着 | 18 | 4 | 14 | 40 |
@@ -61,7 +76,7 @@ Edit `curriculum_builder.html` and replace the `calculateScore()` function with 
 
 ---
 
-## Conclusion
+## 5. Conclusion
 
 ### All formula variations produce nearly identical results (22-24 lessons).
 
@@ -91,7 +106,7 @@ Would require either:
 
 ---
 
-## Files
+## 6. Files
 
 - `path_formula_bin.py` - Python file containing formula definitions
-- `path_formula_readme.md` - This file
+- `docs/path_formula_readme.md` - This file

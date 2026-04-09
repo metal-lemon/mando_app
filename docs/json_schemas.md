@@ -1,8 +1,19 @@
+Last updated: 2026-04-09
+
 # JSON Schema Reference
 
 This document contains JSON file structure reference for developer context. Load `.sample.json` files instead of full files when only needing structure/context.
 
-## JSON File Inventory
+## Table of Contents
+
+1. [JSON File Inventory](#1-json-file-inventory)
+2. [Source Companion Files](#2-source-companion-files)
+3. [Sample Files Convention](#3-sample-files-convention)
+4. [File Structures](#4-file-structures)
+
+---
+
+## 1. JSON File Inventory
 
 | File | Location | Description |
 |------|----------|-------------|
@@ -20,7 +31,9 @@ This document contains JSON file structure reference for developer context. Load
 | `wiki_corpus_config.json` | `source/wiki/` | Corpus metadata |
 | `wiki.sample.json` | `source/wiki/` | Sample for testing |
 
-## Source Companion Files
+---
+
+## 2. Source Companion Files
 
 Every content source in `source/<name>/` follows the same companion file pattern:
 
@@ -33,13 +46,18 @@ Every content source in `source/<name>/` follows the same companion file pattern
 | `<name>.sample.json` | Sample for testing | Yes |
 | `<name>_inverted_index.bin` | Binary index (optional) | No |
 
-## Sample Files Convention
+---
+
+## 3. Sample Files Convention
 
 For each `.json` data file, a matching `<original>.sample.json` exists with a small subset for quick structure reference.
 
-## File Structures
+---
+
+## 4. File Structures
 
 ### Content File (<name>.json)
+
 ```json
 [
   {
@@ -53,6 +71,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### Inverted Index (<name>_data.json)
+
 ```json
 {
   "version": "string",
@@ -68,6 +87,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### Character Frequency (<name>_freq.json)
+
 ```json
 {
   "version": "string",
@@ -81,6 +101,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### Corpus Config (<name>_corpus_config.json)
+
 ```json
 {
   "version": "string",
@@ -97,6 +118,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### Sample File (<name>.sample.json)
+
 ```json
 {
   "version": "string",
@@ -109,6 +131,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### dictionary.json
+
 ```json
 {
   "word": "string",
@@ -119,6 +142,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### trad_simp_map.json
+
 ```json
 {
   "traditional_char": "simplified_char"
@@ -126,6 +150,7 @@ For each `.json` data file, a matching `<original>.sample.json` exists with a sm
 ```
 
 ### hsk_characters.json
+
 ```json
 {
   "version": "string",
