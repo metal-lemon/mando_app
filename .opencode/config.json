@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "hello": {
-      "command": "python",
-      "args": ["C:\\Users\\Lapushka\\mcp\\hello_mcp_server.py"],
-      "env": {}
-    }
-  }
-}
