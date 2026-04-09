@@ -24,13 +24,7 @@ python app.py
 │   ├── learning_wizard.html  # Guided 6-step learning workflow
 │   ├── traditional_finder.html # Convert traditional→simplified (toolbox)
 │   ├── story_suggester.html  # Find stories at your level (toolbox)
-│   ├── story_library.html    # Manage story collection (toolbox)
-│   └── archived/             # Redundant tools (superseded by Learning Wizard)
-│       ├── mandarin_learner.html
-│       ├── can_i_read_this.html
-│       ├── study_guide.html
-│       ├── pathfinder.html
-│       └── curriculum_unifier.html
+│   └── story_library.html    # Manage story collection (toolbox)
 │
 ├── static/
 │   └── js/
@@ -97,17 +91,17 @@ Six-step learning experience:
 - Character extraction
 - Accepts incoming stories
 
-### Archived Tools (in `templates/archived/`)
+### Archived Tools Documentation
 
-The following tools are archived but still functional. They are superseded by the Learning Wizard.
+Documentation for superseded tools is preserved in `docs/archived/`:
 
-| Tool | Superseded By |
-|------|--------------|
-| `mandarin_learner.html` | Wizard Step 1 |
-| `can_i_read_this.html` | Wizard Step 2 |
-| `study_guide.html` | Wizard Step 4 |
-| `pathfinder.html` | Wizard Step 3 |
-| `curriculum_unifier.html` | Wizard Steps 3-4 |
+| Tool | Docs Location | Description |
+|------|---------------|-------------|
+| `mandarin_learner` | `docs/archived/mandarin_learner.md` | Words by known characters |
+| `can_i_read_this` | `docs/archived/can_i_read_this.md` | Text readability analyzer |
+| `study_guide` | `docs/archived/study_guide.md` | Generate study materials |
+| `pathfinder` | `docs/archived/pathfinder.md` | Learning path builder |
+| `curriculum_unifier` | `docs/archived/curriculum_unifier.md` | Multi-source curriculum builder |
 
 ---
 
@@ -272,14 +266,14 @@ Simplify the main index page to show only 3 items, and move redundant tools to a
 - Story Suggester
 - Story Library
 
-### Files to Archive (move to `templates/archived/`)
-| File | Reason |
-|------|--------|
-| `mandarin_learner.html` | Character tracking is in wizard step 1 |
-| `can_i_read_this.html` | Text analysis is in wizard step 2 |
-| `study_guide.html` | Study generation is in wizard |
-| `pathfinder.html` | Path building is in wizard step 3 |
-| `curriculum_unifier.html` | Curriculum building is in wizard step 4 |
+### Files to Archive (documentation moved to `docs/archived/`)
+| Tool | Description |
+|------|-------------|
+| `mandarin_learner` | Words by known characters |
+| `can_i_read_this` | Text readability analyzer |
+| `study_guide` | Generate study materials |
+| `pathfinder` | Learning path builder |
+| `curriculum_unifier` | Multi-source curriculum builder |
 
 ### Files to Keep (Active)
 - `index.html` - Simplified main page (3 stacked boxes)
@@ -291,33 +285,36 @@ Simplify the main index page to show only 3 items, and move redundant tools to a
 
 ### Implementation Steps (Completed)
 1. ✅ Fix git merge conflict in index.html (lines 394-407)
-2. ✅ Create `templates/archived/` folder
-3. ✅ Move redundant tools to `templates/archived/`:
-   - `mandarin_learner.html`
-   - `can_i_read_this.html`
-   - `study_guide.html`
-   - `pathfinder.html`
-   - `curriculum_unifier.html`
-4. ✅ Rewrite `index.html` with 3 stacked horizontal boxes
-5. ✅ Add Toolbox modal with links to: Traditional Finder, Story Suggester, Story Library
-6. ✅ Update app.py routes (remove broken wiki_curriculum_builder route, update archive path)
-7. ✅ Update this DOCUMENTATION.md to reflect new structure
+2. ✅ Create documentation in `docs/archived/`:
+   - mandarin_learner.md
+   - can_i_read_this.md
+   - study_guide.md
+   - pathfinder.md
+   - curriculum_unifier.md
+3. ✅ Delete original HTML files from `templates/archived/`
+4. ✅ Delete empty `templates/archived/` folder
+5. ✅ Rewrite `index.html` with 3 stacked horizontal boxes
+6. ✅ Add Toolbox modal with links to: Traditional Finder, Story Suggester, Story Library
+7. ✅ Update app.py routes (remove broken wiki_curriculum_builder route, update archive path)
+8. ✅ Update this DOCUMENTATION.md to reflect new structure
 
 ### Current Project Structure
 ```
 ├── templates/
-│   ├── index.html            # Simplified (3 boxes + toolbox modal) ✅
+│   ├── index.html            # Simplified (3 boxes + toolbox modal)
 │   ├── setup.html           # First-time setup
 │   ├── learning_wizard.html  # Featured (6-step guided workflow)
 │   ├── traditional_finder.html # Toolbox
 │   ├── story_suggester.html  # Toolbox
-│   ├── story_library.html   # Toolbox
-│   └── archived/            # Redundant tools (still functional)
-│       ├── mandarin_learner.html
-│       ├── can_i_read_this.html
-│       ├── study_guide.html
-│       ├── pathfinder.html
-│       └── curriculum_unifier.html
+│   └── story_library.html   # Toolbox
+│
+├── docs/
+│   └── archived/            # Documentation for superseded tools
+│       ├── mandarin_learner.md
+│       ├── can_i_read_this.md
+│       ├── study_guide.md
+│       ├── pathfinder.md
+│       └── curriculum_unifier.md
 ```
 
 ---
