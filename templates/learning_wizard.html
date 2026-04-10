@@ -1261,10 +1261,11 @@
                 this.quizResults = { correct: 0, total: 0, missed: [], correctChars: [] };
                 this.currentQuiz = { index: 0, questions: [], answers: {}, perCharResult: {} };
                 
-                this.selectedSource = 'stories';
+                this.selectedSource = '';
                 this.availableSources = [];
+                this.sourceSelected = false;
+                this.learnableWords = [];
 
-                this.loadSourceCandidates();
                 this.loadSources();
                 this.loadPersistedData();
                 this.init();
@@ -1276,6 +1277,11 @@
                     if (response.ok) {
                         const data = await response.json();
                         this.availableSources = data.sources || [];
+                        
+                        // Re-render step 1 to show sources in dropdown
+                        if (this.currentStep === 1) {
+                            this.renderStep();
+                        }
                     }
                 } catch (e) {
                     console.log('Could not load sources:', e);
@@ -1284,6 +1290,12 @@
             }
 
             loadPersistedData() {
+                // Don't load candidates until source is selected
+                if (!this.selectedSource) {
+                    console.log('No source selected, skipping candidate load');
+                    return;
+                }
+                
                 try {
                     const pathData = localStorage.getItem(WIZARD_STORAGE.PATH);
                     if (pathData) {
@@ -1302,7 +1314,7 @@
                 }
             }
 
-            async loadSourceCandidates() {
+            async loadCandidatesFromAPI() {
                 try {
                     const response = await fetch('/api/search', {
                         method: 'POST',
@@ -1325,7 +1337,7 @@
 
             async loadSourceCandidatesFor(sourceId) {
                 this.selectedSource = sourceId;
-                await this.loadSourceCandidates();
+                await this.loadCandidatesFromAPI();
             }
 
             init() {
@@ -1372,7 +1384,7 @@
 
             canProceed() {
                 switch (this.currentStep) {
-                    case 1: return this.knownChars.size > 0;
+                    case 1: return this.knownChars.size > 0 && this.sourceSelected;
                     case 2: return this.targetChars.length > 0;
                     case 3: return this.path.length > 0;
                     case 4: return this.curriculum.length > 0;
@@ -1489,6 +1501,21 @@ Example:
                         </div>
                     </div>
 
+                    <div class="source-selector" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">📚 Content Source:</label>
+                        <select id="sourceSelectStep1" style="padding: 8px 12px; font-size: 14px; border-radius: 5px; border: 1px solid #ddd; min-width: 250px;">
+                            <option value="">-- Select a source --</option>
+                            ${this.availableSources.map(source => {
+                                const isReady = source.hasIndex && source.hasData;
+                                const disabled = !isReady ? ' disabled' : '';
+                                const status = isReady ? ' ✓' : ' (not ready)';
+                                return `<option value="${source.id}"${disabled}>${source.name}${status}</option>`;
+                            }).join('')}
+                        </select>
+                        <div id="sourceConfirmation" style="margin-top: 10px;"></div>
+                        <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;">Select which content source to use for learning paths.</p>
+                    </div>
+
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-value" id="knownCount">${this.knownChars.size}</div>
@@ -1594,6 +1621,37 @@ Example:
                         this.updateKnownUI();
                     }
                 });
+
+                // Source selector for Step 1
+                document.getElementById('sourceSelectStep1').addEventListener('change', async (e) => {
+                    this.selectedSource = e.target.value;
+                    this.sourceSelected = !!this.selectedSource;
+                    
+                    if (this.selectedSource) {
+                        try {
+                            const response = await fetch(`/api/source/${this.selectedSource}/meta`);
+                            if (response.ok) {
+                                const meta = await response.json();
+                                if (meta.ready) {
+                                    this.showSourceConfirmation(meta);
+                                } else {
+                                    alert('Source is not ready. Please select another.');
+                                    this.selectedSource = '';
+                                    this.sourceSelected = false;
+                                    e.target.value = '';
+                                    this.hideSourceConfirmation();
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Source validation failed:', err);
+                        }
+                    } else {
+                        this.hideSourceConfirmation();
+                    }
+                    
+                    document.getElementById('backBtn').disabled = this.currentStep === 1;
+                    document.getElementById('nextBtn').disabled = !this.canProceed();
+                });
             }
 
             addManualChar() {
@@ -1615,6 +1673,32 @@ Example:
                 document.getElementById('charCollection').innerHTML = this.renderCharTiles();
                 this.updateSummary();
                 this.updateProgress();
+                this.updateLearnableWords();
+            }
+
+            async updateLearnableWords() {
+                if (this.knownChars.size === 0) {
+                    this.learnableWords = [];
+                    document.getElementById('readyWords').textContent = '0';
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/learnable-words', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chars: Array.from(this.knownChars) })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.learnableWords = data.words || [];
+                        document.getElementById('readyWords').textContent = data.count.toLocaleString();
+                    }
+                } catch (e) {
+                    console.log('Could not calculate learnable words:', e);
+                    document.getElementById('readyWords').textContent = '-';
+                }
             }
 
             getCoverage() {
@@ -1622,6 +1706,24 @@ Example:
                 const common = ['的', '是', '了', '我', '在', '有', '和', '人', '这', '中', '大', '为', '上', '个', '们', '来', '到', '时', '说', '们'];
                 const known = common.filter(ch => this.knownChars.has(ch)).length;
                 return Math.round((known / common.length) * 100);
+            }
+
+            showSourceConfirmation(meta) {
+                const container = document.getElementById('sourceConfirmation');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="background: #d4edda; border: 1px solid #c3e6cb; 
+                            padding: 10px; border-radius: 5px;">
+                            <strong>✓ ${meta.name}</strong> ready
+                            <span style="color: #666;">(${meta.stats.totalRecords} records, ${meta.stats.uniqueChars} chars)</span>
+                        </div>
+                    `;
+                }
+            }
+
+            hideSourceConfirmation() {
+                const container = document.getElementById('sourceConfirmation');
+                if (container) container.innerHTML = '';
             }
 
             // ==================== STEP 2: GOAL ====================
@@ -1759,18 +1861,16 @@ Example:
 
                 this.updateSummary();
                 this.updateProgress();
+
+                // Now search for candidates using target characters
+                if (this.selectedSource && this.targetChars.length > 0) {
+                    this.loadCandidatesFromAPI();
+                }
             }
 
             // ==================== STEP 3: PATHFINDER (NEW ALGORITHM) ====================
             renderPathfinder(container) {
                 const hasCandidates = this.candidates && this.candidates.length > 0;
-                
-                // Build source options
-                const sourceOptions = this.availableSources.map(source => {
-                    const disabled = !source.hasIndex ? ' disabled' : '';
-                    const label = !source.hasIndex ? ` (No index)` : '';
-                    return `<option value="${source.id}"${disabled}>${source.name} (${source.totalRecords} records)${label}</option>`;
-                }).join('');
                 
                 container.innerHTML = `
                     <h2><span class="step-num">3</span> Find Your Learning Path</h2>
@@ -1778,12 +1878,8 @@ Example:
                         Select cluster size, find optimal story clusters, then build the most efficient path.
                     </p>
 
-                    <div class="source-selector" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 8px;">📚 Content Source:</label>
-                        <select id="sourceSelect" style="padding: 8px 12px; font-size: 14px; border-radius: 5px; border: 1px solid #ddd; min-width: 250px;">
-                            ${sourceOptions}
-                        </select>
-                        <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;">Select which content source to use for learning paths.</p>
+                    <div class="info-box" style="margin-bottom: 15px;">
+                        <p>Using source: <strong>${this.selectedSource}</strong></p>
                     </div>
 
                     ${!hasCandidates ? `
@@ -1843,22 +1939,6 @@ Example:
             }
 
             bindPathfinderEvents() {
-                // Source selector
-                const sourceSelect = document.getElementById('sourceSelect');
-                if (sourceSelect) {
-                    sourceSelect.value = this.selectedSource;
-                    sourceSelect.addEventListener('change', async (e) => {
-                        const newSource = e.target.value;
-                        await this.loadSourceCandidatesFor(newSource);
-                        // Reset path data when source changes
-                        this.pool = [];
-                        this.clusters = [];
-                        this.selectedCluster = null;
-                        this.path = [];
-                        this.renderStep();
-                    });
-                }
-
                 const generatePoolBtn = document.getElementById('generatePoolBtn');
                 if (generatePoolBtn) generatePoolBtn.addEventListener('click', () => this.generatePool());
 

@@ -448,3 +448,7 @@ This would allow:
 - **Mobile PWA** – Touch-friendly responsive design
 - **Content sources** – News articles, graded readers, user submissions
 - **Better dictionary** – Stroke order, audio pronunciation
+
+### Master Schema Index
+
+- **Create master_index.json file** – Root-level schema index documenting all JSON formats in the project (source/, data/, etc.)

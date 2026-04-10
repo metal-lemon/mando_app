@@ -249,6 +249,34 @@ def create_corpus_config(name, description, total_records, unique_chars):
     }
 
 
+def create_source_index(name, description, total_records, unique_chars):
+    """Create source-specific index.json manifest."""
+    return {
+        "sourceId": name,
+        "name": name,
+        "description": description,
+        "version": "1.0",
+        "generated": datetime.now().isoformat(),
+        "stats": {
+            "totalRecords": total_records,
+            "uniqueChars": unique_chars
+        },
+        "files": {
+            "content": f"{name}.json",
+            "data": f"{name}_data.json",
+            "invIndex": f"{name}_inv_index.json",
+            "freq": f"{name}_freq.json",
+            "config": f"{name}_corpus_config.json",
+            "sample": f"{name}.sample.json"
+        },
+        "loadConfig": {
+            "lazyLoadContent": True,
+            "loadDataOnDemand": True,
+            "loadIndexAlways": True
+        }
+    }
+
+
 def save_json(data, file_path, minify=False):
     """Save data to JSON file."""
     Path(file_path).parent.mkdir(parents=True, exist_ok=True)
@@ -348,7 +376,8 @@ Examples:
             "id": next_id,
             "title": normalized['title'],
             "source": normalized['source'],
-            "content": content
+            "content": content,
+            "characters": chars
         })
         next_id += 1
 
@@ -391,12 +420,30 @@ Examples:
     save_json(config, config_file)
     print(f"  Saved: {config_file}")
 
-    sample_records = records[:sample_size]
-    for r in sample_records:
-        r['sample'] = True
+    sample_schema = [
+        {
+            "id": 1,
+            "title": "Example Title",
+            "source": "example",
+            "content": "这是示例内容，包含中文字符。",
+            "characters": ["这", "是", "示", "例", "内", "容", "包", "含", "中", "文", "字", "符"]
+        },
+        {
+            "id": 2,
+            "title": "第二个示例",
+            "source": "example",
+            "content": "另一个示例文本用于展示数据结构。",
+            "characters": ["另", "一", "个", "示", "例", "文", "本", "用", "于", "展", "示", "数", "据", "结", "构"]
+        }
+    ]
     sample_file = os.path.join(source_dir, f"{name}.sample.json")
-    save_json(sample_records, sample_file)
+    save_json(sample_schema, sample_file)
     print(f"  Saved: {sample_file}")
+
+    source_index = create_source_index(name, description, len(records), len(unique_chars))
+    index_file = os.path.join(source_dir, f"{name}_index.json")
+    save_json(source_index, index_file)
+    print(f"  Saved: {index_file}")
 
     print()
     print("=" * 40)

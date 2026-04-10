@@ -24,11 +24,7 @@ DATA_DIR = BASE_DIR / 'data'
 
 
 def discover_sources():
-    """Auto-discover available sources from the source/ directory structure.
-    
-    Uses corpus_config.json for metadata if available, otherwise falls back
-    to _data.json for legacy sources.
-    """
+    """Discover sources using index.json manifests in each source folder."""
     sources = []
     
     if not SOURCE_DIR.exists():
@@ -39,56 +35,34 @@ def discover_sources():
             continue
         
         source_id = source_path.name
+        index_file = source_path / f'{source_id}_index.json'
         
-        # First check for corpus_config.json (new unified format)
-        config_file = source_path / f'{source_id}_corpus_config.json'
-        
-        if config_file.exists():
+        if index_file.exists():
             try:
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
+                with open(index_file, 'r', encoding='utf-8') as f:
+                    index = json.load(f)
                 
-                # Check if main content file exists
-                content_file = source_path / f'{source_id}.json'
-                has_content = content_file.exists()
+                files = index.get('files', {})
+                file_status = {}
+                for key, filename in files.items():
+                    file_status[key] = (source_path / filename).exists()
                 
+                stats = index.get('stats', {})
                 sources.append({
                     'id': source_id,
-                    'name': config.get('name', source_id.title()),
-                    'description': config.get('description', ''),
-                    'totalRecords': config.get('totalRecords', 0),
-                    'uniqueChars': config.get('totalUniqueCharacters', 0),
-                    'buildDate': config.get('buildDate', ''),
-                    'hasContent': has_content,
-                    'hasIndex': (source_path / f'{source_id}_data.json').exists(),
-                    'hasFreq': (source_path / f'{source_id}_freq.json').exists()
+                    'name': index.get('name', source_id),
+                    'description': index.get('description', ''),
+                    'totalRecords': stats.get('totalRecords', 0),
+                    'uniqueChars': stats.get('uniqueChars', 0),
+                    'files': file_status,
+                    'hasIndex': file_status.get('invIndex', False),
+                    'hasData': file_status.get('data', False),
+                    'hasContent': file_status.get('content', False)
                 })
             except (json.JSONDecodeError, IOError):
                 sources.append(_fallback_source(source_id))
         else:
-            # Fall back to legacy _data.json format
-            data_file = source_path / f'{source_id}_data.json'
-            
-            if data_file.exists():
-                try:
-                    with open(data_file, 'r', encoding='utf-8') as f:
-                        metadata = json.load(f)
-                    
-                    sources.append({
-                        'id': source_id,
-                        'name': metadata.get('name', source_id.title()),
-                        'description': metadata.get('description', ''),
-                        'totalRecords': metadata.get('totalPages', 0),
-                        'uniqueChars': metadata.get('uniqueChars', 0),
-                        'buildDate': metadata.get('buildDate', ''),
-                        'hasContent': (source_path / f'{source_id}.json').exists(),
-                        'hasIndex': True,
-                        'hasFreq': (source_path / f'{source_id}_freq.json').exists()
-                    })
-                except (json.JSONDecodeError, IOError):
-                    sources.append(_fallback_source(source_id))
-            else:
-                sources.append(_fallback_source(source_id))
+            sources.append(_fallback_source(source_id))
     
     return sources
 
@@ -103,19 +77,41 @@ def _fallback_source(source_id):
         'uniqueChars': 0,
         'buildDate': '',
         'hasContent': False,
+        'hasData': False,
         'hasIndex': False,
-        'hasFreq': False
+        'hasFreq': False,
+        'hasConfig': False,
+        'isValid': False
     }
 
 
 def load_source_index(source_id):
     """Load the inverted index for a source."""
     source_path = SOURCE_DIR / source_id
-    data_file = source_path / f'{source_id}_data.json'
+    data_file = source_path / f'{source_id}_inv_index.json'
     
     if not data_file.exists():
         return None
     
+    with open(data_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def load_source_index_manifest(source_id):
+    """Load source index.json for metadata."""
+    index_file = SOURCE_DIR / source_id / f'{source_id}_index.json'
+    if not index_file.exists():
+        return None
+    with open(index_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def load_source_data(source_id):
+    """Load lightweight _data.json for a source."""
+    source_path = SOURCE_DIR / source_id
+    data_file = source_path / f'{source_id}_data.json'
+    if not data_file.exists():
+        return None
     with open(data_file, 'r', encoding='utf-8') as f:
         return json.load(f)
 
@@ -148,6 +144,40 @@ def api_sources():
     return jsonify({
         'sources': sources,
         'count': len(sources)
+    })
+
+
+@app.route('/api/source/<source_id>/meta', methods=['GET'])
+def api_source_meta(source_id):
+    """Get source metadata and file availability."""
+    index = load_source_index_manifest(source_id)
+    if not index:
+        return jsonify({'error': 'Source not found'}), 404
+    
+    source_path = SOURCE_DIR / source_id
+    files = index.get('files', {})
+    file_status = {k: (source_path / v).exists() for k, v in files.items()}
+    
+    return jsonify({
+        'sourceId': source_id,
+        'name': index.get('name'),
+        'description': index.get('description'),
+        'stats': index.get('stats', {}),
+        'files': file_status,
+        'ready': file_status.get('invIndex', False) and file_status.get('data', False)
+    })
+
+
+@app.route('/api/source/<source_id>/data', methods=['GET'])
+def api_source_data(source_id):
+    """Get lightweight per-record data without full content."""
+    data = load_source_data(source_id)
+    if data is None:
+        return jsonify({'error': 'Source data not found'}), 404
+    return jsonify({
+        'sourceId': source_id,
+        'records': data,
+        'count': len(data)
     })
 
 
@@ -217,6 +247,51 @@ def api_search():
         'query_chars': chars,
         'total_candidates': len(candidates),
         'candidates': candidates
+    })
+
+
+@app.route('/api/learnable-words', methods=['POST'])
+def api_learnable_words():
+    """
+    Find dictionary words that can be formed from known characters.
+    
+    Request body (JSON):
+        chars: list - List of known characters
+    
+    Returns:
+        JSON with count and word list of learnable words
+    """
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    known_chars = set(data.get('chars', []))
+    
+    if not known_chars:
+        return jsonify({'count': 0, 'words': []})
+    
+    dictionary_file = DATA_DIR / 'dictionary.json'
+    
+    if not dictionary_file.exists():
+        return jsonify({'error': 'Dictionary not found'}), 404
+    
+    try:
+        with open(dictionary_file, 'r', encoding='utf-8') as f:
+            dictionary = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': f'Failed to load dictionary: {str(e)}'}), 500
+    
+    learnable = []
+    for word in dictionary:
+        word_chars = word.get('chars', [])
+        # Only multi-character words where ALL chars are known
+        if len(word_chars) > 1 and all(ch in known_chars for ch in word_chars):
+            learnable.append(word)
+    
+    return jsonify({
+        'count': len(learnable),
+        'words': learnable
     })
 
 
