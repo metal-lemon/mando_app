@@ -1,0 +1,24 @@
+{
+  "sourceId": "storyCollection",
+  "name": "storyCollection",
+  "description": "Story collection corpus",
+  "version": "1.0",
+  "generated": "2026-04-10T12:23:01.077850",
+  "stats": {
+    "totalRecords": 2679,
+    "uniqueChars": 4652
+  },
+  "files": {
+    "content": "storyCollection.json",
+    "data": "storyCollection_data.json",
+    "invIndex": "storyCollection_inv_index.json",
+    "freq": "storyCollection_freq.json",
+    "config": "storyCollection_corpus_config.json",
+    "sample": "storyCollection.sample.json"
+  },
+  "loadConfig": {
+    "lazyLoadContent": true,
+    "loadDataOnDemand": true,
+    "loadIndexAlways": true
+  }
+}
