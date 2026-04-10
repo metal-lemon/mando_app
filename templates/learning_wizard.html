@@ -1248,6 +1248,7 @@
                 this.currentStep = 1;
                 this.totalSteps = 6;
                 this.knownChars = new Set(window.mandarinState.getCharacters());
+                this.initialKnownCount = window.mandarinState.getCount();
                 this.targetText = window.mandarinState.getTargetText() || '';
                 this.targetChars = [];
                 this.unknownChars = [];
@@ -1344,6 +1345,7 @@
                 this.updateSummary();
                 this.renderStep();
                 this.bindEvents();
+                this.updateSaveButtonState();
             }
 
             updateSummary() {
@@ -1579,6 +1581,7 @@ Example:
                             </div>
                             <div class="button-group" style="margin-top: 15px;">
                                 <button id="addAllExtracted" class="secondary">➕ Add All ${newChars.length} Characters</button>
+                                <button id="saveKnownBtn" class="primary" disabled>💾 Save to Permanent List</button>
                             </div>
                         </div>
                     `;
@@ -1587,6 +1590,8 @@ Example:
                         newChars.forEach(ch => this.knownChars.add(ch));
                         this.updateKnownUI();
                     });
+
+                    document.getElementById('saveKnownBtn').addEventListener('click', () => this.saveToPermanentList());
                 });
 
                 const manualInput = document.getElementById('manualCharInput');
@@ -1606,6 +1611,7 @@ Example:
                                 alert('Error: ' + err.message);
                             } else {
                                 this.knownChars = new Set(window.mandarinState.getCharacters());
+                                this.initialKnownCount = window.mandarinState.getCount();
                                 this.updateKnownUI();
                                 alert(`Added ${result.added} characters!`);
                             }
@@ -1674,6 +1680,22 @@ Example:
                 this.updateSummary();
                 this.updateProgress();
                 this.updateLearnableWords();
+                this.updateSaveButtonState();
+            }
+
+            updateSaveButtonState() {
+                const hasNew = this.knownChars.size > this.initialKnownCount;
+                const saveBtn = document.getElementById('saveKnownBtn');
+                if (saveBtn) saveBtn.disabled = !hasNew;
+                const saveBtn2 = document.getElementById('saveKnownBtnStep2');
+                if (saveBtn2) saveBtn2.disabled = !hasNew;
+            }
+
+            saveToPermanentList() {
+                window.mandarinState.addCharacters(Array.from(this.knownChars));
+                this.initialKnownCount = window.mandarinState.getCount();
+                this.updateSaveButtonState();
+                alert(`Saved! Permanent list now has ${this.initialKnownCount} characters.`);
             }
 
             async updateLearnableWords() {
@@ -1768,6 +1790,9 @@ Example:
                                 Click any character to mark it as known (moves it to your known set)
                             </p>
                             <div id="targetCharsGrid" class="char-grid"></div>
+                            <div class="button-group" style="margin-top: 15px;">
+                                <button id="saveKnownBtnStep2" class="primary" disabled>💾 Save to Permanent List</button>
+                            </div>
                         </div>
 
                         <div class="info-box" id="readabilityAdvice"></div>
@@ -1842,8 +1867,11 @@ Example:
                         
                         this.updateSummary();
                         this.updateProgress();
+                        this.updateSaveButtonState();
                     });
                 });
+
+                document.getElementById('saveKnownBtnStep2').addEventListener('click', () => this.saveToPermanentList());
 
                 document.getElementById('targetCharsSection').classList.remove('hidden');
                 document.getElementById('analysisResults').classList.remove('hidden');
