@@ -181,6 +181,35 @@ def api_source_data(source_id):
     })
 
 
+@app.route('/api/backup', methods=['GET'])
+def api_get_backup():
+    """Get server backup of characters."""
+    backup_file = DATA_DIR / 'my_characters.json'
+    if not backup_file.exists():
+        return jsonify({'characters': [], 'count': 0})
+    try:
+        with open(backup_file, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except (json.JSONDecodeError, IOError):
+        return jsonify({'characters': [], 'count': 0})
+
+
+@app.route('/api/backup', methods=['POST'])
+def api_save_backup():
+    """Save characters to server backup (overwrites)."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    backup_file = DATA_DIR / 'my_characters.json'
+    try:
+        with open(backup_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return jsonify({'success': True, 'count': data.get('count', 0)})
+    except IOError as e:
+        return jsonify({'error': f'Failed to save: {str(e)}'}), 500
+
+
 @app.route('/api/search', methods=['POST'])
 def api_search():
     """

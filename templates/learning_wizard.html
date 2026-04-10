@@ -1582,6 +1582,7 @@ Example:
                             <div class="button-group" style="margin-top: 15px;">
                                 <button id="addAllExtracted" class="secondary">➕ Add All ${newChars.length} Characters</button>
                                 <button id="saveKnownBtn" class="primary" disabled>💾 Save to Permanent List</button>
+                                <button id="saveToServerBtn" class="outline">☁️ Save to Server</button>
                             </div>
                         </div>
                     `;
@@ -1592,6 +1593,15 @@ Example:
                     });
 
                     document.getElementById('saveKnownBtn').addEventListener('click', () => this.saveToPermanentList());
+                    
+                    document.getElementById('saveToServerBtn').addEventListener('click', async () => {
+                        const success = await window.mandarinState.saveToServer();
+                        if (success) {
+                            alert(`Saved ${this.knownChars.size} characters to server!`);
+                        } else {
+                            alert('Failed to save to server.');
+                        }
+                    });
                 });
 
                 const manualInput = document.getElementById('manualCharInput');
@@ -1792,6 +1802,7 @@ Example:
                             <div id="targetCharsGrid" class="char-grid"></div>
                             <div class="button-group" style="margin-top: 15px;">
                                 <button id="saveKnownBtnStep2" class="primary" disabled>💾 Save to Permanent List</button>
+                                <button id="saveToServerBtnStep2" class="outline">☁️ Save to Server</button>
                             </div>
                         </div>
 
@@ -1872,6 +1883,15 @@ Example:
                 });
 
                 document.getElementById('saveKnownBtnStep2').addEventListener('click', () => this.saveToPermanentList());
+
+                document.getElementById('saveToServerBtnStep2').addEventListener('click', async () => {
+                    const success = await window.mandarinState.saveToServer();
+                    if (success) {
+                        alert(`Saved ${this.knownChars.size} characters to server!`);
+                    } else {
+                        alert('Failed to save to server.');
+                    }
+                });
 
                 document.getElementById('targetCharsSection').classList.remove('hidden');
                 document.getElementById('analysisResults').classList.remove('hidden');

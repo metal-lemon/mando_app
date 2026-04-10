@@ -15,7 +15,22 @@ class MandarinState {
         this.load();
     }
 
-    load() {
+    async load() {
+        try {
+            const response = await fetch('/api/backup');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.characters && data.characters.length > 0) {
+                    this.knownChars = new Set(data.characters);
+                    this.save();
+                    console.log(`Loaded ${this.knownChars.size} characters from server backup`);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.log('No server backup found, trying localStorage');
+        }
+        
         try {
             const saved = localStorage.getItem(STORAGE_KEYS.KNOWN_CHARS);
             if (saved) {
@@ -26,6 +41,29 @@ class MandarinState {
         } catch (e) {
             console.error("Failed to load from localStorage:", e);
         }
+    }
+
+    async saveToServer() {
+        try {
+            const data = {
+                version: STATE_VERSION,
+                lastUpdated: new Date().toISOString(),
+                characters: Array.from(this.knownChars),
+                count: this.knownChars.size
+            };
+            const response = await fetch('/api/backup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                console.log(`Saved ${this.knownChars.size} characters to server backup`);
+                return true;
+            }
+        } catch (e) {
+            console.error('Failed to save to server:', e);
+        }
+        return false;
     }
 
     save() {

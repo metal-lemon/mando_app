@@ -452,3 +452,11 @@ This would allow:
 ### Master Schema Index
 
 - **Create master_index.json file** – Root-level schema index documenting all JSON formats in the project (source/, data/, etc.)
+
+### Server Backup & Sync
+
+- **Server backup comparison tool** – Add function to compare server backup (`data/my_characters.json`) vs localStorage. Show user differences between the two lists, allow dynamic save of local changes to server to sync lists when out of sync.
+
+### Setup Overhaul
+
+- **Verify sources in setup** – As part of setup overhaul, verify that sources are properly configured. Ensure index files exist and are valid.
