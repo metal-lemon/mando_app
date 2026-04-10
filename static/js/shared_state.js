@@ -3,6 +3,8 @@
 const STATE_VERSION = "1.0";
 const STORAGE_KEYS = {
     KNOWN_CHARS: "mandarin_known_chars",
+    TARGET_TEXT: "mandarin_target_text",
+    TARGET_CHARS: "mandarin_target_chars",
     LAST_UPDATED: "mandarin_last_updated"
 };
 
@@ -86,6 +88,39 @@ class MandarinState {
 
     getCount() {
         return this.knownChars.size;
+    }
+
+    getTargetText() {
+        try {
+            return localStorage.getItem(STORAGE_KEYS.TARGET_TEXT) || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    setTargetText(text) {
+        try {
+            localStorage.setItem(STORAGE_KEYS.TARGET_TEXT, text || '');
+        } catch (e) {
+            console.error('Failed to save target text:', e);
+        }
+    }
+
+    getTargetChars() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEYS.TARGET_CHARS);
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    setTargetChars(chars) {
+        try {
+            localStorage.setItem(STORAGE_KEYS.TARGET_CHARS, JSON.stringify(chars || []));
+        } catch (e) {
+            console.error('Failed to save target chars:', e);
+        }
     }
 
     subscribe(callback) {
