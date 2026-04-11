@@ -2377,13 +2377,23 @@ Example:
             }
 
             async loadFullContent() {
+                console.log('=== Step 4 Debug: loadFullContent ===');
+                console.log('Path length:', this.path.length);
+                console.log('Selected source:', this.selectedSource);
+                
                 const loadPromises = this.path
                     .filter(item => item.id)
                     .map(async item => {
+                        const url = `/api/content/${this.selectedSource}/${item.id}`;
+                        console.log('Fetching:', url);
                         try {
-                            const response = await fetch(`/api/content/${this.selectedSource}/${item.id}`);
+                            const response = await fetch(url);
                             if (response.ok) {
-                                return await response.json();
+                                const data = await response.json();
+                                console.log('Got response for ID', item.id, '- content length:', (data.content || data.text || '').length);
+                                return data;
+                            } else {
+                                console.log('Response not OK for', item.id, ':', response.status);
                             }
                         } catch (e) {
                             console.log('Could not load content for', item.id, e);
@@ -2392,7 +2402,9 @@ Example:
                     });
                 
                 const results = await Promise.all(loadPromises);
-                return results.filter(r => r !== null);
+                const filtered = results.filter(r => r !== null);
+                console.log('Loaded', filtered.length, 'of', this.path.length, 'stories');
+                return filtered;
             }
 
             async segmentText(text, mode = 'accurate') {
@@ -2424,6 +2436,9 @@ Example:
                 for (let i = 0; i < this.path.length; i++) {
                     const pathItem = this.path[i];
                     const fullStory = fullContent.find(c => c.id === pathItem.id) || {};
+                    
+                    console.log('Story', i, '- ID:', pathItem.id, 'Title:', pathItem.title);
+                    console.log('  Content found:', (fullStory.text || fullStory.content || 'EMPTY').substring(0, 50));
                     
                     const storyChars = new Set(pathItem.chars || []);
                     const newCharsThisLesson = [...storyChars].filter(c => !cumulativeKnown.has(c));

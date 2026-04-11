@@ -540,7 +540,7 @@ def api_content(source_id, record_id):
     content_file = source_path / f'{source_id}.json'
     
     if not content_file.exists():
-        return jsonify({'error': f'Content file not found for source: {source_id}'}), 404
+        return jsonify({'error': f'Content file not found for source: {source_id}', 'file': str(content_file)}), 404
     
     try:
         with open(content_file, 'r', encoding='utf-8') as f:
@@ -551,7 +551,14 @@ def api_content(source_id, record_id):
             for record in content_data:
                 if str(record.get('id')) == str(record_id):
                     return jsonify(record)
-            return jsonify({'error': f'Record not found: {record_id}'}), 404
+            # Debug: Return first few IDs to help diagnose
+            available_ids = [str(r.get('id')) for r in content_data[:10]]
+            return jsonify({
+                'error': f'Record not found: {record_id}',
+                'requested_source': source_id,
+                'file': str(content_file),
+                'first_10_ids': available_ids
+            }), 404
         else:
             return jsonify({'error': 'Invalid content format'}), 500
             
