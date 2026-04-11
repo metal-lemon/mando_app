@@ -2322,12 +2322,32 @@ Example:
 
                 document.getElementById('generateCurriculumBtn').addEventListener('click', async () => {
                     const btn = document.getElementById('generateCurriculumBtn');
+                    const contentDiv = document.getElementById('curriculumContent');
                     btn.disabled = true;
                     btn.textContent = '🔄 Generating...';
                     
-                    await this.generateCurriculumForPath();
+                    contentDiv.innerHTML = `
+                        <div class="info-box" style="background: #e3f2fd; border-color: #2196F3;">
+                            <div id="progressMessage">Starting...</div>
+                            <div class="progress-bar" style="margin-top: 10px;">
+                                <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    `;
                     
-                    document.getElementById('curriculumContent').innerHTML = this.renderCurriculumDetails();
+                    await this.generateCurriculumForPath((progress) => {
+                        if (progress.stage === 'complete') {
+                            document.getElementById('progressMessage').textContent = progress.message;
+                            document.getElementById('progressFill').style.width = '100%';
+                        } else {
+                            document.getElementById('progressMessage').textContent = progress.message;
+                            if (progress.progress !== undefined) {
+                                document.getElementById('progressFill').style.width = progress.progress + '%';
+                            }
+                        }
+                    });
+                    
+                    contentDiv.innerHTML = this.renderCurriculumDetails();
                     btn.textContent = '✅ Generated!';
                     this.bindCollapsibleLessons();
                     this.updateProgress();
@@ -2348,29 +2368,22 @@ Example:
             }
 
             async loadFullContent() {
-                const results = [];
-                for (const item of this.path) {
-                    if (item.id) {
+                const loadPromises = this.path
+                    .filter(item => item.id)
+                    .map(async item => {
                         try {
                             const response = await fetch(`/api/content/${this.selectedSource}/${item.id}`);
                             if (response.ok) {
-                                const data = await response.json();
-                                results.push(data);
+                                return await response.json();
                             }
                         } catch (e) {
                             console.log('Could not load content for', item.id, e);
                         }
-                    }
-                }
-                return results;
-            }
-
-            async loadDictionary() {
-                try {
-                    const response = await fetch('/data/dictionary.json');
-                    if (response.ok) return await response.json();
-                } catch (e) {}
-                return [];
+                        return null;
+                    });
+                
+                const results = await Promise.all(loadPromises);
+                return results.filter(r => r !== null);
             }
 
             extractWordsFromText(text) {
@@ -2397,36 +2410,13 @@ Example:
                 return words;
             }
 
-            async findWordsForChar(char, knownChars, limit = 5) {
-                const dict = await this.loadDictionary();
-                const knownSet = new Set(knownChars);
-                const words = [];
-                
-                for (const entry of dict) {
-                    if (!entry.word || !entry.chars) continue;
-                    if (!entry.word.includes(char)) continue;
-                    
-                    const wordChars = entry.chars.split('');
-                    const allKnown = wordChars.every(c => knownSet.has(c) || c === char);
-                    
-                    if (allKnown) {
-                        words.push({
-                            word: entry.word,
-                            pinyin: entry.pinyin || '',
-                            definition: entry.definition || entry.english || ''
-                        });
-                        if (words.length >= limit) break;
-                    }
-                }
-                
-                return words;
-            }
-
-            async generateCurriculumForPath() {
+            async generateCurriculumForPath(onProgress) {
                 this.curriculum = [];
-                const fullContent = await this.loadFullContent();
-                const targetSet = new Set(this.targetChars);
                 
+                if (onProgress) onProgress({ stage: 'loading_content', message: 'Loading story content...' });
+                const fullContent = await this.loadFullContent();
+                
+                const targetSet = new Set(this.targetChars);
                 let cumulativeKnown = new Set(this.knownChars);
                 
                 for (let i = 0; i < this.path.length; i++) {
@@ -2440,9 +2430,26 @@ Example:
                     const content = fullStory.text || fullStory.content || '';
                     const wordsInStory = this.extractWordsFromText(content);
                     
+                    if (onProgress) onProgress({ 
+                        stage: 'fetching_words', 
+                        message: `Finding words for story ${i + 1}/${this.path.length}...`,
+                        progress: Math.round(((i + 1) / this.path.length) * 80)
+                    });
+                    
+                    const knownArray = Array.from(cumulativeKnown);
+                    const apiResult = await this.fetchLearnableWords(knownArray);
+                    const wordList = apiResult.words || [];
+                    
                     const charWordMap = {};
                     for (const char of newCharsThisLesson) {
-                        const words = await this.findWordsForChar(char, cumulativeKnown, 5);
+                        const words = wordList
+                            .filter(w => w.word && w.word.includes(char))
+                            .slice(0, 5)
+                            .map(w => ({
+                                word: w.word,
+                                pinyin: w.pinyin || '',
+                                definition: w.meaning || w.definition || ''
+                            }));
                         charWordMap[char] = words;
                     }
                     
@@ -2469,9 +2476,22 @@ Example:
                 const remainingTargets = this.targetChars.filter(c => !coveredTargets.has(c));
                 
                 if (remainingTargets.length > 0) {
+                    if (onProgress) onProgress({ stage: 'processing_target', message: 'Processing target text...' });
+                    
+                    const knownArray = Array.from(cumulativeKnown);
+                    const apiResult = await this.fetchLearnableWords(knownArray);
+                    const wordList = apiResult.words || [];
+                    
                     const charWordMap = {};
                     for (const char of remainingTargets) {
-                        const words = await this.findWordsForChar(char, cumulativeKnown, 5);
+                        const words = wordList
+                            .filter(w => w.word && w.word.includes(char))
+                            .slice(0, 5)
+                            .map(w => ({
+                                word: w.word,
+                                pinyin: w.pinyin || '',
+                                definition: w.meaning || w.definition || ''
+                            }));
                         charWordMap[char] = words;
                     }
                     
@@ -2489,7 +2509,24 @@ Example:
                     });
                 }
                 
+                if (onProgress) onProgress({ stage: 'complete', message: 'Done!' });
                 localStorage.setItem(WIZARD_STORAGE.CURRICULUM, JSON.stringify(this.curriculum));
+            }
+            
+            async fetchLearnableWords(chars) {
+                try {
+                    const response = await fetch('/api/learnable-words', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chars: chars })
+                    });
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (e) {
+                    console.log('Error fetching learnable words:', e);
+                }
+                return { words: [] };
             }
 
             renderCurriculumDetails() {
