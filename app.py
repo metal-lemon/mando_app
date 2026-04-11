@@ -279,6 +279,162 @@ def api_search():
     })
 
 
+@app.route('/api/build-pool', methods=['POST'])
+def api_build_pool():
+    """
+    Build a candidate pool by applying steps 1-3 server-side.
+    This avoids sending millions of records to the client.
+    
+    Request body (JSON):
+        source: str - Source ID
+        targetChars: list - Characters to learn
+        knownChars: list - Characters already known
+        maxPoolSize: int - Maximum candidates to return (default 100)
+    
+    Returns:
+        JSON with filtered pool and metadata
+    """
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    source_id = data.get('source')
+    target_chars = set(data.get('targetChars', []))
+    known_chars = set(data.get('knownChars', []))
+    max_pool_size = min(int(data.get('maxPoolSize', 100)), 200)
+    
+    if not source_id:
+        return jsonify({'error': 'Source is required'}), 400
+    
+    if not target_chars:
+        return jsonify({'error': 'Target characters are required'}), 400
+    
+    index_data = load_source_index(source_id)
+    if not index_data:
+        return jsonify({'error': f'Source not found: {source_id}'}), 404
+    
+    index = index_data.get('index', {})
+    total_targets = len(target_chars)
+    
+    # Find records containing target characters
+    page_coverage = {}
+    for char in target_chars:
+        posting_list = index.get(char, [])
+        for page_id in posting_list:
+            if page_id not in page_coverage:
+                page_coverage[page_id] = set()
+            page_coverage[page_id].add(char)
+    
+    # Load page metadata from data file
+    source_path = SOURCE_DIR / source_id
+    data_file = source_path / f'{source_id}_data.json'
+    page_data = {}
+    if data_file.exists():
+        with open(data_file, 'r', encoding='utf-8') as f:
+            page_data = json.load(f)
+    
+    # Dynamic threshold parameters
+    # For long-form content (stories with 150-400 unique chars), efficiency thresholds
+    # are too strict. We use very permissive thresholds and let beam search optimize.
+    alpha = 50.0  # Allow longer stories initially
+    theta = 0.0    # No efficiency filter - all records with targets are candidates
+    max_alpha = 200.0
+    min_theta = 0.0
+    theta_step = 0.1
+    
+    pool = []
+    thresholds_used = {'alpha': alpha, 'theta': theta}
+    
+    # Try progressively relaxed thresholds until we get candidates
+    while len(pool) == 0 and alpha <= max_alpha and theta >= min_theta:
+        for page_id, matched_chars in page_coverage.items():
+            chars = page_data.get(page_id, {}).get('characters', [])
+            if not chars:
+                # Fallback: try to get from content file
+                content_file = source_path / f'{source_id}.json'
+                if content_file.exists():
+                    try:
+                        with open(content_file, 'r', encoding='utf-8') as f:
+                            all_records = json.load(f)
+                            for rec in all_records:
+                                if str(rec.get('id')) == str(page_id) or rec.get('id') == int(page_id):
+                                    chars = rec.get('characters', [])
+                                    break
+                    except:
+                        pass
+            
+            unique_chars = list(set(chars))
+            
+            # Step 1: Numerical Cut-off
+            limit = len(known_chars) + (alpha * total_targets)
+            if len(unique_chars) > limit:
+                continue
+            
+            # Step 2: Pre-split by Known Set
+            known_in_record = [c for c in unique_chars if c in known_chars]
+            unknown_in_record = [c for c in unique_chars if c not in known_chars]
+            target_in_record = [c for c in unknown_in_record if c in target_chars]
+            nontarget_in_record = [c for c in unknown_in_record if c not in target_chars]
+            
+            # Step 3: Efficiency-Threshold
+            if len(nontarget_in_record) + len(target_in_record) == 0:
+                continue
+            efficiency = len(target_in_record) / (len(target_in_record) + len(nontarget_in_record))
+            if efficiency < theta:
+                continue
+            
+            pool.append({
+                'id': page_id,
+                'matched_chars': list(matched_chars),
+                'uniqueChars': unique_chars,
+                'targetChars': target_in_record,
+                'nontargetChars': nontarget_in_record,
+                'efficiency': efficiency
+            })
+            
+            if len(pool) >= max_pool_size:
+                break
+        
+        if len(pool) == 0:
+            alpha += 0.5
+            theta = max(min_theta, theta - theta_step)
+            thresholds_used = {'alpha': alpha, 'theta': theta}
+    
+    # Calculate coverage
+    covered_targets = set()
+    for item in pool:
+        for c in item['targetChars']:
+            covered_targets.add(c)
+    coverage = len(covered_targets) / total_targets if total_targets > 0 else 0
+    
+    # Load titles from content
+    content_file = source_path / f'{source_id}.json'
+    titles = {}
+    if content_file.exists():
+        try:
+            with open(content_file, 'r', encoding='utf-8') as f:
+                for rec in json.load(f):
+                    titles[str(rec.get('id'))] = rec.get('title', 'Untitled')
+        except:
+            pass
+    
+    # Add titles to pool
+    for item in pool:
+        item['title'] = titles.get(str(item['id']), 'Untitled')
+        # Don't include full content in response - client can fetch on demand
+    
+    return jsonify({
+        'source': source_id,
+        'pool': pool,
+        'poolSize': len(pool),
+        'thresholds': thresholds_used,
+        'coverage': coverage,
+        'totalTargets': total_targets,
+        'coveredTargets': len(covered_targets)
+    })
+
+
 @app.route('/api/learnable-words', methods=['POST'])
 def api_learnable_words():
     """
@@ -462,8 +618,8 @@ if __name__ == '__main__':
     sources = discover_sources()
     if sources:
         for src in sources:
-            content_status = "✓" if src.get('hasContent') else "✗"
-            print(f"  - {src['id']}: {src['name']} ({src['totalRecords']} records, {src['uniqueChars']} chars) [{content_status}]")
+            content_status = "[OK]" if src.get('hasContent') else "[MISSING]"
+            print(f"  - {src['id']}: {src['name']} ({src['totalRecords']} records, {src['uniqueChars']} chars) {content_status}")
     else:
         print("  (none found - add data to source/ directory)")
     print()

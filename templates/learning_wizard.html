@@ -1927,27 +1927,32 @@ Example:
                 this.updateSummary();
                 this.updateProgress();
 
-                // Now search for candidates using target characters
+                // Now build pool server-side using steps 1-3
                 if (this.selectedSource && this.targetChars.length > 0) {
-                    this.loadCandidatesFromAPI();
+                    this.loadPoolFromAPI();
                 }
             }
 
-            // ==================== STEP 3: PATHFINDER (NEW ALGORITHM) ====================
+            // ==================== STEP 3: PATHFINDER (PROPOSAL #7 PIPELINE) ====================
             renderPathfinder(container) {
-                const hasCandidates = this.candidates && this.candidates.length > 0;
+                const hasPool = this.pool && this.pool.length > 0;
                 
                 container.innerHTML = `
                     <h2><span class="step-num">3</span> Find Your Learning Path</h2>
                     <p class="step-description">
-                        Select cluster size, find optimal story clusters, then build the most efficient path.
+                        Generate an optimized learning path using beam search to minimize new characters while covering targets.
                     </p>
 
                     <div class="info-box" style="margin-bottom: 15px;">
                         <p>Using source: <strong>${this.selectedSource}</strong></p>
                     </div>
 
-                    ${!hasCandidates ? `
+                    ${!this.pool ? `
+                        <div class="info-box">
+                            <h4>⏳ Loading Pool...</h4>
+                            <p>Building candidate pool from source...</p>
+                        </div>
+                    ` : !hasPool ? `
                         <div class="info-box">
                             <h4>📚 No Candidates Available</h4>
                             <p>No content found for your target characters. You can continue without a predefined path.</p>
@@ -1955,45 +1960,25 @@ Example:
                     ` : `
                         <div class="info-box" style="background: #e3f2fd; border-color: #2196F3;">
                             <h4>📊 Candidate Pool</h4>
-                            <p>Found <strong>${this.candidates.length}</strong> candidates from API search. Click "Generate Pool" to filter by character limit.</p>
+                            <p>Built <strong>${this.pool.length}</strong> candidates from source (α=${this.poolThresholds?.alpha?.toFixed(1) || '?'}, θ=${this.poolThresholds?.theta?.toFixed(1) || '?'})</p>
+                            <p>Coverage: <strong>${((this.poolCoverage || 0) * 100).toFixed(1)}%</strong> of targets</p>
                         </div>
                         
-                        <div class="button-group" style="margin: 15px 0;">
-                            <button id="generatePoolBtn" class="secondary">🔍 Generate Pool</button>
-                        </div>
-                        
-                        <div id="poolStats" class="file-status" style="display: none;"></div>
-                        
-                        <div id="clusterSection" style="display: none;">
-                            <h3 style="margin: 20px 0 15px 0; color: #333;">🔗 Cluster Selection</h3>
-                            <p style="color: #666; margin-bottom: 15px;">Select cluster size (3-7 stories).</p>
-                            <div class="button-group">
-                                <button class="cluster-size-btn secondary" data-size="3">3</button>
-                                <button class="cluster-size-btn secondary" data-size="4">4</button>
-                                <button class="cluster-size-btn secondary active" data-size="5">5</button>
-                                <button class="cluster-size-btn secondary" data-size="6">6</button>
-                                <button class="cluster-size-btn secondary" data-size="7">7</button>
+                        <div id="beamSearchSection" style="margin-top: 20px;">
+                            <div class="info-box" style="background: #fff3e0; border-color: #ff9800;">
+                                <h4>🎯 Beam Search Path</h4>
+                                <p>Find optimal sequence minimizing distinct new characters across all lessons.</p>
                             </div>
-                            <button id="findClustersBtn" class="secondary" style="margin-top: 10px;">🔍 Find Clusters</button>
+                            <button id="generatePathBtn" class="secondary" style="margin-top: 10px;">⚡ Generate Path (Beam Search)</button>
                         </div>
                         
-                        <div id="clusterResults" style="display: none; margin-top: 20px;"></div>
-                        <div id="clusterDetailSection" style="display: none; margin-top: 20px;">
-                            <h3 style="margin: 20px 0 15px 0; color: #333;">🎯 Selected Cluster</h3>
-                            <div id="selectedClusterInfo"></div>
-                            <button id="optimizePathBtn" class="secondary" style="margin-top: 15px;">⚡ Optimize Path (Exhaustive)</button>
-                        </div>
-                        
-                        <div id="pathSection" style="display: none; margin-top: 20px;">
-                            <h3 style="margin: 20px 0 15px 0; color: #333;">📚 Your Learning Path</h3>
-                            <div id="optimizedPathStats"></div>
-                        </div>
+                        <div id="pathStats" class="file-status" style="display: none; margin-top: 20px;"></div>
                         
                         <div id="pathResults">
                             ${this.path.length > 0 ? this.renderPathList() : `
                                 <div class="empty-state">
                                     <h3>🔍 Ready to Find Your Path</h3>
-                                    <p>Generate pool → Select cluster → Build path.</p>
+                                    <p>Click "Generate Path" to find optimal sequence.</p>
                                 </div>
                             `}
                         </div>
@@ -2003,249 +1988,247 @@ Example:
                 this.bindPathfinderEvents();
             }
 
-            bindPathfinderEvents() {
-                const generatePoolBtn = document.getElementById('generatePoolBtn');
-                if (generatePoolBtn) generatePoolBtn.addEventListener('click', () => this.generatePool());
-
-                document.querySelectorAll('.cluster-size-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.querySelectorAll('.cluster-size-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        this.selectedClusterSize = parseInt(btn.dataset.size);
+            async loadPoolFromAPI() {
+                try {
+                    const response = await fetch('/api/build-pool', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            source: this.selectedSource,
+                            targetChars: this.targetChars,
+                            knownChars: [...this.knownChars]
+                        })
                     });
-                });
-
-                const findClustersBtn = document.getElementById('findClustersBtn');
-                if (findClustersBtn) findClustersBtn.addEventListener('click', () => this.findClusters());
-
-                const optimizePathBtn = document.getElementById('optimizePathBtn');
-                if (optimizePathBtn) optimizePathBtn.addEventListener('click', () => this.optimizePathExhaustive());
-
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.pool = data.pool || [];
+                        this.poolThresholds = data.thresholds;
+                        this.poolCoverage = data.coverage;
+                        if (this.currentStep === 3) {
+                            this.renderStep();
+                        }
+                    }
+                } catch (e) {
+                    console.log('Could not load pool:', e);
+                    this.pool = [];
+                }
             }
 
-            generatePool() {
+            bindPathfinderEvents() {
+                const generatePathBtn = document.getElementById('generatePathBtn');
+                if (generatePathBtn) generatePathBtn.addEventListener('click', async () => {
+                    generatePathBtn.disabled = true;
+                    generatePathBtn.textContent = '⏳ Searching...';
+                    
+                    const pathStats = document.getElementById('pathStats');
+                    if (pathStats) {
+                        pathStats.style.display = 'block';
+                        pathStats.innerHTML = '<p>🔄 Running beam search...</p>';
+                    }
+
+                    await this.loadCharFreq();
+                    this.generatePoolV2();
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+
+                    const result = this.beamSearchPath();
+                    const finalResult = this.appendTargetAnchor(result);
+
+                    this.path = finalResult.path;
+                    this.coverage = finalResult.coverage;
+
+                    this.updateProgress();
+
+                    if (pathStats) {
+                        const coveragePct = (finalResult.coverage * 100).toFixed(1);
+                        const isComplete = finalResult.coverage >= 1;
+                        pathStats.className = 'file-status ' + (isComplete ? 'success' : 'warning');
+                        pathStats.innerHTML = '<strong>📊 Path Results:</strong> Coverage: <strong>' + 
+                            coveragePct + '%</strong> | Non-targets introduced: <strong>' + 
+                            finalResult.acc_non_size + '</strong>';
+                    }
+
+                    this.renderPathResults();
+                    
+                    generatePathBtn.disabled = false;
+                    generatePathBtn.textContent = '⚡ Generate Path (Beam Search)';
+                });
+            }
+
+            renderPathResults() {
+                const pathResults = document.getElementById('pathResults');
+                if (pathResults) {
+                    pathResults.innerHTML = this.path.length > 0 ? this.renderPathList() : 
+                        '<div class="empty-state"><h3>🔍 No path found</h3><p>Try adjusting your target characters.</p></div>';
+                }
+            }
+
+            generatePoolV2() {
+                // Pool is now built server-side via /api/build-pool
+                // This method just ensures pool is in the right format for beam search
+                
+                if (!this.pool || this.pool.length === 0) {
+                    return [];
+                }
+
+                // Ensure pool items have required fields for beam search
+                this.pool = this.pool.map(item => ({
+                    id: item.id,
+                    title: item.title || 'Untitled',
+                    matched_chars: item.matched_chars || [],
+                    uniqueChars: item.uniqueChars || [],
+                    targetChars: item.targetChars || [],
+                    nontargetChars: item.nontargetChars || [],
+                    unknownChars: [...(item.targetChars || []), ...(item.nontargetChars || [])],
+                    efficiency: item.efficiency || 0,
+                    jumpsize: (item.targetChars?.length || 0) + (item.nontargetChars?.length || 0)
+                }));
+
+                return this.pool;
+            }
+
+            async loadCharFreq() {
+                if (!this.selectedSource) return null;
+                
+                try {
+                    const freqUrl = '/source/' + this.selectedSource + '/' + this.selectedSource + '_freq.json';
+                    const response = await fetch(freqUrl);
+                    if (!response.ok) return null;
+                    
+                    const freqData = await response.json();
+                    this.charFreq = new Map(Object.entries(freqData));
+                    return this.charFreq;
+                } catch (e) {
+                    console.warn('Could not load character frequency:', e);
+                    return null;
+                }
+            }
+
+            logFreq(char) {
+                if (!this.charFreq || !this.charFreq.has(char)) return 0;
+                return Math.log(this.charFreq.get(char) + 1);
+            }
+
+            beamSearchPath() {
+                if (!this.pool || this.pool.length === 0) {
+                    return { path: [], coverage: 0 };
+                }
+
                 const knownSet = this.knownChars;
                 const targetSet = new Set(this.targetChars);
-                const limit = knownSet.size + (2 * targetSet.size);
-
-                this.pool = [];
-
-                for (const candidate of this.candidates) {
-                    const chars = candidate.chars || [];
-                    const uniqueChars = [...new Set(chars)];
-
-                    if (uniqueChars.length > limit) continue;
-
-                    const knownChars = uniqueChars.filter(c => knownSet.has(c));
-                    const unknownChars = uniqueChars.filter(c => !knownSet.has(c));
-                    const targetChars = unknownChars.filter(c => targetSet.has(c));
-                    const nontargetChars = unknownChars.filter(c => !targetSet.has(c));
-
-                    if (nontargetChars.length > targetChars.length) continue;
-
-                    this.pool.push({
-                        id: candidate.id,
-                        title: candidate.title,
-                        matched_chars: candidate.matched_chars,
-                        uniqueChars: uniqueChars,
-                        knownChars: knownChars,
-                        unknownChars: unknownChars,
-                        targetChars: targetChars,
-                        nontargetChars: nontargetChars,
-                        jumpsize: unknownChars.length,
-                        efficiency: targetChars.length / (targetChars.length + nontargetChars.length)
-                    });
-                }
-
-                const poolStats = document.getElementById('poolStats');
-                poolStats.style.display = 'block';
-                poolStats.className = 'file-status success';
-                poolStats.innerHTML = '<strong>✅ Pool:</strong> ' + this.pool.length + ' candidates';
-
-                document.getElementById('clusterSection').style.display = 'block';
-                this.selectedClusterSize = 5;
-            }
-
-            findClusters() {
-                if (!this.pool || this.pool.length === 0) {
-                    alert('Generate pool first.');
-                    return;
-                }
-
-                const k = this.selectedClusterSize || 5;
-                if (k > this.pool.length) {
-                    alert('Reduce cluster size.');
-                    return;
-                }
-
-                const targetSet = new Set(this.targetChars);
                 const totalTargets = targetSet.size;
+                const beamWidth = 20;
+                const lambda = 0.1;
 
-                document.getElementById('clusterResults').style.display = 'block';
-                document.getElementById('clusterResults').innerHTML = '<p>🔄 Finding clusters...</p>';
+                let beams = [{
+                    sequence: [],
+                    covered: new Set(knownSet),
+                    acc_non: new Set(),
+                    cost: 0
+                }];
 
-                const self = this;
-                setTimeout(function() {
-                    const combinations = self.getCombinations([...Array(self.pool.length).keys()], k);
-                    const clusterResults = [];
+                const maxDepth = this.pool.length;
+                let bestComplete = null;
+                let bestPartial = null;
 
-                    for (const combo of combinations) {
-                        const stories = combo.map(i => self.pool[i]);
-                        
-                        const unionTarget = new Set();
-                        const unionNontarget = new Set();
-                        
-                        for (const s of stories) {
-                            for (const c of s.targetChars) unionTarget.add(c);
-                            for (const c of s.nontargetChars) unionNontarget.add(c);
-                        }
+                for (let depth = 0; depth < maxDepth && beams.length > 0; depth++) {
+                    const newBeams = [];
 
-                        const coverage = (unionTarget.size / totalTargets) * 100;
-                        const efficiency = unionTarget.size / (unionTarget.size + unionNontarget.size);
+                    for (const beam of beams) {
+                        for (let i = 0; i < this.pool.length; i++) {
+                            if (beam.sequence.includes(i)) continue;
 
-                        clusterResults.push({
-                            combo: combo,
-                            stories: stories,
-                            unionTargetSize: unionTarget.size,
-                            unionNontargetSize: unionNontarget.size,
-                            coverage: coverage,
-                            efficiency: efficiency,
-                            avgJumpsize: stories.reduce((sum, s) => sum + s.jumpsize, 0) / stories.length
-                        });
-                    }
-
-                    clusterResults.sort((a, b) => b.efficiency - a.efficiency);
-                    self.clusters = clusterResults.slice(0, 10);
-
-                    let html = '';
-                    for (let i = 0; i < self.clusters.length; i++) {
-                        const c = self.clusters[i];
-                        html += '<div class="cluster-option" data-index="' + i + '" style="background: white; border: 2px solid #ddd; border-radius: 12px; padding: 15px; margin: 10px 0; cursor: pointer;">' +
-                            '<div style="display: flex; justify-content: space-between;"><div><strong>Option ' + (i + 1) + '</strong></div>' +
-                            '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div></div>' +
-                            '<div style="font-size: 12px; color: #666;">' + c.stories.map(s => s.title || 'Untitled').join(' → ') + '</div></div>';
-                    }
-
-                    document.getElementById('clusterResults').innerHTML = html;
-
-                    document.querySelectorAll('.cluster-option').forEach(function(opt) {
-                        opt.addEventListener('click', function() {
-                            self.selectCluster(parseInt(opt.dataset.index));
-                            document.querySelectorAll('.cluster-option').forEach(o => o.style.borderColor = '#ddd');
-                            opt.style.borderColor = 'var(--secondary)';
-                        });
-                    });
-                }, 10);
-            }
-
-            selectCluster(index) {
-                this.selectedCluster = this.clusters[index];
-                const c = this.selectedCluster;
-                
-                document.getElementById('clusterDetailSection').style.display = 'block';
-                document.getElementById('selectedClusterInfo').innerHTML = 
-                    '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
-                    '<h4>📊 Statistics</h4>' +
-                    '<div>Coverage: <strong>' + c.coverage.toFixed(1) + '%</strong> | Efficiency: <strong>' + (c.efficiency * 100).toFixed(1) + '%</strong></div>' +
-                    '<div>Avg Jumpsize: <strong>' + c.avgJumpsize.toFixed(1) + '</strong></div></div>' +
-                    '<h4>📚 Candidates</h4>' + c.stories.map((s, i) => 
-                        '<div style="padding: 8px; border-bottom: 1px solid #eee;">' + (i+1) + '. ' + (s.title || 'Untitled') + '</div>'
-                    ).join('');
-            }
-
-            optimizePathExhaustive() {
-                if (!this.selectedCluster) {
-                    alert('Select a cluster first.');
-                    return;
-                }
-
-                const stories = this.selectedCluster.stories;
-                const targetSet = new Set(this.targetChars);
-                const totalTargets = targetSet.size;
-
-                document.getElementById('optimizedPathStats').innerHTML = '<p>🔄 Finding optimal path...</p>';
-
-                const self = this;
-                setTimeout(function() {
-                    const permutations = self.getPermutations(stories);
-                    let bestPath = null;
-                    let bestAvgJumpsize = Infinity;
-
-                    for (const perm of permutations) {
-                        const knownSoFar = new Set(self.knownChars);
-                        const jumpsizes = [];
-                        const coveredTargets = new Set();
-
-                        for (const story of perm) {
-                            const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
-                            const newTargets = story.targetChars.filter(c => targetSet.has(c) && !knownSoFar.has(c));
+                            const story = this.pool[i];
+                            const newTargets = story.targetChars.filter(c => targetSet.has(c) && !beam.covered.has(c));
                             
-                            jumpsizes.push(newChars.length);
-                            newChars.forEach(c => knownSoFar.add(c));
-                            newTargets.forEach(c => coveredTargets.add(c));
-                        }
+                            if (newTargets.length === 0) continue;
 
-                        const avgJumpsize = jumpsizes.reduce((a, b) => a + b, 0) / jumpsizes.length;
+                            const newNon = story.nontargetChars.filter(c => !beam.acc_non.has(c));
+                            
+                            const newCovered = new Set(beam.covered);
+                            newTargets.forEach(c => newCovered.add(c));
 
-                        if (avgJumpsize < bestAvgJumpsize) {
-                            bestAvgJumpsize = avgJumpsize;
-                            bestPath = { perm: perm, jumpsizes: jumpsizes, avgJumpsize: avgJumpsize, coveredTargets: coveredTargets };
+                            const newAccNon = new Set(beam.acc_non);
+                            newNon.forEach(c => newAccNon.add(c));
+
+                            const freqBonus = newTargets.reduce((sum, c) => sum + lambda * this.logFreq(c), 0);
+                            const adjustedCost = newAccNon.size - freqBonus;
+
+                            newBeams.push({
+                                sequence: [...beam.sequence, i],
+                                covered: newCovered,
+                                acc_non: newAccNon,
+                                cost: adjustedCost
+                            });
                         }
                     }
 
-                    self.optimizedPath = bestPath;
+                    newBeams.sort((a, b) => a.cost - b.cost);
+                    beams = newBeams.slice(0, beamWidth);
 
-                    let html = '<div class="info-box" style="background: #e8f5e9; border-color: #4CAF50;">' +
-                        '<h4>⚡ Best Path</h4>' +
-                        '<div>Avg Jumpsize: <strong>' + bestPath.avgJumpsize.toFixed(2) + '</strong></div>' +
-                        '<div>Coverage: <strong>' + (bestPath.coveredTargets.size / totalTargets * 100).toFixed(1) + '%</strong></div></div>';
+                    for (const beam of beams) {
+                        const coveredTargets = [...beam.covered].filter(c => targetSet.has(c) && !knownSet.has(c)).length;
+                        const coverage = coveredTargets / totalTargets;
 
-                    const knownSoFar = new Set(self.knownChars);
-                    html += '<ul class="path-list">';
-                    for (let i = 0; i < bestPath.perm.length; i++) {
-                        const story = bestPath.perm[i];
-                        const newChars = story.unknownChars.filter(c => !knownSoFar.has(c));
-                        newChars.forEach(c => knownSoFar.add(c));
-                        html += '<li class="path-item"><div class="path-number">' + (i+1) + '</div><div class="path-info"><h4>' + (story.title || 'Untitled') + '</h4><p>Jumpsize: ' + bestPath.jumpsizes[i] + '</p></div></li>';
+                        if (coverage === 1) {
+                            if (!bestComplete || beam.cost < bestComplete.cost) {
+                                bestComplete = { ...beam, coverage: 1 };
+                            }
+                        } else if (!bestPartial || beam.cost < bestPartial.cost) {
+                            bestPartial = { ...beam, coverage: coverage };
+                        }
                     }
-                    html += '</ul>';
+                }
 
-                    document.getElementById('pathSection').style.display = 'block';
-                    document.getElementById('optimizedPathStats').innerHTML = html;
+                const result = bestComplete || bestPartial;
+                if (!result) {
+                    return { path: [], coverage: 0 };
+                }
 
-                    self.path = bestPath.perm.map(s => ({
-                        id: s.id,
-                        title: s.title,
-                        source: self.selectedSource,
-                        matched_chars: s.matched_chars,
-                        chars: s.uniqueChars,
-                        newChars: s.unknownChars,
-                        targetChars: s.targetChars
-                    }));
+                const path = result.sequence.map(idx => ({
+                    id: this.pool[idx].id,
+                    title: this.pool[idx].title,
+                    source: this.selectedSource,
+                    content: this.pool[idx].content,
+                    matched_chars: this.pool[idx].matched_chars,
+                    chars: this.pool[idx].uniqueChars,
+                    newChars: this.pool[idx].unknownChars,
+                    targetChars: this.pool[idx].targetChars,
+                    nontargetChars: this.pool[idx].nontargetChars
+                }));
 
-                    self.updateSummary();
-                    self.updateProgress();
-                }, 10);
+                return { 
+                    path: path, 
+                    coverage: result.coverage,
+                    acc_non_size: result.acc_non.size
+                };
             }
 
-            getCombinations(arr, size) {
-                const result = [];
-                function combine(start, combo) {
-                    if (combo.length === size) { result.push(combo); return; }
-                    for (let i = start; i < arr.length; i++) combine(i + 1, [...combo, arr[i]]);
-                }
-                combine(0, []);
-                return result;
-            }
+            appendTargetAnchor(pathResult) {
+                const knownSet = new Set(this.knownChars);
+                pathResult.path.forEach(s => {
+                    s.newChars.forEach(c => knownSet.add(c));
+                });
 
-            getPermutations(arr) {
-                if (arr.length <= 1) return [arr];
-                const result = [];
-                for (let i = 0; i < arr.length; i++) {
-                    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-                    for (const perm of this.getPermutations(rest)) result.push([arr[i], ...perm]);
+                const targetSet = new Set(this.targetChars);
+                const remainingTargets = [...targetSet].filter(c => !knownSet.has(c));
+
+                if (remainingTargets.length === 0) {
+                    pathResult.path.push({
+                        id: 'target-anchor',
+                        title: this.targetText || 'Target Text',
+                        source: this.selectedSource,
+                        content: this.targetText || '',
+                        matched_chars: this.targetChars,
+                        chars: this.targetChars.split(''),
+                        newChars: [],
+                        targetChars: [],
+                        nontargetChars: [],
+                        isAnchor: true
+                    });
                 }
-                return result;
+
+                return pathResult;
             }
 
             renderPathList() {
