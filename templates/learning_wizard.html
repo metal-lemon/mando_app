@@ -2386,28 +2386,21 @@ Example:
                 return results.filter(r => r !== null);
             }
 
-            extractWordsFromText(text) {
-                const words = [];
-                let i = 0;
-                while (i < text.length) {
-                    let matched = false;
-                    for (let len = 4; len >= 2; len--) {
-                        if (i + len <= text.length) {
-                            const word = text.slice(i, i + len);
-                            if (/[\u4e00-\u9fff]/.test(word)) {
-                                const chars = word.split('');
-                                const allChinese = chars.every(c => /[\u4e00-\u9fff]/.test(c));
-                                if (allChinese && !words.some(w => w.word === word)) {
-                                    words.push(word);
-                                    matched = true;
-                                    break;
-                                }
-                            }
-                        }
+            async segmentText(text, mode = 'accurate') {
+                try {
+                    const response = await fetch('/api/segment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text, mode: mode })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.words || [];
                     }
-                    i++;
+                } catch (e) {
+                    console.log('Segment error:', e);
                 }
-                return words;
+                return [];
             }
 
             async generateCurriculumForPath(onProgress) {
@@ -2428,7 +2421,7 @@ Example:
                     const targetCharsThisLesson = newCharsThisLesson.filter(c => targetSet.has(c));
                     
                     const content = fullStory.text || fullStory.content || '';
-                    const wordsInStory = this.extractWordsFromText(content);
+                    const wordsInStory = await this.segmentText(content);
                     
                     if (onProgress) onProgress({ 
                         stage: 'fetching_words', 
@@ -2506,7 +2499,7 @@ Example:
                         targetChars: remainingTargets,
                         knownBefore: [...cumulativeKnown],
                         charWordMap: charWordMap,
-                        wordsInStory: this.extractWordsFromText(this.targetText).slice(0, 30),
+                        wordsInStory: (await this.segmentText(this.targetText)).slice(0, 30),
                         isTarget: true
                     });
                 }

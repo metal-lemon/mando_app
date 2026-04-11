@@ -14,6 +14,7 @@ Then open http://localhost:5000 in your browser.
 import json
 import os
 from pathlib import Path
+import jieba
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response
 
 app = Flask(__name__)
@@ -478,6 +479,39 @@ def api_learnable_words():
         'count': len(learnable),
         'words': learnable
     })
+
+
+@app.route('/api/segment', methods=['POST'])
+def api_segment():
+    """
+    Segment Chinese text using jieba.
+    
+    Request body (JSON):
+        text: string - Chinese text to segment
+        mode: string - 'accurate' (default), 'full', or 'search'
+    
+    Returns:
+        JSON with word list
+    """
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    text = data.get('text', '')
+    mode = data.get('mode', 'accurate')
+    
+    if not text:
+        return jsonify({'words': []})
+    
+    if mode == 'search':
+        words = jieba.cut_for_search(text)
+    elif mode == 'full':
+        words = jieba.cut(text, cut_all=True)
+    else:
+        words = jieba.cut(text)
+    
+    return jsonify({'words': list(words)})
 
 
 @app.route('/api/content/<source_id>/<record_id>')
