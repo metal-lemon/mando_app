@@ -374,11 +374,16 @@
         .tab-btn {
             padding: 10px 20px;
             background: #f5f5f5;
+            color: #333;
             border: none;
             border-radius: 8px 8px 0 0;
             cursor: pointer;
             font-size: 14px;
             transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: #e0e0e0;
         }
 
         .tab-btn.active {
@@ -1248,6 +1253,7 @@
                 this.currentStep = 1;
                 this.totalSteps = 6;
                 this.knownChars = new Set(window.mandarinState.getCharacters());
+                this.initialKnownCount = window.mandarinState.getCount();
                 this.targetText = window.mandarinState.getTargetText() || '';
                 this.targetChars = [];
                 this.unknownChars = [];
@@ -1344,14 +1350,18 @@
                 this.updateSummary();
                 this.renderStep();
                 this.bindEvents();
+                this.updateSaveButtonState();
             }
 
             updateSummary() {
                 document.getElementById('summaryKnown').textContent = this.knownChars.size;
                 document.getElementById('summaryTarget').textContent = 
                     this.targetText ? this.targetText.substring(0, 20) + '...' : 'Not set';
-                document.getElementById('summaryToLearn').textContent = 
-                    this.targetChars.length > 0 ? this.targetChars.length : '-';
+                // Use unknownChars (learning gap) if set, otherwise use targetChars as fallback
+                const charsToLearn = this.unknownChars && this.unknownChars.length > 0 
+                    ? this.unknownChars.length 
+                    : (this.targetChars.length > 0 ? this.targetChars.length : 0);
+                document.getElementById('summaryToLearn').textContent = charsToLearn > 0 ? charsToLearn : '-';
                 document.getElementById('summaryStories').textContent = this.path.length;
                 document.getElementById('summaryQuiz').textContent = 
                     this.quizResults.total > 0 ? `${this.quizResults.correct}/${this.quizResults.total}` : '-';
@@ -1497,6 +1507,7 @@ Example:
                             </p>
                             <input type="file" id="importFile" accept=".json" style="display: none;">
                             <button id="importBtn" class="secondary">📂 Choose File</button>
+                            <button id="loadFromServerBtn" class="outline">☁️ Load from Server</button>
                             <button id="clearAllBtn" class="danger">🗑️ Clear All</button>
                         </div>
                     </div>
@@ -1579,6 +1590,8 @@ Example:
                             </div>
                             <div class="button-group" style="margin-top: 15px;">
                                 <button id="addAllExtracted" class="secondary">➕ Add All ${newChars.length} Characters</button>
+                                <button id="saveKnownBtn" class="primary" disabled>💾 Save to Permanent List</button>
+                                <button id="saveToServerBtn" class="outline">☁️ Save to Server</button>
                             </div>
                         </div>
                     `;
@@ -1586,6 +1599,17 @@ Example:
                     document.getElementById('addAllExtracted').addEventListener('click', () => {
                         newChars.forEach(ch => this.knownChars.add(ch));
                         this.updateKnownUI();
+                    });
+
+                    document.getElementById('saveKnownBtn').addEventListener('click', () => this.saveToPermanentList());
+                    
+                    document.getElementById('saveToServerBtn').addEventListener('click', async () => {
+                        const success = await window.mandarinState.saveToServer();
+                        if (success) {
+                            alert(`Saved ${this.knownChars.size} characters to server!`);
+                        } else {
+                            alert('Failed to save to server.');
+                        }
                     });
                 });
 
@@ -1599,6 +1623,14 @@ Example:
                     document.getElementById('importFile').click();
                 });
 
+                document.getElementById('loadFromServerBtn').addEventListener('click', async () => {
+                    await window.mandarinState.load();
+                    this.knownChars = new Set(window.mandarinState.getCharacters());
+                    this.initialKnownCount = window.mandarinState.getCount();
+                    this.updateKnownUI();
+                    alert(`Loaded ${this.knownChars.size} characters from server!`);
+                });
+
                 document.getElementById('importFile').addEventListener('change', (e) => {
                     if (e.target.files.length) {
                         window.mandarinState.mergeFromFile(e.target.files[0], (err, result) => {
@@ -1606,6 +1638,7 @@ Example:
                                 alert('Error: ' + err.message);
                             } else {
                                 this.knownChars = new Set(window.mandarinState.getCharacters());
+                                this.initialKnownCount = window.mandarinState.getCount();
                                 this.updateKnownUI();
                                 alert(`Added ${result.added} characters!`);
                             }
@@ -1674,6 +1707,22 @@ Example:
                 this.updateSummary();
                 this.updateProgress();
                 this.updateLearnableWords();
+                this.updateSaveButtonState();
+            }
+
+            updateSaveButtonState() {
+                const hasNew = this.knownChars.size > this.initialKnownCount;
+                const saveBtn = document.getElementById('saveKnownBtn');
+                if (saveBtn) saveBtn.disabled = !hasNew;
+                const saveBtn2 = document.getElementById('saveKnownBtnStep2');
+                if (saveBtn2) saveBtn2.disabled = !hasNew;
+            }
+
+            saveToPermanentList() {
+                window.mandarinState.addCharacters(Array.from(this.knownChars));
+                this.initialKnownCount = window.mandarinState.getCount();
+                this.updateSaveButtonState();
+                alert(`Saved! Permanent list now has ${this.initialKnownCount} characters.`);
             }
 
             async updateLearnableWords() {
@@ -1768,6 +1817,10 @@ Example:
                                 Click any character to mark it as known (moves it to your known set)
                             </p>
                             <div id="targetCharsGrid" class="char-grid"></div>
+                            <div class="button-group" style="margin-top: 15px;">
+                                <button id="saveKnownBtnStep2" class="primary" disabled>💾 Save to Permanent List</button>
+                                <button id="saveToServerBtnStep2" class="outline">☁️ Save to Server</button>
+                            </div>
                         </div>
 
                         <div class="info-box" id="readabilityAdvice"></div>
@@ -1842,7 +1895,19 @@ Example:
                         
                         this.updateSummary();
                         this.updateProgress();
+                        this.updateSaveButtonState();
                     });
+                });
+
+                document.getElementById('saveKnownBtnStep2').addEventListener('click', () => this.saveToPermanentList());
+
+                document.getElementById('saveToServerBtnStep2').addEventListener('click', async () => {
+                    const success = await window.mandarinState.saveToServer();
+                    if (success) {
+                        alert(`Saved ${this.knownChars.size} characters to server!`);
+                    } else {
+                        alert('Failed to save to server.');
+                    }
                 });
 
                 document.getElementById('targetCharsSection').classList.remove('hidden');
