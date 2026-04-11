@@ -1352,8 +1352,11 @@
                 document.getElementById('summaryKnown').textContent = this.knownChars.size;
                 document.getElementById('summaryTarget').textContent = 
                     this.targetText ? this.targetText.substring(0, 20) + '...' : 'Not set';
-                document.getElementById('summaryToLearn').textContent = 
-                    this.targetChars.length > 0 ? this.targetChars.length : '-';
+                // Use unknownChars (learning gap) if set, otherwise use targetChars as fallback
+                const charsToLearn = this.unknownChars && this.unknownChars.length > 0 
+                    ? this.unknownChars.length 
+                    : (this.targetChars.length > 0 ? this.targetChars.length : 0);
+                document.getElementById('summaryToLearn').textContent = charsToLearn > 0 ? charsToLearn : '-';
                 document.getElementById('summaryStories').textContent = this.path.length;
                 document.getElementById('summaryQuiz').textContent = 
                     this.quizResults.total > 0 ? `${this.quizResults.correct}/${this.quizResults.total}` : '-';
