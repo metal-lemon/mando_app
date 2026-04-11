@@ -1499,6 +1499,7 @@ Example:
                             </p>
                             <input type="file" id="importFile" accept=".json" style="display: none;">
                             <button id="importBtn" class="secondary">📂 Choose File</button>
+                            <button id="loadFromServerBtn" class="outline">☁️ Load from Server</button>
                             <button id="clearAllBtn" class="danger">🗑️ Clear All</button>
                         </div>
                     </div>
@@ -1612,6 +1613,14 @@ Example:
 
                 document.getElementById('importBtn').addEventListener('click', () => {
                     document.getElementById('importFile').click();
+                });
+
+                document.getElementById('loadFromServerBtn').addEventListener('click', async () => {
+                    await window.mandarinState.load();
+                    this.knownChars = new Set(window.mandarinState.getCharacters());
+                    this.initialKnownCount = window.mandarinState.getCount();
+                    this.updateKnownUI();
+                    alert(`Loaded ${this.knownChars.size} characters from server!`);
                 });
 
                 document.getElementById('importFile').addEventListener('change', (e) => {
