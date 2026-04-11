@@ -2437,7 +2437,8 @@ Example:
                     });
                     
                     const knownArray = Array.from(cumulativeKnown);
-                    const apiResult = await this.fetchLearnableWords(knownArray);
+                    const allCharsForThisLesson = [...knownArray, ...newCharsThisLesson];
+                    const apiResult = await this.fetchLearnableWords(allCharsForThisLesson);
                     const wordList = apiResult.words || [];
                     
                     const charWordMap = {};
@@ -2479,7 +2480,8 @@ Example:
                     if (onProgress) onProgress({ stage: 'processing_target', message: 'Processing target text...' });
                     
                     const knownArray = Array.from(cumulativeKnown);
-                    const apiResult = await this.fetchLearnableWords(knownArray);
+                    const allCharsForTarget = [...knownArray, ...remainingTargets];
+                    const apiResult = await this.fetchLearnableWords(allCharsForTarget);
                     const wordList = apiResult.words || [];
                     
                     const charWordMap = {};
