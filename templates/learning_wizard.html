@@ -2362,7 +2362,16 @@ Example:
                 document.querySelectorAll('.lesson-header').forEach(header => {
                     header.addEventListener('click', () => {
                         const card = header.closest('.lesson-card');
-                        card.classList.toggle('expanded');
+                        const content = card.querySelector('.lesson-content');
+                        const icon = card.querySelector('.lesson-expand-icon');
+                        
+                        if (content.style.display === 'none') {
+                            content.style.display = 'block';
+                            icon.textContent = '▼';
+                        } else {
+                            content.style.display = 'none';
+                            icon.textContent = '▶';
+                        }
                     });
                 });
             }
@@ -2524,28 +2533,22 @@ Example:
                 return { words: [] };
             }
 
-            renderCurriculumDetails() {
+renderCurriculumDetails() {
                 return this.curriculum.map((lesson, idx) => `
-                    <div class="lesson-card expanded" data-index="${idx}">
-                        <div class="lesson-header">
-                            <div class="lesson-header-left">
-                                <span class="lesson-expand-icon">▼</span>
-                                <h4>📖 Lesson ${idx + 1}: ${lesson.title}</h4>
-                                ${lesson.isTarget ? '<span class="target-badge">🎯 Target Text</span>' : ''}
-                            </div>
-                            <div class="lesson-stats-bar" style="background: transparent; padding: 0; margin: 0;">
-                                <div class="lesson-stat">
-                                    <span class="lesson-stat-label">New chars:</span>
-                                    <span class="lesson-stat-value">${lesson.newChars.length}</span>
-                                </div>
-                                <div class="lesson-stat">
-                                    <span class="lesson-stat-label">Known before:</span>
-                                    <span class="lesson-stat-value">${lesson.knownBefore.length}</span>
-                                </div>
-                            </div>
+                    <div class="lesson-summary" style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                        <h4 style="margin: 0;">📖 Lesson ${idx + 1}: ${lesson.title}${lesson.isTarget ? ' 🎯' : ''}</h4>
+                        <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                            New chars: ${lesson.newChars.length} | Words in story: ${lesson.wordsInStory ? lesson.wordsInStory.length : 0}
                         </div>
-                        
-                        <div class="lesson-content">
+                    </div>
+                    
+                    <!-- Section 1: Characters -->
+                    <div class="lesson-card" data-index="${idx}" data-section="chars">
+                        <div class="lesson-header">
+                            <span class="lesson-expand-icon">▶</span>
+                            <h4>🔤 Characters (${lesson.newChars.length} new)</h4>
+                        </div>
+                        <div class="lesson-content" style="display: none;">
                             ${lesson.newChars.length > 0 ? lesson.newChars.map(ch => `
                                 <div class="char-detail">
                                     <div class="char-detail-header">
@@ -2554,7 +2557,7 @@ Example:
                                             <h6>Character ${ch}</h6>
                                             <a href="https://www.mdbg.net/chinese/dictionary?page=stroke-order&wdqb=${ch}" 
                                                target="_blank" class="stroke-order-link">
-                                                🔢 Stroke Order
+                                                 🔢 Stroke Order
                                             </a>
                                         </div>
                                     </div>
@@ -2573,38 +2576,47 @@ Example:
                                     </div>
                                 </div>
                             `).join('') : '<p style="color: #999;">No new characters in this lesson.</p>'}
-                            
-                            <div class="words-section">
-                                <h5>📝 Words from This Text (${lesson.wordsInStory ? lesson.wordsInStory.length : 0})</h5>
-                                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
-                                    Words extracted from the story text.
+                        </div>
+                    </div>
+                    
+                    <!-- Section 2: Words from Story -->
+                    <div class="lesson-card" data-index="${idx}" data-section="words">
+                        <div class="lesson-header">
+                            <span class="lesson-expand-icon">▶</span>
+                            <h4>📝 Words in Story (${lesson.wordsInStory ? lesson.wordsInStory.length : 0})</h4>
+                        </div>
+                        <div class="lesson-content" style="display: none;">
+                            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                                Words extracted from the story text.
+                            </p>
+                            <div class="word-list-inline" style="flex-wrap: wrap;">
+                                ${(lesson.wordsInStory && lesson.wordsInStory.length > 0) ? lesson.wordsInStory.map(w => `
+                                    <div class="word-pill">
+                                        <span class="word">${w}</span>
+                                    </div>
+                                `).join('') : '<span style="color: #999;">No words extracted</span>'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 3: Read -->
+                    <div class="lesson-card" data-index="${idx}" data-section="read">
+                        <div class="lesson-header">
+                            <span class="lesson-expand-icon">▶</span>
+                            <h4>📖 Read This Story</h4>
+                        </div>
+                        <div class="lesson-content" style="display: none;">
+                            <div class="story-preview" style="background: white; padding: 20px; border-radius: 10px; line-height: 2; font-size: 16px;">
+                                ${lesson.content.substring(0, 300)}${lesson.content.length > 300 ? '...' : ''}
+                            </div>
+                            ${lesson.content.length > 300 ? `
+                                <p style="color: #666; margin-top: 10px; font-size: 14px;">
+                                    (Story continues... ${lesson.content.length} characters total)
                                 </p>
-                                <div class="word-list-inline">
-                                    ${(lesson.wordsInStory && lesson.wordsInStory.length > 0) ? lesson.wordsInStory.map(w => `
-                                        <div class="word-pill">
-                                            <span class="word">${w}</span>
-                                        </div>
-                                    `).join('') : '<span style="color: #999;">No words extracted</span>'}
-                                </div>
-                            </div>
-                            
-                            <div class="read-section">
-                                <h5>📖 Read: ${lesson.title}</h5>
-                                <div class="story-preview" style="background: white; padding: 20px; border-radius: 10px; line-height: 2; font-size: 16px;">
-                                    ${lesson.content.substring(0, 300)}${lesson.content.length > 300 ? '...' : ''}
-                                </div>
-                                ${lesson.content.length > 300 ? `
-                                    <p style="color: #666; margin-top: 10px; font-size: 14px;">
-                                        (Story continues... ${lesson.content.length} characters total)
-                                    </p>
-                                ` : ''}
-                            </div>
-                            
-                            <div class="lesson-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                                <p style="color: #666; font-size: 14px;">
-                                    ✅ Study this lesson, then read the story. After completing, proceed to Step 5 to test your knowledge.
-                                </p>
-                            </div>
+                            ` : ''}
+                            <p style="color: #666; font-size: 14px; margin-top: 15px;">
+                                ✅ Study this lesson, then read the story. After completing, proceed to Step 5 to test your knowledge.
+                            </p>
                         </div>
                     </div>
                 `).join('');
