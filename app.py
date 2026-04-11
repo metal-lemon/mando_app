@@ -13,9 +13,22 @@ Then open http://localhost:5000 in your browser.
 
 import json
 import os
+import sys
+import subprocess
 from pathlib import Path
-import jieba
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response
+
+
+def _ensure_jieba():
+    """Ensure jieba is installed, auto-install if missing."""
+    try:
+        import jieba
+        return jieba
+    except ImportError:
+        print("Installing jieba...")
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'jieba'])
+        import jieba
+        return jieba
 
 app = Flask(__name__)
 
@@ -493,6 +506,8 @@ def api_segment():
     Returns:
         JSON with word list
     """
+    jieba = _ensure_jieba()
+    
     data = request.get_json()
     
     if not data:
