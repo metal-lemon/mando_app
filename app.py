@@ -258,7 +258,14 @@ def api_search():
         return jsonify({'error': f'Source not found: {source_id}'}), 404
     
     index = index_data.get('index', {})
-    pages = index_data.get('pages', {})
+    
+    # Load page metadata from _data.json
+    source_path = SOURCE_DIR / source_id
+    data_file = source_path / f'{source_id}_data.json'
+    pages = {}
+    if data_file.exists():
+        with open(data_file, 'r', encoding='utf-8') as f:
+            pages = json.load(f)
     
     page_coverage = {}
     
@@ -277,7 +284,7 @@ def api_search():
             candidates.append({
                 'id': page_id,
                 'title': page_data.get('title', ''),
-                'chars': page_data.get('chars', []),
+                'characters': page_data.get('characters', []),
                 'matched_chars': list(matched_chars),
                 'coverage': len(matched_chars)
             })
@@ -401,7 +408,7 @@ def api_build_pool():
             pool.append({
                 'id': page_id,
                 'matched_chars': list(matched_chars),
-                'uniqueChars': unique_chars,
+                'characters': unique_chars,
                 'targetChars': target_in_record,
                 'nontargetChars': nontarget_in_record,
                 'efficiency': efficiency
@@ -598,8 +605,8 @@ def api_content_text(source_id, record_id):
                     return jsonify({
                         'id': record_id,
                         'title': record.get('title', ''),
-                        'text': record.get('content', record.get('text', '')),
-                        'chars': record.get('characters', record.get('chars', []))
+                        'content': record.get('content', ''),
+                        'characters': record.get('characters', [])
                     })
             return jsonify({'error': f'Record not found: {record_id}'}), 404
         else:

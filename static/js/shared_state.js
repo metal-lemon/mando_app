@@ -17,11 +17,11 @@ class MandarinState {
 
     async load() {
         try {
-            const response = await fetch('/api/backup');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.characters && data.characters.length > 0) {
-                    this.knownChars = new Set(data.characters);
+            const Response = await fetch('/api/backup');
+            if (Response.ok) {
+                const Data = await Response.json();
+                if (Data.characters && Data.characters.length > 0) {
+                    this.knownChars = new Set(Data.characters);
                     this.save();
                     console.log(`Loaded ${this.knownChars.size} characters from server backup`);
                     return;
@@ -32,10 +32,10 @@ class MandarinState {
         }
         
         try {
-            const saved = localStorage.getItem(STORAGE_KEYS.KNOWN_CHARS);
-            if (saved) {
-                const data = JSON.parse(saved);
-                this.knownChars = new Set(data.characters || []);
+            const Saved = localStorage.getItem(STORAGE_KEYS.KNOWN_CHARS);
+            if (Saved) {
+                const Data = JSON.parse(Saved);
+                this.knownChars = new Set(Data.characters || []);
                 console.log(`Loaded ${this.knownChars.size} characters from localStorage`);
             }
         } catch (e) {
@@ -45,18 +45,18 @@ class MandarinState {
 
     async saveToServer() {
         try {
-            const data = {
+            const Data = {
                 version: STATE_VERSION,
                 lastUpdated: new Date().toISOString(),
                 characters: Array.from(this.knownChars),
                 count: this.knownChars.size
             };
-            const response = await fetch('/api/backup', {
+            const Response = await fetch('/api/backup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(Data)
             });
-            if (response.ok) {
+            if (Response.ok) {
                 console.log(`Saved ${this.knownChars.size} characters to server backup`);
                 return true;
             }
@@ -68,13 +68,13 @@ class MandarinState {
 
     save() {
         try {
-            const data = {
+            const Data = {
                 version: STATE_VERSION,
                 lastUpdated: new Date().toISOString(),
                 characters: Array.from(this.knownChars),
                 count: this.knownChars.size
             };
-            localStorage.setItem(STORAGE_KEYS.KNOWN_CHARS, JSON.stringify(data));
+            localStorage.setItem(STORAGE_KEYS.KNOWN_CHARS, JSON.stringify(Data));
             this.listeners.forEach(listener => listener(this.knownChars));
         } catch (e) {
             console.error("Failed to save to localStorage:", e);
@@ -146,7 +146,7 @@ class MandarinState {
 
     getTargetChars() {
         try {
-            const saved = localStorage.getItem(STORAGE_KEYS.TARGET_CHARS);
+            const Saved = localStorage.getItem(STORAGE_KEYS.TARGET_CHARS);
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
             return [];
@@ -167,68 +167,68 @@ class MandarinState {
     }
 
     exportToFile() {
-        const charsArray = this.getCharacters();
-        if (charsArray.length === 0) {
+        const CHARS_ARRAY = this.getCharacters();
+        if (CHARS_ARRAY.length === 0) {
             alert("No characters to export.");
             return null;
         }
-        const exportData = {
+        const EXPORT_DATA = {
             version: STATE_VERSION,
             date: new Date().toISOString(),
-            characters: charsArray,
-            count: charsArray.length
+            characters: CHARS_ARRAY,
+            count: CHARS_ARRAY.length
         };
-        const jsonStr = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+        const JSON_STR = JSON.stringify(EXPORT_DATA, null, 2);
+        const Blob = new Blob([JSON_STR], { type: 'application/json' });
+        const Url = URL.createObjectURL(Blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = Url;
         a.download = `mandarin_chars_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
         a.click();
-        URL.revokeObjectURL(url);
-        return exportData;
+        URL.revokeObjectURL(Url);
+        return EXPORT_DATA;
     }
 
     importFromFile(file, callback) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        const Reader = new FileReader();
+        Reader.onload = (e) => {
             try {
-                const data = JSON.parse(e.target.result);
-                let charsArray;
-                if (Array.isArray(data)) charsArray = data;
-                else if (data.characters && Array.isArray(data.characters)) charsArray = data.characters;
+                const Data = JSON.parse(e.target.result);
+                let CHARS_ARRAY;
+                if (Array.isArray(Data)) CHARS_ARRAY = Data;
+                else if (Data.characters && Array.isArray(Data.characters)) CHARS_ARRAY = Data.characters;
                 else throw new Error("Invalid format");
-                const validChars = charsArray.filter(ch => typeof ch === 'string' && ch.length === 1);
-                if (validChars.length === 0) throw new Error("No valid characters found");
-                this.setCharacters(validChars);
-                if (callback) callback(null, validChars);
+                const VALID_CHARS = CHARS_ARRAY.filter(ch => typeof ch === 'string' && ch.length === 1);
+                if (VALID_CHARS.length === 0) throw new Error("No valid characters found");
+                this.setCharacters(VALID_CHARS);
+                if (callback) callback(null, VALID_CHARS);
             } catch (err) {
                 if (callback) callback(err);
             }
         };
-        reader.onerror = () => callback(new Error("File read error"));
-        reader.readAsText(file, 'UTF-8');
+        Reader.onerror = () => callback(new Error("File read error"));
+        Reader.readAsText(file, 'UTF-8');
     }
 
     mergeFromFile(file, callback) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        const Reader = new FileReader();
+        Reader.onload = (e) => {
             try {
-                const data = JSON.parse(e.target.result);
-                let charsArray;
-                if (Array.isArray(data)) charsArray = data;
-                else if (data.characters && Array.isArray(data.characters)) charsArray = data.characters;
+                const Data = JSON.parse(e.target.result);
+                let CHARS_ARRAY;
+                if (Array.isArray(Data)) CHARS_ARRAY = Data;
+                else if (Data.characters && Array.isArray(Data.characters)) CHARS_ARRAY = Data.characters;
                 else throw new Error("Invalid format");
-                const validChars = charsArray.filter(ch => typeof ch === 'string' && ch.length === 1);
-                if (validChars.length === 0) throw new Error("No valid characters found");
-                const added = this.addCharacters(validChars);
-                if (callback) callback(null, { added, total: validChars.length });
+                const VALID_CHARS = CHARS_ARRAY.filter(ch => typeof ch === 'string' && ch.length === 1);
+                if (VALID_CHARS.length === 0) throw new Error("No valid characters found");
+                const Added = this.addCharacters(VALID_CHARS);
+                if (callback) callback(null, { added: Added, total: VALID_CHARS.length });
             } catch (err) {
                 if (callback) callback(err);
             }
         };
-        reader.onerror = () => callback(new Error("File read error"));
-        reader.readAsText(file, 'UTF-8');
+        Reader.onerror = () => callback(new Error("File read error"));
+        Reader.readAsText(file, 'UTF-8');
     }
 
     clear() {
