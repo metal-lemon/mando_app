@@ -13,8 +13,22 @@ Then open http://localhost:5000 in your browser.
 
 import json
 import os
+import sys
+import subprocess
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response
+
+
+def _ensure_jieba():
+    """Ensure jieba is installed, auto-install if missing."""
+    try:
+        import jieba
+        return jieba
+    except ImportError:
+        print("Installing jieba...")
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'jieba'])
+        import jieba
+        return jieba
 
 app = Flask(__name__)
 
@@ -480,6 +494,41 @@ def api_learnable_words():
     })
 
 
+@app.route('/api/segment', methods=['POST'])
+def api_segment():
+    """
+    Segment Chinese text using jieba.
+    
+    Request body (JSON):
+        text: string - Chinese text to segment
+        mode: string - 'accurate' (default), 'full', or 'search'
+    
+    Returns:
+        JSON with word list
+    """
+    jieba = _ensure_jieba()
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    text = data.get('text', '')
+    mode = data.get('mode', 'accurate')
+    
+    if not text:
+        return jsonify({'words': []})
+    
+    if mode == 'search':
+        words = jieba.cut_for_search(text)
+    elif mode == 'full':
+        words = jieba.cut(text, cut_all=True)
+    else:
+        words = jieba.cut(text)
+    
+    return jsonify({'words': list(words)})
+
+
 @app.route('/api/content/<source_id>/<record_id>')
 def api_content(source_id, record_id):
     """
@@ -491,7 +540,7 @@ def api_content(source_id, record_id):
     content_file = source_path / f'{source_id}.json'
     
     if not content_file.exists():
-        return jsonify({'error': f'Content file not found for source: {source_id}'}), 404
+        return jsonify({'error': f'Content file not found for source: {source_id}', 'file': str(content_file)}), 404
     
     try:
         with open(content_file, 'r', encoding='utf-8') as f:
@@ -501,8 +550,23 @@ def api_content(source_id, record_id):
         if isinstance(content_data, list):
             for record in content_data:
                 if str(record.get('id')) == str(record_id):
-                    return jsonify(record)
-            return jsonify({'error': f'Record not found: {record_id}'}), 404
+                    # Normalize to standard schema (docs/json_schemas.md)
+                    normalized = {
+                        'id': record.get('id'),
+                        'title': record.get('title', ''),
+                        'source': record.get('source', ''),
+                        'content': record.get('content', ''),
+                        'characters': record.get('characters', [])
+                    }
+                    return jsonify(normalized)
+            # Debug: Return first few IDs to help diagnose
+            available_ids = [str(r.get('id')) for r in content_data[:10]]
+            return jsonify({
+                'error': f'Record not found: {record_id}',
+                'requested_source': source_id,
+                'file': str(content_file),
+                'first_10_ids': available_ids
+            }), 404
         else:
             return jsonify({'error': 'Invalid content format'}), 500
             
