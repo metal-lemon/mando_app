@@ -312,11 +312,11 @@
         }
 
         function showCharPreview() {
-            const content = document.getElementById('storyContent').value;
-            const chars = extractCharacters(content);
+            const Content = document.getElementById('storyContent').value;
+            const Chars = extractCharacters(Content);
             const previewDiv = document.getElementById('charPreview');
-            if (chars.length > 0) {
-                previewDiv.innerHTML = `<strong>Extracted characters (${chars.length} unique):</strong><br>${chars.sort().join(' ')}`;
+            if (Chars.length > 0) {
+                previewDiv.innerHTML = `<strong>Extracted characters (${Chars.length} unique):</strong><br>${Chars.sort().join(' ')}`;
             } else {
                 previewDiv.innerHTML = '<em>No Chinese characters found in this text.</em>';
             }
@@ -341,9 +341,9 @@
             const uniquePercent = uniqueTotal > 0 ? (knownUnique / uniqueTotal) * 100 : 0;
 
             const chineseRegex = /[\u4e00-\u9fff]/g;
-            const allChars = story.content.match(chineseRegex) || [];
-            const totalOcc = allChars.length;
-            const knownOcc = allChars.filter(ch => window.mandarinState.has(ch)).length;
+            const AllChars = story.content.match(chineseRegex) || [];
+            const totalOcc = AllChars.length;
+            const knownOcc = AllChars.filter(ch => window.mandarinState.has(ch)).length;
             const occPercent = totalOcc > 0 ? (knownOcc / totalOcc) * 100 : 0;
 
             const unknownUniqueList = uniqueChars.filter(ch => !window.mandarinState.has(ch));
@@ -451,43 +451,43 @@
                 alert('No stories to export.');
                 return false;
             }
-            const jsonStr = JSON.stringify(stories, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            const JSON_STR = JSON.stringify(stories, null, 2);
+            const Blob = new Blob([JSON_STR], { type: 'application/json' });
+            const Url = URL.createObjectURL(Blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = Url;
             a.download = `stories_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
             a.click();
-            URL.revokeObjectURL(url);
+            URL.revokeObjectURL(Url);
             return true;
         }
 
         function loadStoriesFromFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            const Reader = new FileReader();
+            Reader.onload = function(e) {
                 try {
-                    const data = JSON.parse(e.target.result);
-                    stories = Array.isArray(data) ? data : [];
+                    const Data = JSON.parse(e.target.result);
+                    stories = Array.isArray(Data) ? Data : [];
                     renderLibrary();
                     updateFileStatus(`✅ Loaded ${stories.length} stories successfully!`, true);
                 } catch (error) {
                     updateFileStatus(`❌ Failed to load file: ${error.message}`, false, true);
                 }
             };
-            reader.onerror = () => updateFileStatus("❌ Failed to read file.", false, true);
-            reader.readAsText(file, 'UTF-8');
+            Reader.onerror = () => updateFileStatus("❌ Failed to read file.", false, true);
+            Reader.readAsText(file, 'UTF-8');
         }
 
         function saveStory() {
             const editId = document.getElementById('editStoryId').value;
             const title = document.getElementById('storyTitle').value.trim();
             const source = document.getElementById('storySource').value.trim();
-            const content = document.getElementById('storyContent').value;
-            if (!title || !content) {
+            const Content = document.getElementById('storyContent').value;
+            if (!title || !Content) {
                 alert('Please enter both a title and story content.');
                 return;
             }
-            const characters = extractCharacters(content);
+            const characters = extractCharacters(Content);
             let nextId = 1;
             if (stories.length > 0) {
                 const maxId = Math.max(...stories.map(s => s.id));
@@ -499,7 +499,7 @@
                     ...stories[index],
                     title: title,
                     source: source || 'Unknown',
-                    content: content,
+                    content: Content,
                     characters: characters
                 };
                 updateFileStatus(`✅ Story updated!`, true);
@@ -508,7 +508,7 @@
                     id: nextId,
                     title: title,
                     source: source || 'User Added',
-                    content: content,
+                    content: Content,
                     characters: characters
                 };
                 stories.push(newStory);
@@ -578,7 +578,7 @@
         fetch('/data/stories.json').then(response => {
             if (response.ok) return response.json();
             throw new Error('Not found');
-        }).then(data => {
+        }).then(Data => {
             stories = Array.isArray(data) ? data : [];
             renderLibrary();
             updateFileStatus(`✅ Auto-loaded ${stories.length} stories from data/stories.json!`, true);

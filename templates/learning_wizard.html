@@ -1279,10 +1279,10 @@
 
             async loadSources() {
                 try {
-                    const response = await fetch('/api/sources');
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.availableSources = data.sources || [];
+                    const Response = await fetch('/api/sources');
+                    if (Response.ok) {
+                        const Data = await Response.json();
+                        this.availableSources = Data.sources || [];
                         
                         // Re-render step 1 to show sources in dropdown
                         if (this.currentStep === 1) {
@@ -1305,10 +1305,10 @@
                 try {
                     const pathData = localStorage.getItem(WIZARD_STORAGE.PATH);
                     if (pathData) {
-                        const data = JSON.parse(pathData);
-                        this.path = data.path || [];
-                        this.optimizedPath = data.optimizedPath;
-                        this.selectedCluster = data.selectedCluster;
+                        const Data = JSON.parse(pathData);
+                        this.path = Data.path || [];
+                        this.optimizedPath = Data.optimizedPath;
+                        this.selectedCluster = Data.selectedCluster;
                     }
                     
                     const curriculumData = localStorage.getItem(WIZARD_STORAGE.CURRICULUM);
@@ -1322,7 +1322,7 @@
 
             async loadCandidatesFromAPI() {
                 try {
-                    const response = await fetch('/api/search', {
+                    const Response = await fetch('/api/search', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1331,9 +1331,9 @@
                             limit: 2000
                         })
                     });
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.candidates = data.candidates || [];
+                    if (Response.ok) {
+                        const Data = await Response.json();
+                        this.candidates = Data.candidates || [];
                     }
                 } catch (e) {
                     console.log('Could not load candidates:', e);
@@ -1576,8 +1576,8 @@ Example:
                         alert('Please enter some Chinese text first.');
                         return;
                     }
-                    const chars = this.extractCharacters(text);
-                    const newChars = chars.filter(ch => !this.knownChars.has(ch));
+                    const Chars = this.extractCharacters(text);
+                    const newChars = Chars.filter(ch => !this.knownChars.has(ch));
                     
                     const preview = document.getElementById('extractPreview');
                     preview.classList.remove('hidden');
@@ -1662,9 +1662,9 @@ Example:
                     
                     if (this.selectedSource) {
                         try {
-                            const response = await fetch(`/api/source/${this.selectedSource}/meta`);
-                            if (response.ok) {
-                                const meta = await response.json();
+                            const Response = await fetch(`/api/source/${this.selectedSource}/meta`);
+                            if (Response.ok) {
+                                const meta = await Response.json();
                                 if (meta.ready) {
                                     this.showSourceConfirmation(meta);
                                 } else {
@@ -1733,16 +1733,16 @@ Example:
                 }
                 
                 try {
-                    const response = await fetch('/api/learnable-words', {
+                    const Response = await fetch('/api/learnable-words', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ chars: Array.from(this.knownChars) })
                     });
                     
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.learnableWords = data.words || [];
-                        document.getElementById('readyWords').textContent = data.count.toLocaleString();
+                    if (Response.ok) {
+                        const Data = await Response.json();
+                        this.learnableWords = Data.words || [];
+                        document.getElementById('readyWords').textContent = Data.count.toLocaleString();
                     }
                 } catch (e) {
                     console.log('Could not calculate learnable words:', e);
@@ -1860,17 +1860,17 @@ Example:
                 }
 
                 this.targetText = text;
-                const allChars = this.extractCharacters(text);
-                this.targetChars = allChars;
+                const AllChars = this.extractCharacters(text);
+                this.targetChars = AllChars;
                 
                 const knownSet = new Set(this.knownChars);
-                this.unknownChars = allChars.filter(ch => !knownSet.has(ch));
+                this.unknownChars = AllChars.filter(ch => !knownSet.has(ch));
 
                 const totalOccurrences = text.replace(/[^\u4e00-\u9fff]/g, '').length;
-                const knownOccurrences = allChars.filter(ch => knownSet.has(ch)).length;
+                const knownOccurrences = AllChars.filter(ch => knownSet.has(ch)).length;
                 
-                const pctKnown = totalOccurrences > 0 ? Math.round((knownOccurrences / allChars.length) * 100) : 0;
-                const pctUnique = allChars.length > 0 ? Math.round(((allChars.length - this.unknownChars.length) / allChars.length) * 100) : 0;
+                const pctKnown = totalOccurrences > 0 ? Math.round((knownOccurrences / AllChars.length) * 100) : 0;
+                const pctUnique = AllChars.length > 0 ? Math.round(((AllChars.length - this.unknownChars.length) / AllChars.length) * 100) : 0;
 
                 document.getElementById('pctKnown').textContent = pctKnown + '%';
                 document.getElementById('pctUnique').textContent = pctUnique + '%';
@@ -1891,7 +1891,7 @@ Example:
                         const newCount = this.unknownChars.length;
                         document.getElementById('gapCount').textContent = newCount;
                         document.getElementById('pctUnique').textContent = 
-                            allChars.length > 0 ? Math.round(((allChars.length - newCount) / allChars.length) * 100) + '%' : '0%';
+                            AllChars.length > 0 ? Math.round(((AllChars.length - newCount) / AllChars.length) * 100) + '%' : '0%';
                         
                         this.updateSummary();
                         this.updateProgress();
@@ -1990,7 +1990,7 @@ Example:
 
             async loadPoolFromAPI() {
                 try {
-                    const response = await fetch('/api/build-pool', {
+                    const Response = await fetch('/api/build-pool', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1999,11 +1999,11 @@ Example:
                             knownChars: [...this.knownChars]
                         })
                     });
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.pool = data.pool || [];
-                        this.poolThresholds = data.thresholds;
-                        this.poolCoverage = data.coverage;
+                    if (Response.ok) {
+                        const Data = await Response.json();
+                        this.pool = Data.pool || [];
+                        this.poolThresholds = Data.thresholds;
+                        this.poolCoverage = Data.coverage;
                         if (this.currentStep === 3) {
                             this.renderStep();
                         }
@@ -2076,7 +2076,7 @@ Example:
                     id: item.id,
                     title: item.title || 'Untitled',
                     matched_chars: item.matched_chars || [],
-                    uniqueChars: item.uniqueChars || [],
+                    characters: item.characters || [],
                     targetChars: item.targetChars || [],
                     nontargetChars: item.nontargetChars || [],
                     unknownChars: [...(item.targetChars || []), ...(item.nontargetChars || [])],
@@ -2092,10 +2092,10 @@ Example:
                 
                 try {
                     const freqUrl = '/source/' + this.selectedSource + '/' + this.selectedSource + '_freq.json';
-                    const response = await fetch(freqUrl);
-                    if (!response.ok) return null;
+                    const Response = await fetch(freqUrl);
+                    if (!Response.ok) return null;
                     
-                    const freqData = await response.json();
+                    const freqData = await Response.json();
                     this.charFreq = new Map(Object.entries(freqData));
                     return this.charFreq;
                 } catch (e) {
@@ -2191,7 +2191,7 @@ Example:
                     source: this.selectedSource,
                     content: this.pool[idx].content,
                     matched_chars: this.pool[idx].matched_chars,
-                    chars: this.pool[idx].uniqueChars,
+                    chars: this.pool[idx].characters,
                     newChars: this.pool[idx].unknownChars,
                     targetChars: this.pool[idx].targetChars,
                     nontargetChars: this.pool[idx].nontargetChars
@@ -2220,7 +2220,7 @@ Example:
                         source: this.selectedSource,
                         content: this.targetText || '',
                         matched_chars: this.targetChars,
-                        chars: this.targetChars.split(''),
+                        chars: [...this.targetChars],
                         newChars: [],
                         targetChars: [],
                         nontargetChars: [],
@@ -2384,16 +2384,16 @@ Example:
                 const loadPromises = this.path
                     .filter(item => item.id)
                     .map(async item => {
-                        const url = `/api/content/${this.selectedSource}/${item.id}`;
-                        console.log('Fetching:', url);
+                        const Url = `/api/content/${this.selectedSource}/${item.id}`;
+                        console.log('Fetching:', Url);
                         try {
-                            const response = await fetch(url);
-                            if (response.ok) {
-                                const data = await response.json();
-                                console.log('Got response for ID', item.id, '- content length:', (data.content || data.text || '').length);
-                                return data;
+                            const Response = await fetch(Url);
+                    if (Response.ok) {
+                                const Data = await Response.json();
+                                console.log('Got response for ID', item.id, '- content length:', (Data.content || '').length);
+                                return Data;
                             } else {
-                                console.log('Response not OK for', item.id, ':', response.status);
+                                console.log('Response not OK for', item.id, ':', Response.status);
                             }
                         } catch (e) {
                             console.log('Could not load content for', item.id, e);
@@ -2424,6 +2424,23 @@ Example:
                 return [];
             }
 
+            async getWordsByFrequency(text, limit = 30) {
+                try {
+                    const response = await fetch('/api/words-by-frequency', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text, limit: limit })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data;
+                    }
+                } catch (e) {
+                    console.log('Words by frequency error:', e);
+                }
+                return { words: [] };
+            }
+
             async generateCurriculumForPath(onProgress) {
                 this.curriculum = [];
                 
@@ -2435,7 +2452,7 @@ Example:
                 
                 for (let i = 0; i < this.path.length; i++) {
                     const pathItem = this.path[i];
-                    const fullStory = fullContent.find(c => c.id === pathItem.id) || {};
+                    const fullStory = fullContent.find(c => String(c.id) === String(pathItem.id)) || {};
                     
                     console.log('Story', i, '- ID:', pathItem.id, 'Title:', pathItem.title);
                     console.log('  Content found:', (fullStory.content || 'EMPTY').substring(0, 50));
@@ -2444,8 +2461,9 @@ Example:
                     const newCharsThisLesson = [...storyChars].filter(c => !cumulativeKnown.has(c));
                     const targetCharsThisLesson = newCharsThisLesson.filter(c => targetSet.has(c));
                     
-                    const content = fullStory.content;
-                    const wordsInStory = await this.segmentText(content);
+                    const Content = fullStory.content;
+                    const wordsInStoryResult = await this.getWordsByFrequency(Content);
+                    const wordsInStory = wordsInStoryResult.words || [];
                     
                     if (onProgress) onProgress({ 
                         stage: 'fetching_words', 
@@ -2475,7 +2493,7 @@ Example:
                         index: i,
                         storyId: pathItem.id,
                         title: pathItem.title || 'Story ' + (i + 1),
-                        content: content,
+                        content: Content,
                         newChars: newCharsThisLesson,
                         targetChars: targetCharsThisLesson,
                         knownBefore: [...cumulativeKnown],
@@ -2523,7 +2541,7 @@ Example:
                         targetChars: remainingTargets,
                         knownBefore: [...cumulativeKnown],
                         charWordMap: charWordMap,
-                        wordsInStory: (await this.segmentText(this.targetText)).slice(0, 30),
+                        wordsInStory: (await this.getWordsByFrequency(this.targetText)).words || [],
                         isTarget: true
                     });
                 }
@@ -2534,13 +2552,13 @@ Example:
             
             async fetchLearnableWords(chars) {
                 try {
-                    const response = await fetch('/api/learnable-words', {
+                    const Response = await fetch('/api/learnable-words', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ chars: chars })
                     });
-                    if (response.ok) {
-                        return await response.json();
+                    if (Response.ok) {
+                        return await Response.json();
                     }
                 } catch (e) {
                     console.log('Error fetching learnable words:', e);
@@ -2577,7 +2595,7 @@ renderCurriculumDetails() {
                                         </div>
                                     </div>
                                     <div class="words-for-char">
-                                        <h6>5 Words (using ${ch} with known characters):</h6>
+                                        <h6>${(lesson.charWordMap[ch] || []).length} Words (using ${ch} with known characters):</h6>
                                         <div class="word-list-inline">
                                             ${(lesson.charWordMap[ch] || []).map(w => `
                                                 <div class="word-pill">
@@ -2602,12 +2620,14 @@ renderCurriculumDetails() {
                         </div>
                         <div class="lesson-content" style="display: none;">
                             <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
-                                Words extracted from the story text.
+                                Rarest words in story (sorted by frequency, least common first).
                             </p>
-                            <div class="word-list-inline" style="flex-wrap: wrap;">
+                            <div class="word-list-inline" style="flex-direction: column; align-items: flex-start;">
                                 ${(lesson.wordsInStory && lesson.wordsInStory.length > 0) ? lesson.wordsInStory.map(w => `
-                                    <div class="word-pill">
-                                        <span class="word">${w}</span>
+                                    <div class="word-pill" style="margin: 5px 0; padding: 8px 12px; background: #e8f5e9; border-left: 3px solid #48bb78;">
+                                        <span class="word" style="font-weight: bold; color: #2e7d32;">${w.word}</span>
+                                        ${w.pinyin ? `<span class="pinyin" style="color: #666; margin-left: 8px;">${w.pinyin}</span>` : ''}
+                                        ${w.definition ? `<span class="meaning" style="color: #555; margin-left: 8px; font-size: 14px;">${w.definition}</span>` : ''}
                                     </div>
                                 `).join('') : '<span style="color: #999;">No words extracted</span>'}
                             </div>
@@ -2743,10 +2763,10 @@ renderCurriculumDetails() {
                 
                 let hskChars = [];
                 try {
-                    const response = await fetch('/data/hsk_characters.json');
-                    if (response.ok) {
-                        const data = await response.json();
-                        hskChars = data.all || [];
+                    const Response = await fetch('/data/hsk_characters.json');
+                    if (Response.ok) {
+                        const Data = await Response.json();
+                        hskChars = Data.all || [];
                     }
                 } catch (e) {
                     console.log('Could not load HSK characters:', e);
@@ -3136,13 +3156,13 @@ renderCurriculumDetails() {
                         quizResults: this.quizResults
                     };
                     
-                    const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
+                    const Blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
+                    const Url = URL.createObjectURL(Blob);
                     const a = document.createElement('a');
-                    a.href = url;
+                    a.href = Url;
                     a.download = `learning_session_${new Date().toISOString().slice(0,10)}.json`;
                     a.click();
-                    URL.revokeObjectURL(url);
+                    URL.revokeObjectURL(Url);
                 });
 
                 document.getElementById('startNewBtn')?.addEventListener('click', () => {

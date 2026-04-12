@@ -275,6 +275,32 @@ Search index for characters.
 
 Fetch article content.
 
+### POST /api/segment
+
+Segment Chinese text using pkuseg (web model).
+
+```json
+{"text": "自然语言处理是人工智能领域的一个重要分支"}
+```
+
+Returns:
+```json
+{"words": ["自然语言处理", "是", "人工智能", "领域", "的", "一个", "重要", "分支"]}
+```
+
+### POST /api/words-by-frequency
+
+Get words from text sorted by frequency (least common first).
+
+```json
+{"text": "自然语言处理是人工智能领域", "limit": 10}
+```
+
+Returns:
+```json
+{"words": [{"word": "自然语言处理", "pinyin": "", "definition": "", "freqRank": 1}, ...], "totalUnique": 15}
+```
+
 ---
 
 ## 7. State Management (shared_state.js)
