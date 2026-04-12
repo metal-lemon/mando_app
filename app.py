@@ -550,7 +550,15 @@ def api_content(source_id, record_id):
         if isinstance(content_data, list):
             for record in content_data:
                 if str(record.get('id')) == str(record_id):
-                    return jsonify(record)
+                    # Normalize to standard schema (docs/json_schemas.md)
+                    normalized = {
+                        'id': record.get('id'),
+                        'title': record.get('title', ''),
+                        'source': record.get('source', ''),
+                        'content': record.get('content', ''),
+                        'characters': record.get('characters', [])
+                    }
+                    return jsonify(normalized)
             # Debug: Return first few IDs to help diagnose
             available_ids = [str(r.get('id')) for r in content_data[:10]]
             return jsonify({

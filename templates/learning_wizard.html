@@ -2438,13 +2438,13 @@ Example:
                     const fullStory = fullContent.find(c => c.id === pathItem.id) || {};
                     
                     console.log('Story', i, '- ID:', pathItem.id, 'Title:', pathItem.title);
-                    console.log('  Content found:', (fullStory.text || fullStory.content || 'EMPTY').substring(0, 50));
+                    console.log('  Content found:', (fullStory.content || 'EMPTY').substring(0, 50));
                     
                     const storyChars = new Set(pathItem.chars || []);
                     const newCharsThisLesson = [...storyChars].filter(c => !cumulativeKnown.has(c));
                     const targetCharsThisLesson = newCharsThisLesson.filter(c => targetSet.has(c));
                     
-                    const content = fullStory.text || fullStory.content || '';
+                    const content = fullStory.content;
                     const wordsInStory = await this.segmentText(content);
                     
                     if (onProgress) onProgress({ 
