@@ -72,6 +72,8 @@ http://localhost:5000/
 | `/api/content/<source>/<id>` | GET | Fetch full content record |
 | `/api/content/<source>/<id>/text` | GET | Fetch plain text content |
 | `/api/batch_content` | POST | Fetch multiple records |
+| `/api/segment` | POST | Segment Chinese text using pkuseg |
+| `/api/words-by-frequency` | POST | Get words sorted by frequency (rarest first) |
 
 ### Source Discovery
 
@@ -231,6 +233,22 @@ class MandarinState {
 const stateVersion = "1.0"; // should be UPPER_SNAKE_CASE
 const storageKeys = { ... }; // should be UPPER_SNAKE_CASE
 ```
+
+## Naming Conventions Glossary
+
+This glossary defines all naming conventions used throughout the codebase.
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Module constants | UPPER_SNAKE_CASE | STATE_VERSION, STORAGE_KEYS |
+| Local variables | UPPER_SNAKE_CASE | const DATA, const READER |
+| Functions/methods | camelCase | getCharacters(), extractChars() |
+| Classes | PascalCase | MandarinState, FileReader |
+| CSS classes | kebab-case | .button-group, .file-status |
+
+### References
+- Module constants defined in `static/js/shared_state.js`
+- See Section: Code Style Guidelines above
 
 ### HTML
 

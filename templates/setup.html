@@ -164,10 +164,10 @@ class MandarinState {
 
     load() {
         try {
-            const saved = localStorage.getItem(STORAGE_KEYS.KNOWN_CHARS);
-            if (saved) {
-                const data = JSON.parse(saved);
-                this.knownChars = new Set(data.characters || []);
+            const Saved = localStorage.getItem(STORAGE_KEYS.KNOWN_CHARS);
+            if (Saved) {
+                const Data = JSON.parse(Saved);
+                this.knownChars = new Set(Data.characters || []);
                 console.log(\`Loaded \${this.knownChars.size} characters from localStorage\`);
             }
         } catch (e) {
@@ -177,13 +177,13 @@ class MandarinState {
 
     save() {
         try {
-            const data = {
+            const DATA = {
                 version: STATE_VERSION,
                 lastUpdated: new Date().toISOString(),
                 characters: Array.from(this.knownChars),
                 count: this.knownChars.size
             };
-            localStorage.setItem(STORAGE_KEYS.KNOWN_CHARS, JSON.stringify(data));
+            localStorage.setItem(STORAGE_KEYS.KNOWN_CHARS, JSON.stringify(Data));
             this.listeners.forEach(listener => listener(this.knownChars));
         } catch (e) {
             console.error("Failed to save to localStorage:", e);
@@ -243,47 +243,47 @@ class MandarinState {
     }
 
     exportToFile() {
-        const charsArray = this.getCharacters();
-        if (charsArray.length === 0) {
+        const CHARS_ARRAY = this.getCharacters();
+if (CHARS_ARRAY.length === 0) {
             alert("No characters to export.");
             return null;
         }
-        const exportData = {
+        const EXPORT_DATA = {
             version: STATE_VERSION,
             date: new Date().toISOString(),
-            characters: charsArray,
-            count: charsArray.length
+            characters: CHARS_ARRAY,
+            count: CHARS_ARRAY.length
         };
-        const jsonStr = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+        const JSON_STR = JSON.stringify(EXPORT_DATA, null, 2);
+        const Blob = new Blob([JSON_STR], { type: 'application/json' });
+        const Url = URL.createObjectURL(Blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = \`mandarin_chars_\${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json\`;
+        a.href = Url;
+        a.download = `mandarin_chars_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
         a.click();
-        URL.revokeObjectURL(url);
-        return exportData;
+        URL.revokeObjectURL(Url);
+        return EXPORT_DATA;
     }
 
     importFromFile(file, callback) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        const Reader = new FileReader();
+        Reader.onload = (e) => {
             try {
-                const data = JSON.parse(e.target.result);
-                let charsArray;
-                if (Array.isArray(data)) charsArray = data;
-                else if (data.characters && Array.isArray(data.characters)) charsArray = data.characters;
+                const Data = JSON.parse(e.target.result);
+                let CHARS_ARRAY;
+                if (Array.isArray(Data)) CHARS_ARRAY = Data;
+                else if (Data.characters && Array.isArray(Data.characters)) CHARS_ARRAY = Data.characters;
                 else throw new Error("Invalid format");
-                const validChars = charsArray.filter(ch => typeof ch === 'string' && ch.length === 1);
-                if (validChars.length === 0) throw new Error("No valid characters found");
-                this.setCharacters(validChars);
-                if (callback) callback(null, validChars);
+                const VALID_CHARS = CHARS_ARRAY.filter(ch => typeof ch === 'string' && ch.length === 1);
+                if (VALID_CHARS.length === 0) throw new Error("No valid characters found");
+                this.setCharacters(VALID_CHARS);
+                if (callback) callback(null, VALID_CHARS);
             } catch (err) {
                 if (callback) callback(err);
             }
         };
-        reader.onerror = () => callback(new Error("File read error"));
-        reader.readAsText(file, 'UTF-8');
+        Reader.onerror = () => callback(new Error("File read error"));
+        Reader.readAsText(file, 'UTF-8');
     }
 
     clear() {
@@ -2639,10 +2639,10 @@ window.mandarinState = new MandarinState();
 ]`;
 
         // Files to check (some in root, some in data folder)
-        const rootFiles = [
+        const RootFiles = [
             { name: "shared_state.js", content: SHARED_STATE_CONTENT, required: true, description: "Shared data management core", folder: "" }
         ];
-        const dataFolderFiles = [
+        const DATAFolderFiles = [
             { name: "dictionary.json", content: null, required: false, description: "CC-CEDICT dictionary (must be generated manually)", folder: "data/" },
             { name: "trad_simp_map.json", content: TRAD_SIMP_MAP_CONTENT, required: false, description: "Full traditional-simplified mapping (cleaned)", folder: "data/" },
             { name: "stories.json", content: STORIES_CONTENT, required: false, description: "Example story database", folder: "data/" }
@@ -2651,7 +2651,7 @@ window.mandarinState = new MandarinState();
         let statusElements = {};
 
         function showMessage(text, isError = false) {
-            const msgDiv = document.getElementById("message");
+            const MSG_DIV = document.getElementById("message");
             msgDiv.textContent = text;
             msgDiv.className = "message " + (isError ? "error" : "success");
             msgDiv.style.display = "block";
@@ -2662,7 +2662,7 @@ window.mandarinState = new MandarinState();
 
         async function checkFileExists(path) {
             try {
-                const response = await fetch(path);
+                const Response = await fetch(path);
                 return response.ok;
             } catch {
                 return false;
@@ -2670,8 +2670,8 @@ window.mandarinState = new MandarinState();
         }
 
         async function createFile(path, content) {
-            const blob = new Blob([content], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            const Blob = new Blob([content], { type: 'application/json' });
+            const Url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = path.split('/').pop();

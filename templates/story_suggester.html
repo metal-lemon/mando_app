@@ -380,9 +380,9 @@
             const uniquePercent = (knownUnique / uniqueTotal) * 100;
 
             const chineseRegex = /[\u4e00-\u9fff]/g;
-            const allChars = story.content.match(chineseRegex) || [];
-            const totalOcc = allChars.length;
-            const knownOcc = allChars.filter(ch => currentKnownSet.has(ch)).length;
+            const AllChars = story.content.match(chineseRegex) || [];
+            const totalOcc = AllChars.length;
+            const knownOcc = AllChars.filter(ch => currentKnownSet.has(ch)).length;
             const occPercent = (knownOcc / totalOcc) * 100;
 
             const unknownUnique = uniqueChars.filter(ch => !currentKnownSet.has(ch));
@@ -661,13 +661,13 @@
         updateKnownCount();
         
         // Auto-load stories.json from data folder
-        fetch('/data/stories.json').then(response => {
-            if (response.ok) {
-                return response.json();
+        fetch('/data/stories.json').then(Response => {
+            if (Response.ok) {
+                return Response.json();
             }
             throw new Error('No data/stories.json found');
-        }).then(data => {
-            stories = Array.isArray(data) ? data : [];
+        }).then(Data => {
+            stories = Array.isArray(Data) ? Data : [];
             document.getElementById('storyStatus').innerHTML = `✅ Loaded ${stories.length} stories from data/stories.json!`;
             document.getElementById('storyStatus').style.backgroundColor = '#e8f5e9';
             displayStories();

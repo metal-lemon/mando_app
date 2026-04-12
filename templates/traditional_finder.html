@@ -152,50 +152,48 @@
         // Parse the trad-simp.txt file (lines like "錒  锕" or "錒\t锕")
         function parseTradSimpTxt(content) {
             const lines = content.split(/\r?\n/);
-            const map = new Map();
+            const Map = new Map();
             for (let line of lines) {
                 line = line.trim();
-                if (line.length === 0 || line.startsWith("#") || line.startsWith("【")) continue; // skip comments and header
-                // split by whitespace (space or tab)
+                if (line.length === 0 || line.startsWith("#") || line.startsWith("【")) continue;
                 const parts = line.split(/\s+/);
                 if (parts.length >= 2) {
                     const trad = parts[0];
                     const simp = parts[1];
-                    // Basic sanity: both should be single characters (or at least not empty)
                     if (trad && simp && trad.length === 1 && simp.length === 1) {
-                        map.set(trad, simp);
+                        Map.set(trad, simp);
                     } else {
                         console.warn("Skipping line (not a single character pair):", line);
                     }
                 }
             }
-            return map;
+            return Map;
         }
 
         function loadFromTxtFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            const Reader = new FileReader();
+            Reader.onload = function(e) {
                 try {
-                    const content = e.target.result;
-                    const map = parseTradSimpTxt(content);
-                    if (map.size === 0) throw new Error("No valid pairs found in the file.");
-                    loadTradFromMap(map);
+                    const Content = e.target.result;
+                    const Map = parseTradSimpTxt(Content);
+                    if (Map.size === 0) throw new Error("No valid pairs found in the file.");
+                    loadTradFromMap(Map);
                 } catch (error) {
                     updateTradStatus(`❌ Failed to parse file: ${error.message}`, false, true);
                 }
             };
-            reader.onerror = () => updateTradStatus("❌ Failed to read file.", false, true);
-            reader.readAsText(file, 'UTF-8');
+            Reader.onerror = () => updateTradStatus("❌ Failed to read file.", false, true);
+            Reader.readAsText(file, 'UTF-8');
         }
 
         function loadFromJsonFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            const Reader = new FileReader();
+            Reader.onload = function(e) {
                 try {
-                    const data = JSON.parse(e.target.result);
+                    const Data = JSON.parse(e.target.result);
                     let newMap = new Map();
-                    if (typeof data === 'object' && !Array.isArray(data)) {
-                        for (let [trad, simp] of Object.entries(data)) {
+                    if (typeof Data === 'object' && !Array.isArray(Data)) {
+                        for (let [trad, simp] of Object.entries(Data)) {
                             if (trad && simp && trad.length === 1 && simp.length === 1) {
                                 newMap.set(trad, simp);
                             }
@@ -209,8 +207,8 @@
                     updateTradStatus(`❌ Failed to load file: ${error.message}`, false, true);
                 }
             };
-            reader.onerror = () => updateTradStatus("❌ Failed to read file.", false, true);
-            reader.readAsText(file, 'UTF-8');
+            Reader.onerror = () => updateTradStatus("❌ Failed to read file.", false, true);
+            Reader.readAsText(file, 'UTF-8');
         }
 
         function clearTradList() {
@@ -226,8 +224,8 @@
             if (tradMap.size === 0) { alert("Please load a traditional character map first."); return; }
 
             const chineseRegex = /[\u4e00-\u9fff]/g;
-            const allChars = text.match(chineseRegex) || [];
-            const tradChars = allChars.filter(ch => tradMap.has(ch));
+            const AllChars = text.match(chineseRegex) || [];
+            const tradChars = AllChars.filter(ch => tradMap.has(ch));
             const uniqueTrad = [...new Set(tradChars)].sort();
 
             // Stats
@@ -321,14 +319,14 @@
             const tradChars = Array.from(listDiv.querySelectorAll(".char-tile")).map(tile => tile.textContent.split('→')[0].trim());
             if (tradChars.length === 0) { alert("No traditional characters to export."); return; }
             const exportData = { version: "1.0", source: "Traditional Finder", date: new Date().toISOString(), characters: tradChars, count: tradChars.length };
-            const jsonStr = JSON.stringify(exportData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            const JSON_STR = JSON.stringify(exportData, null, 2);
+            const Blob = new Blob([JSON_STR], { type: 'application/json' });
+            const Url = URL.createObjectURL(Blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = Url;
             a.download = `trad_chars_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
             a.click();
-            URL.revokeObjectURL(url);
+            URL.revokeObjectURL(Url);
             alert(`Exported ${tradChars.length} traditional characters.`);
         }
 
@@ -385,14 +383,14 @@
         }
 
         // Auto-load from data/trad_simp_map.json
-        fetch('/data/trad_simp_map.json').then(response => {
-            if (response.ok) {
-                return response.json();
+        fetch('/data/trad_simp_map.json').then(Response => {
+            if (Response.ok) {
+                return Response.json();
             }
             throw new Error('No data/trad_simp_map.json found');
-        }).then(data => {
+        }).then(Data => {
             const newMap = new Map();
-            for (let [trad, simp] of Object.entries(data)) {
+            for (let [trad, simp] of Object.entries(Data)) {
                 if (trad && simp && trad.length === 1 && simp.length === 1) {
                     newMap.set(trad, simp);
                 }

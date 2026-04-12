@@ -2409,19 +2409,36 @@ Example:
 
             async segmentText(text, mode = 'accurate') {
                 try {
-                    const Response = await fetch('/api/segment', {
+                    const response = await fetch('/api/segment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: text, mode: mode })
                     });
-                    if (Response.ok) {
-                        const Data = await Response.json();
-                        return Data.words || [];
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.words || [];
                     }
                 } catch (e) {
                     console.log('Segment error:', e);
                 }
                 return [];
+            }
+
+            async getWordsByFrequency(text, limit = 30) {
+                try {
+                    const response = await fetch('/api/words-by-frequency', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text, limit: limit })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data;
+                    }
+                } catch (e) {
+                    console.log('Words by frequency error:', e);
+                }
+                return { words: [] };
             }
 
             async generateCurriculumForPath(onProgress) {
@@ -2445,7 +2462,8 @@ Example:
                     const targetCharsThisLesson = newCharsThisLesson.filter(c => targetSet.has(c));
                     
                     const Content = fullStory.content;
-                    const wordsInStory = await this.segmentText(Content);
+                    const wordsInStoryResult = await this.getWordsByFrequency(Content);
+                    const wordsInStory = wordsInStoryResult.words || [];
                     
                     if (onProgress) onProgress({ 
                         stage: 'fetching_words', 
@@ -2523,7 +2541,7 @@ Example:
                         targetChars: remainingTargets,
                         knownBefore: [...cumulativeKnown],
                         charWordMap: charWordMap,
-                        wordsInStory: (await this.segmentText(this.targetText)).slice(0, 30),
+                        wordsInStory: (await this.getWordsByFrequency(this.targetText)).words || [],
                         isTarget: true
                     });
                 }
@@ -2577,7 +2595,7 @@ renderCurriculumDetails() {
                                         </div>
                                     </div>
                                     <div class="words-for-char">
-                                        <h6>5 Words (using ${ch} with known characters):</h6>
+                                        <h6>${(lesson.charWordMap[ch] || []).length} Words (using ${ch} with known characters):</h6>
                                         <div class="word-list-inline">
                                             ${(lesson.charWordMap[ch] || []).map(w => `
                                                 <div class="word-pill">
@@ -2602,12 +2620,14 @@ renderCurriculumDetails() {
                         </div>
                         <div class="lesson-content" style="display: none;">
                             <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
-                                Words extracted from the story text.
+                                Rarest words in story (sorted by frequency, least common first).
                             </p>
-                            <div class="word-list-inline" style="flex-wrap: wrap;">
+                            <div class="word-list-inline" style="flex-direction: column; align-items: flex-start;">
                                 ${(lesson.wordsInStory && lesson.wordsInStory.length > 0) ? lesson.wordsInStory.map(w => `
-                                    <div class="word-pill">
-                                        <span class="word">${w}</span>
+                                    <div class="word-pill" style="margin: 5px 0; padding: 8px 12px; background: #e8f5e9; border-left: 3px solid #48bb78;">
+                                        <span class="word" style="font-weight: bold; color: #2e7d32;">${w.word}</span>
+                                        ${w.pinyin ? `<span class="pinyin" style="color: #666; margin-left: 8px;">${w.pinyin}</span>` : ''}
+                                        ${w.definition ? `<span class="meaning" style="color: #555; margin-left: 8px; font-size: 14px;">${w.definition}</span>` : ''}
                                     </div>
                                 `).join('') : '<span style="color: #999;">No words extracted</span>'}
                             </div>

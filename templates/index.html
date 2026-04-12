@@ -359,27 +359,35 @@
                     </div>
                     <a href="/story_library">Open</a>
                 </div>
+                <div class="tool-item">
+                    <div class="icon">📊</div>
+                    <div class="info">
+                        <h3>Word Frequency Finder</h3>
+                        <p>Look up word frequencies and find learnable words</p>
+                    </div>
+                    <a href="/word_frequency_finder">Open</a>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         // Toolbox modal functionality
-        const modal = document.getElementById('toolboxModal');
-        const toolboxBox = document.getElementById('toolboxBox');
-        const modalClose = document.getElementById('modalClose');
+        const Modal = document.getElementById('toolboxModal');
+        const ToolboxBox = document.getElementById('toolboxBox');
+        const ModalClose = document.getElementById('modalClose');
 
-        toolboxBox.addEventListener('click', () => {
-            modal.classList.add('active');
+        ToolboxBox.addEventListener('click', () => {
+            Modal.classList.add('active');
         });
 
-        modalClose.addEventListener('click', () => {
-            modal.classList.remove('active');
+        ModalClose.addEventListener('click', () => {
+            Modal.classList.remove('active');
         });
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('active');
+        Modal.addEventListener('click', (e) => {
+            if (e.target === Modal) {
+                Modal.classList.remove('active');
             }
         });
 

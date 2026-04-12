@@ -19,16 +19,16 @@ from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response
 
 
-def _ensure_jieba():
-    """Ensure jieba is installed, auto-install if missing."""
+def _ensure_pkuseg():
+    """Ensure pkuseg is installed and return a segmenter instance."""
     try:
-        import jieba
-        return jieba
+        import pkuseg
+        return pkuseg.pkuseg()
     except ImportError:
-        print("Installing jieba...")
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'jieba'])
-        import jieba
-        return jieba
+        print("Installing pkuseg...")
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pkuseg'])
+        import pkuseg
+        return pkuseg.pkuseg()
 
 app = Flask(__name__)
 
@@ -460,6 +460,7 @@ def api_build_pool():
 def api_learnable_words():
     """
     Find dictionary words that can be formed from known characters.
+    Sorted by frequency (most common first).
     
     Request body (JSON):
         chars: list - List of known characters
@@ -478,6 +479,7 @@ def api_learnable_words():
         return jsonify({'count': 0, 'words': []})
     
     dictionary_file = DATA_DIR / 'dictionary.json'
+    frequency_file = DATA_DIR / 'word_frequency.json'
     
     if not dictionary_file.exists():
         return jsonify({'error': 'Dictionary not found'}), 404
@@ -488,12 +490,26 @@ def api_learnable_words():
     except (json.JSONDecodeError, IOError) as e:
         return jsonify({'error': f'Failed to load dictionary: {str(e)}'}), 500
     
+    word_ranks = {}
+    if frequency_file.exists():
+        try:
+            with open(frequency_file, 'r', encoding='utf-8') as f:
+                freq_data = json.load(f)
+                for item in freq_data:
+                    word_ranks[item['word']] = item['rank']
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load frequency data: {e}")
+    
     learnable = []
     for word in dictionary:
         word_chars = word.get('chars', [])
-        # Only multi-character words where ALL chars are known
         if len(word_chars) > 1 and all(ch in known_chars for ch in word_chars):
-            learnable.append(word)
+            word_entry = dict(word)
+            w = word.get('word', '')
+            word_entry['freqRank'] = word_ranks.get(w, 999999)
+            learnable.append(word_entry)
+    
+    learnable.sort(key=lambda w: w.get('freqRank', 999999))
     
     return jsonify({
         'count': len(learnable),
@@ -504,34 +520,27 @@ def api_learnable_words():
 @app.route('/api/segment', methods=['POST'])
 def api_segment():
     """
-    Segment Chinese text using jieba.
+    Segment Chinese text using pkuseg.
     
     Request body (JSON):
         text: string - Chinese text to segment
-        mode: string - 'accurate' (default), 'full', or 'search'
     
     Returns:
         JSON with word list
     """
-    jieba = _ensure_jieba()
-    
     data = request.get_json()
     
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
     text = data.get('text', '')
-    mode = data.get('mode', 'accurate')
     
     if not text:
         return jsonify({'words': []})
     
-    if mode == 'search':
-        words = jieba.cut_for_search(text)
-    elif mode == 'full':
-        words = jieba.cut(text, cut_all=True)
-    else:
-        words = jieba.cut(text)
+    seg = _ensure_pkuseg()
+    
+    words = seg.cut(text)
     
     return jsonify({'words': list(words)})
 
@@ -678,6 +687,154 @@ def serve_static(filename):
 def serve_data(filename):
     """Serve data files from data/ directory."""
     return send_from_directory('data', filename)
+
+
+@app.route('/word_frequency_finder')
+def word_frequency_finder():
+    return render_template('word_frequency_finder.html')
+
+
+@app.route('/api/word-frequency', methods=['POST'])
+def api_word_frequency_lookup():
+    """Look up frequency for a specific word."""
+    data = request.get_json()
+    word = data.get('word', '').strip()
+    
+    if not word:
+        return jsonify({'error': 'No word provided'}), 400
+    
+    freq_file = DATA_DIR / 'word_frequency.json'
+    
+    if not freq_file.exists():
+        return jsonify({'error': 'Frequency data not found'}), 404
+    
+    try:
+        with open(freq_file, 'r', encoding='utf-8') as f:
+            freq_data = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': f'Failed to load frequency data: {str(e)}'}), 500
+    
+    for item in freq_data:
+        if item['word'] == word:
+            return jsonify({
+                'found': True,
+                'word': item['word'],
+                'rank': item['rank'],
+                'count': item['count']
+            })
+    
+    return jsonify({'found': False, 'word': word})
+
+
+@app.route('/api/word-frequency/top')
+def api_word_frequency_top():
+    """Get top N most frequent words."""
+    limit = request.args.get('limit', 50, type=int)
+    
+    freq_file = DATA_DIR / 'word_frequency.json'
+    
+    if not freq_file.exists():
+        return jsonify({'error': 'Frequency data not found'}), 404
+    
+    try:
+        with open(freq_file, 'r', encoding='utf-8') as f:
+            freq_data = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': f'Failed to load frequency data: {str(e)}'}), 500
+    
+    top_words = freq_data[:limit]
+    
+    return jsonify({'words': top_words})
+
+
+@app.route('/api/words-by-frequency', methods=['POST'])
+def api_words_by_frequency():
+    """
+    Get words from text, sorted by frequency (least common first).
+    Filters out punctuation and single characters.
+    Returns up to 30 rarest words with definitions from dictionary.
+    
+    Request body (JSON):
+        text: string - Chinese text to process
+        known_chars: list - List of known characters (optional, for filtering)
+        limit: int - Max words to return (default 30)
+    
+    Returns:
+        JSON with list of words sorted by frequency (rarest first)
+    """
+    data = request.get_json()
+    text = data.get('text', '')
+    known_chars = set(data.get('known_chars', []))
+    limit = data.get('limit', 30)
+    
+    if not text:
+        return jsonify({'words': []})
+    
+    pkuseg_ = _ensure_pkuseg()
+    
+    words = pkuseg_.cut(text)
+    
+    punctuation = set('，。！？、；：""''（）【】《》…—·《》「」『』,!?;:\'"()[]<>.- ')
+    valid_words = []
+    seen = set()
+    for w in words:
+        if w in seen:
+            continue
+        if len(w) <= 1:
+            continue
+        if all(c in punctuation for c in w):
+            continue
+        if any('\u4e00' <= c <= '\u9fff' for c in w):
+            valid_words.append(w)
+            seen.add(w)
+    
+    freq_file = DATA_DIR / 'word_frequency.json'
+    word_ranks = {}
+    if freq_file.exists():
+        try:
+            with open(freq_file, 'r', encoding='utf-8') as f:
+                freq_data = json.load(f)
+                for item in freq_data:
+                    word_ranks[item['word']] = item['rank']
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load frequency data: {e}")
+    
+    for w in valid_words:
+        if w not in word_ranks:
+            word_ranks[w] = 999999
+    
+    valid_words.sort(key=lambda w: word_ranks.get(w, 999999), reverse=True)
+    
+    rarest_words = valid_words[:limit]
+    
+    dict_file = DATA_DIR / 'dictionary.json'
+    word_definitions = {}
+    if dict_file.exists():
+        try:
+            with open(dict_file, 'r', encoding='utf-8') as f:
+                dictionary = json.load(f)
+                for entry in dictionary:
+                    w = entry.get('word', '')
+                    if w:
+                        word_definitions[w] = {
+                            'pinyin': entry.get('pinyin', ''),
+                            'definition': entry.get('meaning', '') or entry.get('definition', '')
+                        }
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load dictionary: {e}")
+    
+    results = []
+    for w in rarest_words:
+        rank = word_ranks.get(w, 999999)
+        dict_info = word_definitions.get(w, {})
+        results.append({
+            'word': w,
+            'pinyin': dict_info.get('pinyin', ''),
+            'definition': dict_info.get('definition', ''),
+            'freqRank': rank
+        })
+    
+    return jsonify({'words': results, 'totalUnique': len(valid_words)})
 
 
 if __name__ == '__main__':
